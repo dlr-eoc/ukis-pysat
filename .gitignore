@@ -1,0 +1,14 @@
+*.swp
+*.pyc
+/dist
+/build
+/.idea
+*.egg-info
+/*.egg
+
+#ignore virtualenvironment directory
+/pysatenv/*
+
+/docs/build/
+result.tif
+result.tif.aux.xml
