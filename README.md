@@ -1,4 +1,4 @@
-[![UKIS](docs/ukis-logo.png)](https://www.dlr.de/eoc/en/desktopdefault.aspx/tabid-5413/10560_read-21914/) UKIS-pysat
+[![UKIS](https://raw.githubusercontent.com/dlr-eoc/ukis-pysat/master/docs/ukis-logo.png)](https://www.dlr.de/eoc/en/desktopdefault.aspx/tabid-5413/10560_read-21914/) UKIS-pysat
 ==============
 
 ![Build Status](https://github.com/dlr-eoc/ukis-pysat/workflows/build/badge.svg)
@@ -25,7 +25,7 @@ Work with you local satellite data files and read information out of file names 
 Read the documentation for more details: [https://ukis-pysat.readthedocs.io](https://ukis-pysat.readthedocs.io/en/latest/).
 
 ## Example
-Here's an example about some basic features, it might also help to read through the [tests](tests).
+Here's an example about some basic features, it might also help to read through the [tests](https://github.com/dlr-eoc/ukis-pysat/blob/master/tests).
 ````python
 from ukis_pysat.file import get_sentinel_scene_from_dir
 from ukis_pysat.download import Source
@@ -55,7 +55,7 @@ conda activate ukis_pysat
 ```
 
 ### Dependencies
-For the latest list of dependencies check the [requirements](setup.py:12).
+For the latest list of dependencies check the [requirements](https://github.com/dlr-eoc/ukis-pysat/blob/master/requirements.txt).
 
 
 ## Contributors
@@ -70,16 +70,16 @@ The UKIS team creates and adapts libraries which simplify the usage of satellite
 German Aerospace Center (DLR)
 
 ## Licenses
-This software is licensed under the [Apache 2.0 License](LICENSE).
+This software is licensed under the [Apache 2.0 License](https://github.com/dlr-eoc/ukis-pysat/blob/master/LICENSE).
 
 Copyright (c) 2020 German Aerospace Center (DLR) * German Remote Sensing Data Center * Department: Geo-Risks and Civil Security
 
 ## Changelog
-See [changelog](CHANGELOG.rst).
+See [changelog](https://github.com/dlr-eoc/ukis-pysat/blob/master/CHANGELOG.rst).
 
 ## Contributing
 The UKIS team welcomes contributions from the community.
-For more detailed information, see our guide on [contributing](CONTRIBUTING.md) if you're interested in getting involved.
+For more detailed information, see our guide on [contributing](https://github.com/dlr-eoc/ukis-pysat/blob/master/CONTRIBUTING.md) if you're interested in getting involved.
 
 ## What is UKIS?
 The DLR project Environmental and Crisis Information System (the German abbreviation is UKIS, standing for [Umwelt- und Kriseninformationssysteme](https://www.dlr.de/eoc/en/desktopdefault.aspx/tabid-5413/10560_read-21914/) aims at harmonizing the development of information systems at the German Remote Sensing Data Center (DFD) and setting up a framework of modularized and generalized software components.
