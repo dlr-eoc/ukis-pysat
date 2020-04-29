@@ -22,7 +22,7 @@ Reading satellite data and performing simple, but cumbersome tasks.
 Work with you local satellite data files and read information out of file names and metadata files. Currently focusing on Sentinel-1.
 
 
-Read the documentation for more details: [https://ukis-pysat.readthedocs.io](https://ukis-pysat.readthedocs.io/en/stable/).
+Read the documentation for more details: [https://ukis-pysat.readthedocs.io](https://ukis-pysat.readthedocs.io/en/latest/).
 
 ## Example
 Here's an example about some basic features, it might also help to read through the [tests](tests).
