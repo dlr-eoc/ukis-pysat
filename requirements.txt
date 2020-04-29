@@ -1,6 +1,6 @@
 shapely
 numpy
-dask
+dask[array]
 requests
 rasterio
 matplotlib
