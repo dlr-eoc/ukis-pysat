@@ -37,3 +37,5 @@ To run the tests set the Environment variables and then:
     conda activate ukis_pysat
     export
     python -m unittest discover tests
+
+If you set the environment variables with the credentials to the hubs, you can uncomment `@unittest.skip()` for these tests.
