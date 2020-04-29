@@ -5,7 +5,7 @@
 /.idea
 *.egg-info
 /*.egg
-
+.coverage
 #ignore virtualenvironment directory
 /pysatenv/*
 

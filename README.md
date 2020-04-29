@@ -1,6 +1,10 @@
 [![UKIS](docs/ukis-logo.png)](https://www.dlr.de/eoc/en/desktopdefault.aspx/tabid-5413/10560_read-21914/) UKIS-pysat
 ==============
-![Build Status](https://github.com/dlr-eoc/ukis-pysat/workflows/unittest/badge.svg)
+
+![Build Status](https://github.com/dlr-eoc/ukis-pysat/workflows/build/badge.svg)
+[![GitHub license](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://black.readthedocs.io/en/stable/)
+
 
 The UKIS-pysat package provides generic classes and functions to query, access and process multi-spectral and SAR satellite images.
 

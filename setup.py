@@ -11,9 +11,7 @@ setup(
     description="generic classes and functions to query, access and process multi-spectral and SAR satellite images",
     packages=find_packages(),
     install_requires=open("requirements.txt").read().splitlines(),
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "Operating System :: OS Independent",
-    ],
+    extras_require={"dev": ["sphinx >= 1.3", "sphinx_rtd_theme",],},
+    classifiers=["Programming Language :: Python :: 3", "Operating System :: OS Independent",],
     python_requires=">=3.6",
 )
