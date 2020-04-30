@@ -14,10 +14,3 @@ class Datahub(Enum):
     file = auto()
     EarthExplorer = auto()
     Scihub = auto()
-
-
-if __name__ == "__main__":
-    print(Platform["Landsat5"])
-    print(type(Platform.Landsat8))
-    print(Datahub.file == Datahub.file)
-    print(Platform.Landsat8.value)
