@@ -28,15 +28,12 @@ class Image:
             else:
                 raise TypeError(f"path must be of type str")
         else:
-            if isinstance(dataset, rasterio.io.DatasetReader) and isinstance(
-                arr, np.ndarray
-            ):
+            if isinstance(dataset, rasterio.io.DatasetReader) and isinstance(arr, np.ndarray):
                 self.dataset = dataset
                 self.arr = arr
             else:
                 raise TypeError(
-                    f"dataset must be of type rasterio.io.DatasetReader and arr must be of type "
-                    f"numpy.ndarray"
+                    f"dataset must be of type rasterio.io.DatasetReader and arr must be of type " f"numpy.ndarray"
                 )
         self.transform = self.dataset.transform
         self.crs = self.dataset.crs
@@ -49,9 +46,7 @@ class Image:
         :return: tuple with valid data bounds
         """
         valid_data_window = windows.get_data_window(self.arr, nodata=nodata)
-        return windows.bounds(
-            valid_data_window, windows.transform(valid_data_window, self.transform)
-        )
+        return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.transform))
 
     def mask_image(self, bbox, crop=True, pad=False, **kwargs):
         """
@@ -64,13 +59,9 @@ class Image:
             self.dataset = self._pad_to_bbox(bbox, **kwargs).open()
 
         if isinstance(bbox, polygon.Polygon):
-            self.arr, self.transform = rasterio.mask.mask(
-                self.dataset, [bbox], crop=crop
-            )
+            self.arr, self.transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
         elif isinstance(bbox, tuple):
-            self.arr, self.transform = rasterio.mask.mask(
-                self.dataset, [box(*bbox)], crop=crop
-            )
+            self.arr, self.transform = rasterio.mask.mask(self.dataset, [box(*bbox)], crop=crop)
         else:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
@@ -94,37 +85,22 @@ class Image:
         max_diff_ll = np.max(np.subtract(tuple(self.dataset.bounds[:2]), bbox[:2]))
         max_diff = max(max_diff_ll, max_diff_ur)  # buffer in units
 
-        pad_width = math.ceil(
-            max_diff / self.transform.to_gdal()[1]
-        )  # units / pixel_size
+        pad_width = math.ceil(max_diff / self.transform.to_gdal()[1])  # units / pixel_size
 
         destination = np.zeros(
-            (
-                self.dataset.count,
-                self.arr.shape[1] + 2 * pad_width,
-                self.arr.shape[2] + 2 * pad_width,
-            ),
-            self.arr.dtype,
+            (self.dataset.count, self.arr.shape[1] + 2 * pad_width, self.arr.shape[2] + 2 * pad_width,), self.arr.dtype,
         )
 
         for i in range(0, self.dataset.count):
             destination[i], self.transform = rasterio.pad(
-                self.arr[0],
-                self.transform,
-                pad_width,
-                mode,
-                constant_values=constant_values,
+                self.arr[0], self.transform, pad_width, mode, constant_values=constant_values,
             )
 
         self.arr = destination
 
         mem_profile = self.dataset.meta
         mem_profile.update(
-            {
-                "height": self.arr.shape[-2],
-                "width": self.arr.shape[-1],
-                "transform": self.transform,
-            }
+            {"height": self.arr.shape[-2], "width": self.arr.shape[-1], "transform": self.transform,}
         )
 
         memfile = MemoryFile()
@@ -155,11 +131,7 @@ class Image:
             )
         else:
             transform, width, height = calculate_default_transform(
-                self.dataset.crs,
-                dst_crs,
-                self.dataset.width,
-                self.dataset.height,
-                *self.dataset.bounds,
+                self.dataset.crs, dst_crs, self.dataset.width, self.dataset.height, *self.dataset.bounds,
             )
 
         destination = np.zeros((self.dataset.count, height, width), self.arr.dtype)
@@ -205,31 +177,19 @@ class Image:
             else:
                 # if metadata file is provided use a more sophisticated conversion that accounts for the sun angle
                 # get factors from metadata file
-                mtl = toa_utils._load_mtl(
-                    metadata
-                )  # no obvious reason not to call this
+                mtl = toa_utils._load_mtl(metadata)  # no obvious reason not to call this
                 metadata = mtl["L1_METADATA_FILE"]
                 sun_elevation = metadata["IMAGE_ATTRIBUTES"]["SUN_ELEVATION"]
                 toa = []
 
-                for idx, b in enumerate(
-                    sorted(self._lookup_bands(platform, wavelengths))
-                ):
-                    multiplicative_rescaling_factors = metadata[
-                        "RADIOMETRIC_RESCALING"
-                    ][f"REFLECTANCE_MULT_BAND_{b}"]
-                    additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][
-                        f"REFLECTANCE_ADD_BAND_{b}"
-                    ]
+                for idx, b in enumerate(sorted(self._lookup_bands(platform, wavelengths))):
+                    multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_MULT_BAND_{b}"]
+                    additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
 
                     if platform == Platform.Landsat8:  # exception for Landsat-8
                         if b in ["10", "11"]:
-                            thermal_conversion_constant1 = metadata[
-                                "THERMAL_CONSTANTS"
-                            ][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata[
-                                "THERMAL_CONSTANTS"
-                            ][f"K2_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata["THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata["THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
                             toa.append(
                                 brightness_temp.brightness_temp(
                                     self.arr[:, :, idx],
@@ -242,12 +202,8 @@ class Image:
                             continue
                     else:
                         if b.startswith("6"):
-                            thermal_conversion_constant1 = metadata[
-                                "TIRS_THERMAL_CONSTANTS"
-                            ][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata[
-                                "TIRS_THERMAL_CONSTANTS"
-                            ][f"K2_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata["TIRS_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata["TIRS_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
                             toa.append(
                                 brightness_temp.brightness_temp(
                                     self.arr[:, :, idx],

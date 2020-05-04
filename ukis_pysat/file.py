@@ -215,9 +215,7 @@ def get_pixel_spacing(scenedir, polarization="HH"):
                 for child in elem.iter():
                     if child.tag == "rangePixelSpacing":
                         pixel_spacing_meter = float(child.text)
-                        pixel_spacing_degree = (
-                            pixel_spacing_meter / 10.0
-                        ) * 8.983152841195215e-5
+                        pixel_spacing_degree = (pixel_spacing_meter / 10.0) * 8.983152841195215e-5
 
                         return pixel_spacing_meter, pixel_spacing_degree
 

@@ -48,6 +48,12 @@ class DataTest(unittest.TestCase):
             BoundingBox(left=11.896863892, bottom=51.446545369, right=11.9578595, top=51.515176657,),
         )
 
+        img.mask_image((11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        self.assertEqual(
+            img.dataset.bounds,
+            BoundingBox(left=11.896863892, bottom=51.446545369, right=11.9578595, top=51.515176657,),
+        )
+
         img.mask_image(
             box(11.8919236802142620, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,), pad=True,
         )
