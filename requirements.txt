@@ -4,6 +4,7 @@ dask[array]
 requests
 rasterio
 matplotlib
+pillow
 sentinelsat==0.13
 landsatxplore==0.6
 pylandsat==0.2
