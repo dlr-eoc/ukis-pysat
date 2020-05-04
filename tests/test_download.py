@@ -56,7 +56,7 @@ queries = [
 
 
 class DownloadTest(unittest.TestCase):
-    @unittest.skip("uncomment when you set ENVs with credentials")
+    # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_query(self):
         for i in range(len(queries)):
             with Source(source=queries[i]["source"]) as src:
@@ -75,14 +75,11 @@ class DownloadTest(unittest.TestCase):
     def test_get_metadata(self):
         source_dir = os.path.join(os.path.dirname(__file__), "testfiles")
         src = Source(source=Datahub.file, source_dir=source_dir)
-        meta = src.get_metadata(
-            product_id="S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618"
-        )
+        meta = src.get_metadata(product_id="S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618")
         returns_srcid = meta["properties"]["srcid"]
         returns_uuid = meta["properties"]["srcuuid"]
         self.assertEqual(
-            returns_srcid,
-            "S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618",
+            returns_srcid, "S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618",
         )
         self.assertEqual(returns_uuid, "560f78fb-22b8-4904-87de-160d9236d33e")
 
@@ -91,11 +88,9 @@ class DownloadTest(unittest.TestCase):
         # TODO
         pass
 
-    @unittest.skip("uncomment when you set ENVs with credentials")
+    # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_quicklook(self):
-        target_dir = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "testfiles"
-        )
+        target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
         for i in range(len(queries)):
             with Source(source=queries[i]["source"]) as src:
                 src.download_quicklook(
@@ -104,16 +99,8 @@ class DownloadTest(unittest.TestCase):
                     product_srcid=queries[i]["returns_srcid"],
                     target_dir=target_dir,
                 )
-            self.assertTrue(
-                os.path.isfile(
-                    os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpg"
-                )
-            )
-            self.assertTrue(
-                os.path.isfile(
-                    os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpgw"
-                )
-            )
+            self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpg"))
+            self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpgw"))
             os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpg")
             os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpgw")
 

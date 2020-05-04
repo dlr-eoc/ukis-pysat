@@ -34,9 +34,7 @@ class Source:
 
         if self.src == Datahub.file:
             if not source_dir:
-                raise Exception(
-                    f"{traceback.format_exc()} source_dir has to be set if source is {self.src}."
-                )
+                raise Exception(f"{traceback.format_exc()} source_dir has to be set if source is {self.src}.")
             else:
                 self.api = source_dir
 
@@ -55,19 +53,14 @@ class Source:
                 self.user = env_get("SCIHUB_USER")
                 self.pw = env_get("SCIHUB_PW")
                 self.api = sentinelsat.SentinelAPI(
-                    self.user,
-                    self.pw,
-                    "https://scihub.copernicus.eu/dhus",
-                    show_progressbars=False,
+                    self.user, self.pw, "https://scihub.copernicus.eu/dhus", show_progressbars=False,
                 )
             except Exception as e:
                 raise Exception(
                     f"{traceback.format_exc()} Could not connect to SciHub. This Exception was raised: {e}."
                 )
         else:
-            raise NotImplementedError(
-                f"{source} is not supported [file, earthexplorer, scihub]"
-            )
+            raise NotImplementedError(f"{source} is not supported [file, earthexplorer, scihub]")
 
     def __enter__(self):
         return self
@@ -87,9 +80,7 @@ class Source:
             raise NotImplementedError("File metadata query not yet supported.")
         elif self.src == Datahub.EarthExplorer:
             try:
-                bbox = geometry.shape(
-                    sentinelsat.read_geojson(aoi)[0]["geometry"]
-                ).bounds
+                bbox = geometry.shape(sentinelsat.read_geojson(aoi)[0]["geometry"]).bounds
                 if not cloud_cover:
                     # query Earthexplorer for metadata without cloudcoverpercentage
                     meta_src = self.api.search(
@@ -129,12 +120,9 @@ class Source:
                         producttype="L1TP",
                         orbitdirection="DESCENDING",
                         orbitnumber=m["summary"][
-                            m["summary"].find("Path: ")
-                            + len("Path: ") : m["summary"].rfind(", Row: ")
+                            m["summary"].find("Path: ") + len("Path: ") : m["summary"].rfind(", Row: ")
                         ],
-                        relativeorbitnumber=m["summary"][
-                            m["summary"].find("Row: ") + len("Row: ") :
-                        ],
+                        relativeorbitnumber=m["summary"][m["summary"].find("Row: ") + len("Row: ") :],
                         acquisitiondate=m["acquisitionDate"],
                         ingestiondate=m["modifiedDate"],
                         processingdate="",
@@ -183,35 +171,19 @@ class Source:
                 for i in range(len(meta_src["features"])):
                     try:
                         # check if cloudcoverpercentage exists
-                        cloudcoverpercentage = meta_src["features"][i]["properties"][
-                            "cloudcoverpercentage"
-                        ]
+                        cloudcoverpercentage = meta_src["features"][i]["properties"]["cloudcoverpercentage"]
                     except KeyError:
                         cloudcoverpercentage = ""  # leave it empty if not exists
                     # convert Scihub metadata to custom metadata
                     return self._construct_metadata(
                         id=meta_src["features"][i]["properties"]["identifier"],
-                        platformname=meta_src["features"][i]["properties"][
-                            "platformname"
-                        ],
-                        producttype=meta_src["features"][i]["properties"][
-                            "producttype"
-                        ],
-                        orbitdirection=meta_src["features"][i]["properties"][
-                            "orbitdirection"
-                        ],
-                        orbitnumber=meta_src["features"][i]["properties"][
-                            "orbitnumber"
-                        ],
-                        relativeorbitnumber=meta_src["features"][i]["properties"][
-                            "relativeorbitnumber"
-                        ],
-                        acquisitiondate=meta_src["features"][i]["properties"][
-                            "beginposition"
-                        ],
-                        ingestiondate=meta_src["features"][i]["properties"][
-                            "ingestiondate"
-                        ],
+                        platformname=meta_src["features"][i]["properties"]["platformname"],
+                        producttype=meta_src["features"][i]["properties"]["producttype"],
+                        orbitdirection=meta_src["features"][i]["properties"]["orbitdirection"],
+                        orbitnumber=meta_src["features"][i]["properties"]["orbitnumber"],
+                        relativeorbitnumber=meta_src["features"][i]["properties"]["relativeorbitnumber"],
+                        acquisitiondate=meta_src["features"][i]["properties"]["beginposition"],
+                        ingestiondate=meta_src["features"][i]["properties"]["ingestiondate"],
                         processingdate="",
                         processingsteps="",
                         processingversion="",
@@ -238,9 +210,7 @@ class Source:
         :param geom: geometry in GeoJSON-format
         :returns: Metadata of satellite product (GeoJSON-like mapping)
         """
-        return geometry.mapping(
-            _GeoInterface({"type": "Feature", "properties": kwargs, "geometry": geom})
-        )
+        return geometry.mapping(_GeoInterface({"type": "Feature", "properties": kwargs, "geometry": geom}))
 
     def get_metadata(self, product_id):
         """This method gets satellite image metadata for a specific product from a local file directory.
@@ -288,8 +258,7 @@ class Source:
             try:
                 # compress download directory and remove original files
                 pack(
-                    os.path.join(target_dir, product_srcid),
-                    root_dir=os.path.join(target_dir, product_srcid),
+                    os.path.join(target_dir, product_srcid), root_dir=os.path.join(target_dir, product_srcid),
                 )
                 shutil.rmtree(os.path.join(target_dir, product_srcid))
             except Exception as e:
@@ -321,10 +290,7 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             try:
-                m = self.api.request(
-                    "metadata",
-                    **{"datasetName": platform.value, "entityIds": [product_uuid],},
-                )
+                m = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
                 url = m[0]["browseUrl"]
                 bounds = geometry.shape(m[0]["spatialFootprint"]).bounds
                 self.save_quicklook_image(url, bounds, product_srcid, target_dir)
@@ -362,22 +328,10 @@ class Source:
         quicklook_size = (quicklook.shape[1], quicklook.shape[0])
 
         # save worldfile
-        dist_x = (
-            geometry.Point(bounds[0], bounds[1]).distance(
-                geometry.Point(bounds[2], bounds[1])
-            )
-            / quicklook_size[0]
-        )
-        dist_y = (
-            geometry.Point(bounds[0], bounds[1]).distance(
-                geometry.Point(bounds[0], bounds[3])
-            )
-            / quicklook_size[1]
-        )
+        dist_x = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[2], bounds[1])) / quicklook_size[0]
+        dist_y = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[0], bounds[3])) / quicklook_size[1]
         ul_x, ul_y = bounds[0], bounds[3]
-        with open(
-            os.path.join(os.path.join(target_dir, product_srcid + ".jpgw")), "w"
-        ) as out_file:
+        with open(os.path.join(os.path.join(target_dir, product_srcid + ".jpgw")), "w") as out_file:
             out_file.write(str(dist_x) + "\n")
             out_file.write(str(0.0) + "\n")
             out_file.write(str(0.0) + "\n")
