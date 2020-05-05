@@ -5,8 +5,8 @@ requests
 rasterio
 matplotlib
 pillow
-sentinelsat==0.13
+sentinelsat
 landsatxplore==0.6
 pylandsat==0.2
 rio_toa==0.3.0
-utm
+utm==0.5.0
