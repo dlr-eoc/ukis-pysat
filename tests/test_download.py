@@ -61,9 +61,9 @@ class DownloadTest(unittest.TestCase):
         for i in range(len(queries)):
             with Source(source=queries[i]["source"]) as src:
                 meta = src.query_metadata(
-                    aoi=aoi,
                     platform=queries[i]["platform_name"],
                     date=queries[i]["date"],
+                    aoi=aoi,
                     cloud_cover=queries[i]["cloud_cover"],
                 )
             returns_srcid = meta["properties"]["srcid"]
@@ -82,12 +82,12 @@ class DownloadTest(unittest.TestCase):
         )
         self.assertEqual(returns_uuid, "560f78fb-22b8-4904-87de-160d9236d33e")
 
-    @unittest.skip("uncomment when you set ENVs with credentials")
+    # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_image(self):
         # TODO
         pass
 
-    @unittest.skip("uncomment when you set ENVs with credentials")
+    # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_quicklook(self):
         target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
         for i in range(len(queries)):

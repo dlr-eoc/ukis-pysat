@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class Source:
     """
-    This class provides methods to query data sources for metadata and download images (APIs only).
+    This class provides methods to query data sources for metadata and download images and quicklooks (APIs only).
     Remote APIs and local data directories that hold metadata files are supported.
     """
 
@@ -65,41 +65,34 @@ class Source:
     def __enter__(self):
         return self
 
-    def query_metadata(self, aoi, platform, date, cloud_cover=None):
-        """This method queries satellite image metadata either online or on a local file directory.
+    def query_metadata(self, platform, date, aoi, cloud_cover=None):
+        """This method queries satellite image metadata from data source.
 
-        :param aoi: Area of interest in WGS84 (GeoJson).
         :param platform: image platform (<enum 'Platform'>).
         :param date: Date from - to (String or Datetime tuple). Expects a tuple of (start, end), e.g.
             (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
-
+        :param aoi: Area of interest in WGS84 (GeoJson).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
         :returns: Metadata of products that match query criteria (GeoJSON-like mapping).
         """
         if self.src == Datahub.file:
             raise NotImplementedError("File metadata query not yet supported.")
+
         elif self.src == Datahub.EarthExplorer:
             try:
+                # query Earthexplorer for metadata
                 bbox = geometry.shape(sentinelsat.read_geojson(aoi)[0]["geometry"]).bounds
-                if not cloud_cover:
-                    # query Earthexplorer for metadata without cloudcoverpercentage
-                    meta_src = self.api.search(
-                        dataset=platform.value,
-                        bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
-                        start_date=sentinelsat.format_query_date(date[0]),
-                        end_date=sentinelsat.format_query_date(date[1]),
-                        max_results=10000,
-                    )
-                else:
-                    # query Earthexplorer for metadata with cloudcoverpercentage
-                    meta_src = self.api.search(
-                        dataset=platform.value,
-                        bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
-                        start_date=sentinelsat.format_query_date(date[0]),
-                        end_date=sentinelsat.format_query_date(date[1]),
-                        max_cloud_cover=cloud_cover[1],
-                        max_results=10000,
-                    )
+                kwargs = {}
+                if cloud_cover:
+                    kwargs['max_cloud_cover'] = cloud_cover[1]
+                meta_src = self.api.search(
+                    dataset=platform.value,
+                    bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
+                    start_date=sentinelsat.format_query_date(date[0]),
+                    end_date=sentinelsat.format_query_date(date[1]),
+                    max_results=10000,
+                    **kwargs
+                )
             except Exception as e:
                 raise Exception(
                     f"{traceback.format_exc()} Could not execute query to EarthExplorer. Check your query parameters. "
@@ -107,8 +100,8 @@ class Source:
                 )
 
             try:
+                # construct harmonized metadata
                 for m in meta_src:
-                    # construct harmonized metadata
                     return self.construct_metadata(meta_src=m)
             except Exception as e:
                 raise Exception(
@@ -118,21 +111,16 @@ class Source:
 
         elif self.src == Datahub.Scihub:
             try:
-                if not cloud_cover or platform == platform.Sentinel1:
-                    # query Scihub for metadata without cloudcoverpercentage
-                    meta_src = self.api.query(
-                        area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
-                        date=date,
-                        platformname=platform.value,
-                    )
-                else:
-                    # query Scihub for metadata with cloudcoverpercentage
-                    meta_src = self.api.query(
-                        area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
-                        date=date,
-                        platformname=platform.value,
-                        cloudcoverpercentage=cloud_cover,
-                    )
+                # query Scihub for metadata
+                kwargs = {}
+                if cloud_cover and platform != platform.Sentinel1:
+                    kwargs['cloudcoverpercentage'] = cloud_cover
+                meta_src = self.api.query(
+                    area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
+                    date=date,
+                    platformname=platform.value,
+                    **kwargs
+                )
                 meta_src = self.api.to_geojson(meta_src)["features"]
             except Exception as e:
                 raise Exception(
@@ -141,8 +129,8 @@ class Source:
                 )
 
             try:
+                # construct harmonized metadata
                 for m in meta_src:
-                    # construct harmonized metadata
                     return self.construct_metadata(meta_src=m)
             except Exception as e:
                 raise Exception(
