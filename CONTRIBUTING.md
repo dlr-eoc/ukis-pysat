@@ -55,10 +55,10 @@ Before you submit your Pull Request (PR) consider the following guidelines:
      ```
 
 1. Create your patch, **including appropriate test cases**.
-1. Document your changes in the [changelog][changelog].
+1. Document your changes in the [changelog](CHANGELOG.rst).
     
      ```shell
-     git commit -a
+     git commit -a -m "some useful message"
      ```
     Note: the optional commit `-a` command line option will automatically "add" and "rm" edited files.
 
