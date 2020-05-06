@@ -9,9 +9,11 @@ import traceback
 import landsatxplore.api
 import requests
 import sentinelsat
+import fiona
+import pyproj
 from matplotlib.pyplot import imread
 from pylandsat import Product
-from shapely import geometry, wkt
+from shapely import geometry, wkt, ops
 
 from ukis_pysat.members import Datahub, Platform
 from ukis_pysat.file import env_get, pack
@@ -59,11 +61,36 @@ class Source:
                 raise Exception(
                     f"{traceback.format_exc()} Could not connect to SciHub. This Exception was raised: {e}."
                 )
+
         else:
             raise NotImplementedError(f"{source} is not supported [file, earthexplorer, scihub]")
 
     def __enter__(self):
         return self
+
+    @staticmethod
+    def _prep_aoi(aoi):
+        """ This method converts aoi to Shapely Polygon and reprojects to WGS84.
+
+        :param aoi: Area of interest as Geojson file or bounding box in lat lon coordinates (String, Tuple)
+        :return: Shapely Polygon
+        """
+        if isinstance(aoi, str):
+            with fiona.open(aoi, 'r') as aoi:
+                # make sure crs is in epsg:4326
+                project = pyproj.Transformer.from_proj(
+                    proj_from=pyproj.Proj(aoi.crs['init']), proj_to=pyproj.Proj("epsg:4326"),
+                    skip_equivalent=True, always_xy=True
+                )
+                aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
+
+        elif isinstance(aoi, tuple):
+            aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
+
+        else:
+            raise TypeError(f"aoi must be of type string or tuple")
+
+        return aoi
 
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
         """This method queries satellite image metadata from data source.
@@ -71,7 +98,7 @@ class Source:
         :param platform: image platform (<enum 'Platform'>).
         :param date: Date from - to (String or Datetime tuple). Expects a tuple of (start, end), e.g.
             (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
-        :param aoi: Area of interest in WGS84 (GeoJson).
+        :param aoi: Area of interest as GeoJson file or bounding box tuple (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
         :returns: Metadata of products that match query criteria (GeoJSON-like mapping).
         """
@@ -81,7 +108,7 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             try:
                 # query Earthexplorer for metadata
-                bbox = geometry.shape(sentinelsat.read_geojson(aoi)[0]["geometry"]).bounds
+                bbox = self._prep_aoi(aoi).bounds
                 kwargs = {}
                 if cloud_cover:
                     kwargs['max_cloud_cover'] = cloud_cover[1]
@@ -99,16 +126,6 @@ class Source:
                     f"The following Exception was raised: {e}."
                 )
 
-            try:
-                # construct harmonized metadata
-                for m in meta_src:
-                    return self.construct_metadata(meta_src=m)
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not convert metadata to custom metadata. "
-                    f"The following Exception was raised: {e}."
-                )
-
         elif self.src == Datahub.Scihub:
             try:
                 # query Scihub for metadata
@@ -116,7 +133,8 @@ class Source:
                 if cloud_cover and platform != platform.Sentinel1:
                     kwargs['cloudcoverpercentage'] = cloud_cover
                 meta_src = self.api.query(
-                    area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
+                    # area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
+                    area=self._prep_aoi(aoi).wkt,
                     date=date,
                     platformname=platform.value,
                     **kwargs
@@ -128,15 +146,15 @@ class Source:
                     f"The following Exception was raised: {e}."
                 )
 
-            try:
-                # construct harmonized metadata
-                for m in meta_src:
-                    return self.construct_metadata(meta_src=m)
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not convert metadata to custom metadata. "
-                    f"The following Exception was raised: {e}."
-                )
+        try:
+            # construct harmonized metadata
+            for m in meta_src:
+                return self.construct_metadata(meta_src=m)
+        except Exception as e:
+            raise Exception(
+                f"{traceback.format_exc()} Could not convert metadata to custom metadata. "
+                f"The following Exception was raised: {e}."
+            )
 
     def construct_metadata(self, meta_src):
         """This method constructs metadata that is harmonized across different satellite image sources and
@@ -286,7 +304,7 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             try:
-                m = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+                m = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid], }, )
                 url = m[0]["browseUrl"]
                 bounds = geometry.shape(m[0]["spatialFootprint"]).bounds
                 self.save_quicklook_image(url, bounds, product_srcid, target_dir)
