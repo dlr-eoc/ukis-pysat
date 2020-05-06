@@ -42,7 +42,7 @@ with get_sentinel_scene_from_dir(target_dir) as (full_path, ident):
 
 
 ## Installation
-The easiest way to install `pysat` is through pip. At least once we put this on pypi which might be never.
+The easiest way to install `pysat` is through pip. Be aware, that Rasterio requires GDAL >= 1.11, < 3.1.
 ```shell
 pip install ukis-pysat
 ```
