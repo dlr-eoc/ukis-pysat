@@ -6,14 +6,16 @@ import os
 import shutil
 import traceback
 
+import fiona
 import landsatxplore.api
+import pyproj
 import requests
 import sentinelsat
 from matplotlib.pyplot import imread
 from pylandsat import Product
-from shapely import geometry, wkt
+from shapely import geometry, wkt, ops
 
-from ukis_pysat.members import Datahub
+from ukis_pysat.members import Datahub, Platform
 from ukis_pysat.file import env_get, pack
 
 logger = logging.getLogger(__name__)
@@ -21,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Source:
     """
-    This class provides methods to query data sources for metadata and download images (APIs only).
+    This class provides methods to query data sources for metadata and download images and quicklooks (APIs only).
     Remote APIs and local data directories that hold metadata files are supported.
     """
 
@@ -59,158 +61,172 @@ class Source:
                 raise Exception(
                     f"{traceback.format_exc()} Could not connect to SciHub. This Exception was raised: {e}."
                 )
+
         else:
             raise NotImplementedError(f"{source} is not supported [file, earthexplorer, scihub]")
 
     def __enter__(self):
         return self
 
-    def query(self, aoi, platform, date, cloud_cover=None):
-        """This method queries satellite image metadata either online or on a local file directory.
+    @staticmethod
+    def _prep_aoi(aoi):
+        """ This method converts aoi to Shapely Polygon and reprojects to WGS84.
 
-        :param aoi: Area of interest in WGS84 (GeoJson).
+        :param aoi: Area of interest as Geojson file or bounding box in lat lon coordinates (String, Tuple)
+        :return: Shapely Polygon
+        """
+        if isinstance(aoi, str):
+            with fiona.open(aoi, "r") as aoi:
+                # make sure crs is in epsg:4326
+                project = pyproj.Transformer.from_proj(
+                    proj_from=pyproj.Proj(aoi.crs["init"]),
+                    proj_to=pyproj.Proj("epsg:4326"),
+                    skip_equivalent=True,
+                    always_xy=True,
+                )
+                aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
+
+        elif isinstance(aoi, tuple):
+            aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
+
+        else:
+            raise TypeError(f"aoi must be of type string or tuple")
+
+        return aoi
+
+    def query_metadata(self, platform, date, aoi, cloud_cover=None):
+        """This method queries satellite image metadata from data source.
+
         :param platform: image platform (<enum 'Platform'>).
         :param date: Date from - to (String or Datetime tuple). Expects a tuple of (start, end), e.g.
             (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
-
+        :param aoi: Area of interest as GeoJson file or bounding box tuple (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
         :returns: Metadata of products that match query criteria (GeoJSON-like mapping).
         """
         if self.src == Datahub.file:
             raise NotImplementedError("File metadata query not yet supported.")
+
         elif self.src == Datahub.EarthExplorer:
             try:
-                bbox = geometry.shape(sentinelsat.read_geojson(aoi)[0]["geometry"]).bounds
-                if not cloud_cover:
-                    # query Earthexplorer for metadata without cloudcoverpercentage
-                    meta_src = self.api.search(
-                        dataset=platform.value,
-                        bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
-                        start_date=sentinelsat.format_query_date(date[0]),
-                        end_date=sentinelsat.format_query_date(date[1]),
-                        max_results=10000,
-                    )
-                else:
-                    # query Earthexplorer for metadata with cloudcoverpercentage
-                    meta_src = self.api.search(
-                        dataset=platform.value,
-                        bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
-                        start_date=sentinelsat.format_query_date(date[0]),
-                        end_date=sentinelsat.format_query_date(date[1]),
-                        max_cloud_cover=cloud_cover[1],
-                        max_results=10000,
-                    )
+                # query Earthexplorer for metadata
+                bbox = self._prep_aoi(aoi).bounds
+                kwargs = {}
+                if cloud_cover:
+                    kwargs["max_cloud_cover"] = cloud_cover[1]
+                meta_src = self.api.search(
+                    dataset=platform.value,
+                    bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
+                    start_date=sentinelsat.format_query_date(date[0]),
+                    end_date=sentinelsat.format_query_date(date[1]),
+                    max_results=10000,
+                    **kwargs,
+                )
             except Exception as e:
                 raise Exception(
                     f"{traceback.format_exc()} Could not execute query to EarthExplorer. Check your query parameters. "
                     f"The following Exception was raised: {e}."
                 )
 
-            try:
-                for m in meta_src:
-                    try:
-                        # check if cloudcoverpercentage exists
-                        cloudcoverpercentage = m["cloudCover"]
-                    except KeyError:
-                        cloudcoverpercentage = ""  # leave it empty if not exists
-                    # convert metadata to custom metadata
-                    return self._construct_metadata(
-                        id=m["displayId"],
-                        platformname=platform,
-                        producttype="L1TP",
-                        orbitdirection="DESCENDING",
-                        orbitnumber=m["summary"][
-                            m["summary"].find("Path: ") + len("Path: ") : m["summary"].rfind(", Row: ")
-                        ],
-                        relativeorbitnumber=m["summary"][m["summary"].find("Row: ") + len("Row: ") :],
-                        acquisitiondate=m["acquisitionDate"],
-                        ingestiondate=m["modifiedDate"],
-                        processingdate="",
-                        processingsteps="",
-                        processingversion="",
-                        bandlist=[{}],
-                        cloudcoverpercentage=cloudcoverpercentage,
-                        format="GeoTIFF",
-                        size="",
-                        srcid=m["displayId"],
-                        srcurl=m["dataAccessUrl"],
-                        srcuuid=m["entityId"],
-                        geom=m["spatialFootprint"],
-                    )
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not convert metadata to custom metadata. "
-                    f"The following Exception was raised: {e}."
-                )
-
         elif self.src == Datahub.Scihub:
             try:
-                if not cloud_cover or platform == platform.Sentinel1:
-                    # query Scihub for metadata without cloudcoverpercentage
-                    meta_src = self.api.query(
-                        area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
-                        date=date,
-                        platformname=platform.value,
-                    )
-                else:
-                    # query Scihub for metadata with cloudcoverpercentage
-                    meta_src = self.api.query(
-                        area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
-                        date=date,
-                        platformname=platform.value,
-                        cloudcoverpercentage=cloud_cover,
-                    )
-                meta_src = self.api.to_geojson(meta_src)
+                # query Scihub for metadata
+                kwargs = {}
+                if cloud_cover and platform != platform.Sentinel1:
+                    kwargs["cloudcoverpercentage"] = cloud_cover
+                meta_src = self.api.query(
+                    # area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
+                    area=self._prep_aoi(aoi).wkt,
+                    date=date,
+                    platformname=platform.value,
+                    **kwargs,
+                )
+                meta_src = self.api.to_geojson(meta_src)["features"]
             except Exception as e:
                 raise Exception(
                     f"{traceback.format_exc()} Could not execute query to Scihub. Check your query parameters."
                     f"The following Exception was raised: {e}."
                 )
 
-            try:
-                for i in range(len(meta_src["features"])):
-                    try:
-                        # check if cloudcoverpercentage exists
-                        cloudcoverpercentage = meta_src["features"][i]["properties"]["cloudcoverpercentage"]
-                    except KeyError:
-                        cloudcoverpercentage = ""  # leave it empty if not exists
-                    # convert Scihub metadata to custom metadata
-                    return self._construct_metadata(
-                        id=meta_src["features"][i]["properties"]["identifier"],
-                        platformname=meta_src["features"][i]["properties"]["platformname"],
-                        producttype=meta_src["features"][i]["properties"]["producttype"],
-                        orbitdirection=meta_src["features"][i]["properties"]["orbitdirection"],
-                        orbitnumber=meta_src["features"][i]["properties"]["orbitnumber"],
-                        relativeorbitnumber=meta_src["features"][i]["properties"]["relativeorbitnumber"],
-                        acquisitiondate=meta_src["features"][i]["properties"]["beginposition"],
-                        ingestiondate=meta_src["features"][i]["properties"]["ingestiondate"],
-                        processingdate="",
-                        processingsteps="",
-                        processingversion="",
-                        bandlist=[{}],
-                        cloudcoverpercentage=cloudcoverpercentage,
-                        format=meta_src["features"][i]["properties"]["format"],
-                        size=meta_src["features"][i]["properties"]["size"],
-                        srcid=meta_src["features"][i]["properties"]["identifier"],
-                        srcurl=meta_src["features"][i]["properties"]["link"],
-                        srcuuid=meta_src["features"][i]["properties"]["uuid"],
-                        geom=meta_src["features"][i]["geometry"],
-                    )
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not convert metadata to custom metadata. "
-                    f"The following Exception was raised: {e}."
-                )
+        try:
+            # construct harmonized metadata
+            for m in meta_src:
+                return self.construct_metadata(meta_src=m)
+        except Exception as e:
+            raise Exception(
+                f"{traceback.format_exc()} Could not convert metadata to custom metadata. "
+                f"The following Exception was raised: {e}."
+            )
 
-    @staticmethod
-    def _construct_metadata(geom, **kwargs):
-        """This method puts satellite image metadata into __geo_interface__ https://gist.github.com/sgillies/2217756
+    def construct_metadata(self, meta_src):
+        """This method constructs metadata that is harmonized across different satellite image sources and
+        maps it into __geo_interface__ https://gist.github.com/sgillies/2217756
         Example Metadata: tests/testfiles/S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618.json
 
-        :param geom: geometry in GeoJSON-format
-        :returns: Metadata of satellite product (GeoJSON-like mapping)
+        :param meta_src: Source metadata (GeoJSON-like mapping)
+        :returns: Harmonized metadata (GeoJSON-like mapping)
         """
-        return geometry.mapping(_GeoInterface({"type": "Feature", "properties": kwargs, "geometry": geom}))
+        if self.src == Datahub.file:
+            raise NotImplementedError("File metadata construction not yet supported.")
+
+        elif self.src == Datahub.EarthExplorer:
+            prop = {}
+            prop["id"] = meta_src["displayId"]
+            prop["platformname"] = Platform(
+                meta_src["dataAccessUrl"][
+                    meta_src["dataAccessUrl"].find("dataset_name=")
+                    + len("dataset_name=") : meta_src["dataAccessUrl"].rfind("&ordered=")
+                ]
+            ).name
+            prop["producttype"] = "L1TP"
+            prop["orbitdirection"] = "DESCENDING"
+            prop["orbitnumber"] = meta_src["summary"][
+                meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
+            ]
+            prop["relativeorbitnumber"] = meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :]
+            prop["acquisitiondate"] = meta_src["acquisitionDate"]
+            prop["ingestiondate"] = meta_src["modifiedDate"]
+            prop["processingdate"] = ""
+            prop["processingsteps"] = ""
+            prop["processingversion"] = ""
+            prop["bandlist"] = [{}]
+            try:
+                prop["cloudcoverpercentage"] = round(meta_src["cloudCover"], 2)
+            except Exception:
+                prop["cloudcoverpercentage"] = ""
+            prop["format"] = "GeoTIFF"
+            prop["size"] = ""
+            prop["srcid"] = meta_src["displayId"]
+            prop["srcurl"] = meta_src["dataAccessUrl"]
+            prop["srcuuid"] = meta_src["entityId"]
+            geom = meta_src["spatialFootprint"]
+
+        elif self.src == Datahub.Scihub:
+            prop = {}
+            prop["id"] = meta_src["properties"]["identifier"]
+            prop["platformname"] = Platform(meta_src["properties"]["platformname"]).name
+            prop["producttype"] = meta_src["properties"]["producttype"]
+            prop["orbitdirection"] = meta_src["properties"]["orbitdirection"]
+            prop["orbitnumber"] = meta_src["properties"]["orbitnumber"]
+            prop["relativeorbitnumber"] = meta_src["properties"]["relativeorbitnumber"]
+            prop["acquisitiondate"] = meta_src["properties"]["beginposition"]
+            prop["ingestiondate"] = meta_src["properties"]["ingestiondate"]
+            prop["processingdate"] = ""
+            prop["processingsteps"] = ""
+            prop["processingversion"] = ""
+            prop["bandlist"] = [{}]
+            try:
+                prop["cloudcoverpercentage"] = round(meta_src["properties"]["cloudcoverpercentage"], 2)
+            except Exception:
+                prop["cloudcoverpercentage"] = ""
+            prop["format"] = meta_src["properties"]["format"]
+            prop["size"] = meta_src["properties"]["size"]
+            prop["srcid"] = meta_src["properties"]["identifier"]
+            prop["srcurl"] = meta_src["properties"]["link"]
+            prop["srcuuid"] = meta_src["properties"]["uuid"]
+            geom = meta_src["geometry"]
+
+        return geometry.mapping(_GeoInterface({"type": "Feature", "properties": prop, "geometry": geom}))
 
     def get_metadata(self, product_id):
         """This method gets satellite image metadata for a specific product from a local file directory.

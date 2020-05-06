@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "aoi_3857",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } },
+"features": [
+{ "type": "Feature", "properties": { "MINX": null, "MINY": null, "MAXX": null, "MAXY": null, "CNTX": null, "CNTY": null, "AREA": null, "PERIM": null, "HEIGHT": null, "WIDTH": null }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 1325007.596623238641769, 6704215.58994026388973 ], [ 1325007.596623238641769, 6710389.37193488329649 ], [ 1330016.725676901638508, 6710389.37193488329649 ], [ 1330016.725676901638508, 6704215.58994026388973 ], [ 1325007.596623238641769, 6704215.58994026388973 ] ] ] } }
+]
+}
