@@ -24,6 +24,7 @@ Added
 
 Fixed
 *****
+- fixed #7
 
 Changed
 *******

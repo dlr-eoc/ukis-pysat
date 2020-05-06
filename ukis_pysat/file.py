@@ -121,23 +121,29 @@ def get_ts_from_sentinel_filename(filename, start_date=True):
     :param  filename: top-level SENTINEL product folder or file name
     :param start_date: boolean (default: True), False is Stop Date, optional
     :return: str
-
     >>> get_ts_from_sentinel_filename("S1M_BB_TTTR_LFPP_20200113T074619_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip")
     '20200113T074619'
-    >>> get_ts_from_sentinel_filename("MMM_BB_TTTR_LFPP_YYYYMMDDTHHMMSS_20200113T002219_OOOOOO_DDDDDD_CCCC.SAFE.zip", False)
+    >>> get_ts_from_sentinel_filename("S1M_BB_TTTR_LFPP_YYYYMMDDTHHMMSS_20200113T002219_OOOOOO_DDDDDD_CCCC.SAFE.zip", False)
     '20200113T002219'
-    >>> get_ts_from_sentinel_filename("S3M_OL_L_TTTTTT_yyyymmddThhmmss_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3")
+    >>> get_ts_from_sentinel_filename("S3M_OL_L_TTT____yyyymmddThhmmss_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3")
     'yyyymmddThhmmss'
+    >>> get_ts_from_sentinel_filename("S3M_OL_L_TTTTTT_yyyymmddThhmmss_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3", False)
+    'YYYYMMDDTHHMMSS'
     >>> get_ts_from_sentinel_filename("S2AM_MSIXXX_YYYYMMDDHHMMSS_Nxxyy_ROOO_Txxxxx_<Product Discriminator>.SAFE")
     'YYYYMMDDHHMMSS'
     """
     if filename.startswith("S2"):
         return filename.split("_")[2]
-    else:
+    elif filename.startswith("S1"):
         if start_date:
             return filename.split("_")[4]
         else:
             return filename.split("_")[5]
+    else:
+        if start_date:
+            return filename[16:31]
+        else:
+            return filename[32:47]
 
 
 def get_footprint_from_manifest(xml_path):
