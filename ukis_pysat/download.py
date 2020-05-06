@@ -6,11 +6,11 @@ import os
 import shutil
 import traceback
 
+import fiona
 import landsatxplore.api
+import pyproj
 import requests
 import sentinelsat
-import fiona
-import pyproj
 from matplotlib.pyplot import imread
 from pylandsat import Product
 from shapely import geometry, wkt, ops
