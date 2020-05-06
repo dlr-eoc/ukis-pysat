@@ -76,11 +76,13 @@ class Source:
         :return: Shapely Polygon
         """
         if isinstance(aoi, str):
-            with fiona.open(aoi, 'r') as aoi:
+            with fiona.open(aoi, "r") as aoi:
                 # make sure crs is in epsg:4326
                 project = pyproj.Transformer.from_proj(
-                    proj_from=pyproj.Proj(aoi.crs['init']), proj_to=pyproj.Proj("epsg:4326"),
-                    skip_equivalent=True, always_xy=True
+                    proj_from=pyproj.Proj(aoi.crs["init"]),
+                    proj_to=pyproj.Proj("epsg:4326"),
+                    skip_equivalent=True,
+                    always_xy=True,
                 )
                 aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
 
@@ -111,14 +113,14 @@ class Source:
                 bbox = self._prep_aoi(aoi).bounds
                 kwargs = {}
                 if cloud_cover:
-                    kwargs['max_cloud_cover'] = cloud_cover[1]
+                    kwargs["max_cloud_cover"] = cloud_cover[1]
                 meta_src = self.api.search(
                     dataset=platform.value,
                     bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
                     start_date=sentinelsat.format_query_date(date[0]),
                     end_date=sentinelsat.format_query_date(date[1]),
                     max_results=10000,
-                    **kwargs
+                    **kwargs,
                 )
             except Exception as e:
                 raise Exception(
@@ -131,13 +133,13 @@ class Source:
                 # query Scihub for metadata
                 kwargs = {}
                 if cloud_cover and platform != platform.Sentinel1:
-                    kwargs['cloudcoverpercentage'] = cloud_cover
+                    kwargs["cloudcoverpercentage"] = cloud_cover
                 meta_src = self.api.query(
                     # area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
                     area=self._prep_aoi(aoi).wkt,
                     date=date,
                     platformname=platform.value,
-                    **kwargs
+                    **kwargs,
                 )
                 meta_src = self.api.to_geojson(meta_src)["features"]
             except Exception as e:
@@ -173,15 +175,15 @@ class Source:
             prop["platformname"] = Platform(
                 meta_src["dataAccessUrl"][
                     meta_src["dataAccessUrl"].find("dataset_name=")
-                    + len("dataset_name="): meta_src["dataAccessUrl"].rfind("&ordered=")
+                    + len("dataset_name=") : meta_src["dataAccessUrl"].rfind("&ordered=")
                 ]
             ).name
             prop["producttype"] = "L1TP"
             prop["orbitdirection"] = "DESCENDING"
             prop["orbitnumber"] = meta_src["summary"][
-                meta_src["summary"].find("Path: ") + len("Path: "): meta_src["summary"].rfind(", Row: ")
+                meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
             ]
-            prop["relativeorbitnumber"] = meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: "):]
+            prop["relativeorbitnumber"] = meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :]
             prop["acquisitiondate"] = meta_src["acquisitionDate"]
             prop["ingestiondate"] = meta_src["modifiedDate"]
             prop["processingdate"] = ""
@@ -304,7 +306,7 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             try:
-                m = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid], }, )
+                m = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
                 url = m[0]["browseUrl"]
                 bounds = geometry.shape(m[0]["spatialFootprint"]).bounds
                 self.save_quicklook_image(url, bounds, product_srcid, target_dir)
