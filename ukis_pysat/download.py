@@ -9,9 +9,9 @@ import traceback
 import fiona
 import landsatxplore.api
 import pyproj
+import rasterio
 import requests
 import sentinelsat
-from matplotlib.pyplot import imread
 from pylandsat import Product
 from shapely import geometry, wkt, ops
 
@@ -339,7 +339,8 @@ class Source:
         response = requests.get(url, auth=(self.user, self.pw))
         with open(os.path.join(target_dir, product_srcid + ".jpg"), "wb") as f:
             f.write(response.content)
-        quicklook = imread(os.path.join(target_dir, product_srcid + ".jpg"))
+        with rasterio.open(os.path.join(target_dir, product_srcid + ".jpg"), driver="JPEG") as ds:
+            quicklook = ds.read()
         quicklook_size = (quicklook.shape[1], quicklook.shape[0])
 
         # geocode quicklook
