@@ -100,9 +100,9 @@ class Source:
         :param platform: image platform (<enum 'Platform'>).
         :param date: Date from - to (String or Datetime tuple). Expects a tuple of (start, end), e.g.
             (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
-        :param aoi: Area of interest as GeoJson file or bounding box tuple (String, Tuple).
+        :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
-        :returns: Metadata of products that match query criteria (GeoJSON-like mapping).
+        :returns: Metadata of products that match query criteria (List of GeoJSON-like mapping).
         """
         if self.src == Datahub.file:
             raise NotImplementedError("File metadata query not yet supported.")
@@ -135,7 +135,6 @@ class Source:
                 if cloud_cover and platform != platform.Sentinel1:
                     kwargs["cloudcoverpercentage"] = cloud_cover
                 meta_src = self.api.query(
-                    # area=sentinelsat.geojson_to_wkt(sentinelsat.read_geojson(aoi)),
                     area=self._prep_aoi(aoi).wkt,
                     date=date,
                     platformname=platform.value,
@@ -149,9 +148,11 @@ class Source:
                 )
 
         try:
-            # construct harmonized metadata
+            # construct list of harmonized metadata
+            meta = []
             for m in meta_src:
-                return self.construct_metadata(meta_src=m)
+                meta.append(self.construct_metadata(meta_src=m))
+            return meta
         except Exception as e:
             raise Exception(
                 f"{traceback.format_exc()} Could not convert metadata to custom metadata. "
@@ -228,25 +229,29 @@ class Source:
 
         return geometry.mapping(_GeoInterface({"type": "Feature", "properties": prop, "geometry": geom}))
 
-    def get_metadata(self, product_id):
-        """This method gets satellite image metadata for a specific product from a local file directory.
+    def filter_metadata(self, meta, filter_dict):
+        """This method filters metadata as returned by query_metadata().
 
-        :param product_id: ID of the satellite image product (String).
-        :returns: Metadata of satellite product that matches the product_id (GeoJson).
+        :param metadata: Metadata of product(s) (GeoJSON-like mapping).
+        :param filter: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
+        :returns: Metadata of products that match filter criteria (List of GeoJSON-like mapping).
         """
-        if self.src == Datahub.file:
-            # search local directory for metadata of a particular image
-            for root, dirs, files in os.walk(str(self.api)):
-                for file in files:
-                    if file.endswith(".json") and product_id in file:
-                        with open(os.path.join(root, file)) as json_file:
-                            return json.load(json_file)
+        m = []
+        k = list(filter_dict.keys())
+        for i in range(len(meta)):
+            if filter_dict[k[0]] == meta[i]["properties"][k[0]]:
+                m.append(meta[i])
+        return m
 
-        elif self.src == Datahub.EarthExplorer:
-            raise NotImplementedError(f"get_metadata not supported for {self.src}.")
+    def download_metadata(self, meta, target_dir):
+        """This method writes metadata as returned by query_metadata() to file.
 
-        elif self.src == Datahub.Scihub:
-            raise NotImplementedError(f"get_metadata not supported for {self.src}.")
+        :param metadata: Metadata of product(s) (GeoJSON-like mapping).
+        :param target_dir: Target directory that holds the downloaded metadata (String)
+        """
+        for i in range(len(meta)):
+            with open(os.path.join(target_dir, meta[i]["properties"]["srcid"] + ".json"), "w") as f:
+                json.dump(meta[i], f)
 
     def download_image(self, product_srcid, product_uuid, target_dir):
         """This method downloads satellite image data to a target directory for a specific product_id.
@@ -306,9 +311,9 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             try:
-                m = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
-                url = m[0]["browseUrl"]
-                bounds = geometry.shape(m[0]["spatialFootprint"]).bounds
+                meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+                url = meta_src[0]["browseUrl"]
+                bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
                 self.save_quicklook_image(url, bounds, product_srcid, target_dir)
             except Exception as e:
                 logger.warning(
@@ -318,11 +323,11 @@ class Source:
 
         elif self.src == Datahub.Scihub:
             try:
-                m = self.api.get_product_odata(product_uuid)
+                meta_src = self.api.get_product_odata(product_uuid)
                 url = "https://scihub.copernicus.eu/apihub/odata/v1/Products('{}')/Products('Quicklook')/$value".format(
                     product_uuid
                 )
-                bounds = wkt.loads(m["footprint"]).bounds
+                bounds = wkt.loads(meta_src["footprint"]).bounds
                 self.save_quicklook_image(url, bounds, product_srcid, target_dir)
             except Exception as e:
                 logger.warning(
