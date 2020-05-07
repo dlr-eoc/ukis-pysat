@@ -297,12 +297,11 @@ class Source:
                     f"This Exception was raised: {e}."
                 )
 
-    def download_quicklook(self, platform, product_uuid, product_srcid, target_dir):
+    def download_quicklook(self, platform, product_uuid, target_dir):
         """This method downloads a quicklook of the satellite image to a target directory for a specific product_id.
 
         :param platform: image platform (<enum 'Platform'>).
         :param product_uuid: UUID of the satellite image product (String).
-        :param product_srcid: Product source id (String).
         :param target_dir: Target directory that holds the downloaded images (String)
         """
         if self.src == Datahub.file:
@@ -311,10 +310,11 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             try:
+                # query EarthExplorer for url, srcid and bounds of product
                 meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
                 url = meta_src[0]["browseUrl"]
                 bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
-                self.save_quicklook_image(url, bounds, product_srcid, target_dir)
+                product_srcid = meta_src[0]["displayId"]
             except Exception as e:
                 logger.warning(
                     f"{traceback.format_exc()} Could not download and save quicklook. "
@@ -323,32 +323,26 @@ class Source:
 
         elif self.src == Datahub.Scihub:
             try:
+                # query Scihub for url, srcid and bounds of product
                 meta_src = self.api.get_product_odata(product_uuid)
                 url = "https://scihub.copernicus.eu/apihub/odata/v1/Products('{}')/Products('Quicklook')/$value".format(
                     product_uuid
                 )
                 bounds = wkt.loads(meta_src["footprint"]).bounds
-                self.save_quicklook_image(url, bounds, product_srcid, target_dir)
+                product_srcid = meta_src["title"]
             except Exception as e:
                 logger.warning(
                     f"{traceback.format_exc()} Could not download and save quicklook. This Exception was raised: {e}."
                 )
 
-    def save_quicklook_image(self, platform, bounds, product_srcid, target_dir):
-        """This method saves a quicklook of the satellite image to a target directory for a specific product_id.
-
-        :param platform: image platform (<enum 'Platform'>).
-        :param bounds: Bounding Box of footprint
-        :param product_srcid: Product source id (String).
-        :param target_dir: Target directory that holds the downloaded images (String)
-        """
-        response = requests.get(platform, auth=(self.user, self.pw))
+        # download quicklook from url
+        response = requests.get(url, auth=(self.user, self.pw))
         with open(os.path.join(target_dir, product_srcid + ".jpg"), "wb") as f:
             f.write(response.content)
         quicklook = imread(os.path.join(target_dir, product_srcid + ".jpg"))
         quicklook_size = (quicklook.shape[1], quicklook.shape[0])
 
-        # save worldfile
+        # geocode quicklook
         dist_x = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[2], bounds[1])) / quicklook_size[0]
         dist_y = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[0], bounds[3])) / quicklook_size[1]
         ul_x, ul_y = bounds[0], bounds[3]

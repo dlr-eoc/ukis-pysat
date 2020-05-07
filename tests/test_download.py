@@ -104,10 +104,10 @@ class DownloadTest(unittest.TestCase):
     def test_download_quicklook(self):
         for i in range(len(queries)):
             with Source(source=queries[i]["source"]) as src:
+                # download geocoded quicklook
                 src.download_quicklook(
                     platform=queries[i]["platform_name"],
                     product_uuid=queries[i]["returns_uuid"],
-                    product_srcid=queries[i]["returns_srcid"],
                     target_dir=target_dir,
                 )
             self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpg"))
