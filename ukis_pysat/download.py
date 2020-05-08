@@ -138,10 +138,7 @@ class Source:
                 if cloud_cover and platform != platform.Sentinel1:
                     kwargs["cloudcoverpercentage"] = cloud_cover
                 meta_src = self.api.query(
-                    area=self._prep_aoi(aoi).wkt,
-                    date=date,
-                    platformname=platform.value,
-                    **kwargs,
+                    area=self._prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,
                 )
                 meta_src = self.api.to_geojson(meta_src)["features"]
             except Exception as e:
@@ -174,29 +171,30 @@ class Source:
             raise NotImplementedError("File metadata construction not yet supported.")
 
         elif self.src == Datahub.EarthExplorer:
-            prop = {}
-            prop["id"] = meta_src["displayId"]
-            prop["platformname"] = Platform(
-                meta_src["dataAccessUrl"][
-                    meta_src["dataAccessUrl"].find("dataset_name=")
-                    + len("dataset_name=") : meta_src["dataAccessUrl"].rfind("&ordered=")
-                ]
-            ).name
-            prop["producttype"] = "L1TP"
-            prop["orbitdirection"] = "DESCENDING"
-            prop["orbitnumber"] = meta_src["summary"][
-                meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
-            ]
-            prop["relativeorbitnumber"] = meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :]
-            prop["acquisitiondate"] = meta_src["acquisitionDate"]
-            prop["ingestiondate"] = meta_src["modifiedDate"]
-            prop["processingdate"] = ""
-            prop["processingsteps"] = ""
-            prop["processingversion"] = ""
-            prop["bandlist"] = [{}]
+            prop = {
+                "id": meta_src["displayId"],
+                "platformname": Platform(
+                    meta_src["dataAccessUrl"][
+                        meta_src["dataAccessUrl"].find("dataset_name=")
+                        + len("dataset_name=") : meta_src["dataAccessUrl"].rfind("&ordered=")
+                    ]
+                ).name,
+                "producttype": "L1TP",
+                "orbitdirection": "DESCENDING",
+                "orbitnumber": meta_src["summary"][
+                    meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
+                ],
+                "relativeorbitnumber": meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :],
+                "acquisitiondate": meta_src["acquisitionDate"],
+                "ingestiondate": meta_src["modifiedDate"],
+                "processingdate": "",
+                "processingsteps": "",
+                "processingversion": "",
+                "bandlist": [{}],
+            }
             try:
                 prop["cloudcoverpercentage"] = round(meta_src["cloudCover"], 2)
-            except Exception:
+            except KeyError:
                 prop["cloudcoverpercentage"] = ""
             prop["format"] = "GeoTIFF"
             prop["size"] = ""
@@ -205,23 +203,24 @@ class Source:
             prop["srcuuid"] = meta_src["entityId"]
             geom = meta_src["spatialFootprint"]
 
-        elif self.src == Datahub.Scihub:
-            prop = {}
-            prop["id"] = meta_src["properties"]["identifier"]
-            prop["platformname"] = Platform(meta_src["properties"]["platformname"]).name
-            prop["producttype"] = meta_src["properties"]["producttype"]
-            prop["orbitdirection"] = meta_src["properties"]["orbitdirection"]
-            prop["orbitnumber"] = meta_src["properties"]["orbitnumber"]
-            prop["relativeorbitnumber"] = meta_src["properties"]["relativeorbitnumber"]
-            prop["acquisitiondate"] = meta_src["properties"]["beginposition"]
-            prop["ingestiondate"] = meta_src["properties"]["ingestiondate"]
-            prop["processingdate"] = ""
-            prop["processingsteps"] = ""
-            prop["processingversion"] = ""
-            prop["bandlist"] = [{}]
+        else:  # self.src must be Datahub.Scihub
+            prop = {
+                "id": meta_src["properties"]["identifier"],
+                "platformname": Platform(meta_src["properties"]["platformname"]).name,
+                "producttype": meta_src["properties"]["producttype"],
+                "orbitdirection": meta_src["properties"]["orbitdirection"],
+                "orbitnumber": meta_src["properties"]["orbitnumber"],
+                "relativeorbitnumber": meta_src["properties"]["relativeorbitnumber"],
+                "acquisitiondate": meta_src["properties"]["beginposition"],
+                "ingestiondate": meta_src["properties"]["ingestiondate"],
+                "processingdate": "",
+                "processingsteps": "",
+                "processingversion": "",
+                "bandlist": [{}],
+            }
             try:
                 prop["cloudcoverpercentage"] = round(meta_src["properties"]["cloudcoverpercentage"], 2)
-            except Exception:
+            except KeyError:
                 prop["cloudcoverpercentage"] = ""
             prop["format"] = meta_src["properties"]["format"]
             prop["size"] = meta_src["properties"]["size"]
@@ -232,7 +231,8 @@ class Source:
 
         return geometry.mapping(_GeoInterface({"type": "Feature", "properties": prop, "geometry": geom}))
 
-    def filter_metadata(self, meta, filter_dict):
+    @staticmethod
+    def filter_metadata(meta, filter_dict):
         """This method filters metadata as returned by query_metadata() based on filter_dict.
 
         :param meta: Metadata of product(s) (List of GeoJSON-like mappings).
@@ -246,10 +246,11 @@ class Source:
                 m.append(meta[i])
         return m
 
-    def download_metadata(self, meta, target_dir):
+    @staticmethod
+    def download_metadata(meta, target_dir):
         """This method writes metadata as returned by query_metadata() to file.
 
-        :param metadata: Metadata of product(s) (GeoJSON-like mapping).
+        :param meta: Metadata of product(s) (GeoJSON-like mapping).
         :param target_dir: Target directory that holds the downloaded metadata (String)
         """
         for i in range(len(meta)):
@@ -270,7 +271,9 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             try:
                 # query EarthExplorer for srcid of product
-                meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+                meta_src = self.api.request(
+                    "metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},
+                )
                 product_srcid = meta_src[0]["displayId"]
                 # download data from AWS
                 # landsatxplore is great for metadata search on EE but download via EE is slow. pylandsat is great
@@ -294,7 +297,7 @@ class Source:
                     f"This Exception was raised: {e}."
                 )
 
-        elif self.src == Datahub.Scihub:
+        else:  # self.src must be Datahub.Scihub
             try:
                 self.api.download(product_uuid, target_dir, checksum=True)
             except Exception as e:
@@ -317,7 +320,9 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             try:
                 # query EarthExplorer for url, srcid and bounds of product
-                meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+                meta_src = self.api.request(
+                    "metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},
+                )
                 url = meta_src[0]["browseUrl"]
                 bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
                 product_srcid = meta_src[0]["displayId"]
@@ -326,8 +331,9 @@ class Source:
                     f"{traceback.format_exc()} Could not download and save quicklook. "
                     f"This Exception was raised: {e}."
                 )
+                return
 
-        elif self.src == Datahub.Scihub:
+        else:  # self.src must be Datahub.Scihub
             try:
                 # query Scihub for url, srcid and bounds of product
                 meta_src = self.api.get_product_odata(product_uuid)
@@ -340,13 +346,14 @@ class Source:
                 logger.warning(
                     f"{traceback.format_exc()} Could not download and save quicklook. This Exception was raised: {e}."
                 )
+                return
 
         # download quicklook and crop no-data borders
         response = requests.get(url, auth=(self.user, self.pw))
         quicklook = np.asarray(Image.open(BytesIO(response.content)))
         # use threshold of 50 to overcome noise in JPEG compression
         xs, ys, zs = np.where(quicklook >= 50)
-        quicklook = quicklook[min(xs):max(xs)+1, min(ys):max(ys)+1, min(zs):max(zs)+1]
+        quicklook = quicklook[min(xs) : max(xs) + 1, min(ys) : max(ys) + 1, min(zs) : max(zs) + 1]
         Image.fromarray(quicklook).save(os.path.join(target_dir, product_srcid + ".jpg"))
 
         # geocode quicklook
