@@ -256,11 +256,11 @@ class Source:
             with open(os.path.join(target_dir, meta[i]["properties"]["srcid"] + ".json"), "w") as f:
                 json.dump(meta[i], f)
 
-    def download_image(self, product_srcid, product_uuid, target_dir):
+    def download_image(self, platform, product_uuid, target_dir):
         """This method downloads satellite image data to a target directory for a specific product_id.
         Incomplete downloads are continued and complete files are skipped.
 
-        :param product_srcid: Product source id (String).
+        :param platform: image platform (<enum 'Platform'>).
         :param product_uuid: UUID of the satellite image product (String).
         :param target_dir: Target directory that holds the downloaded images (String)
         """
@@ -269,9 +269,12 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             try:
-                # NOTE: this downloads data from Amazon AWS using pylandsat. landsatxplore is great for metadata
-                # search on EE but download via EE is slow. pylandsat is great for fast download from AWS but is
-                # poor for metadata search. Here we combine them to get the best from both packages.
+                # query EarthExplorer for srcid of product
+                meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+                product_srcid = meta_src[0]["displayId"]
+                # download data from Amazon AWS
+                # NOTE: landsatxplore is great for metadata search on EE but download via EE is slow. pylandsat is great
+                # for fast download from AWS but does not provide good metadata search. Here we combine their benefits.
                 product = Product(product_srcid)
                 product.download(out_dir=target_dir, progressbar=False)
             except Exception as e:
