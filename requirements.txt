@@ -3,7 +3,6 @@ numpy
 dask[array]
 requests
 rasterio
-matplotlib
 pillow
 sentinelsat
 landsatxplore==0.6
