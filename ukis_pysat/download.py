@@ -305,6 +305,7 @@ class Source:
 
     def download_quicklook(self, platform, product_uuid, target_dir):
         """This method downloads a quicklook of the satellite image to a target directory for a specific product_id.
+        It performs a very rough geocoding of the quicklooks by shifting the image to the location of the footprint.
 
         :param platform: image platform (<enum 'Platform'>).
         :param product_uuid: UUID of the satellite image product (String).
