@@ -105,7 +105,7 @@ class Source:
             (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
         :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
-        :returns: Metadata of products that match query criteria (List of GeoJSON-like mapping).
+        :returns: Metadata of products that match query criteria (List of GeoJSON-like mappings).
         """
         if self.src == Datahub.file:
             raise NotImplementedError("File metadata query not yet supported.")
@@ -233,11 +233,11 @@ class Source:
         return geometry.mapping(_GeoInterface({"type": "Feature", "properties": prop, "geometry": geom}))
 
     def filter_metadata(self, meta, filter_dict):
-        """This method filters metadata as returned by query_metadata().
+        """This method filters metadata as returned by query_metadata() based on filter_dict.
 
-        :param metadata: Metadata of product(s) (GeoJSON-like mapping).
-        :param filter: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
-        :returns: Metadata of products that match filter criteria (List of GeoJSON-like mapping).
+        :param meta: Metadata of product(s) (List of GeoJSON-like mappings).
+        :param filter_dict: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
+        :returns: Metadata of products that match filter criteria (List of GeoJSON-like mappings).
         """
         m = []
         k = list(filter_dict.keys())
@@ -272,8 +272,8 @@ class Source:
                 # query EarthExplorer for srcid of product
                 meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
                 product_srcid = meta_src[0]["displayId"]
-                # download data from Amazon AWS
-                # NOTE: landsatxplore is great for metadata search on EE but download via EE is slow. pylandsat is great
+                # download data from AWS
+                # landsatxplore is great for metadata search on EE but download via EE is slow. pylandsat is great
                 # for fast download from AWS but does not provide good metadata search. Here we combine their benefits.
                 product = Product(product_srcid)
                 product.download(out_dir=target_dir, progressbar=False)
@@ -312,8 +312,7 @@ class Source:
         :param target_dir: Target directory that holds the downloaded images (String)
         """
         if self.src == Datahub.file:
-            logger.warning(f"download_quicklook not supported for {self.src}.")
-            return
+            raise NotImplementedError(f"download_quicklook not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
             try:
@@ -343,9 +342,9 @@ class Source:
                 )
 
         # download quicklook and crop no-data borders
-        # NOTE: use threshold of 50 to overcome noise in JPEG compression
         response = requests.get(url, auth=(self.user, self.pw))
         quicklook = np.asarray(Image.open(BytesIO(response.content)))
+        # use threshold of 50 to overcome noise in JPEG compression
         xs, ys, zs = np.where(quicklook >= 50)
         quicklook = quicklook[min(xs):max(xs)+1, min(ys):max(ys)+1, min(zs):max(zs)+1]
         Image.fromarray(quicklook).save(os.path.join(target_dir, product_srcid + ".jpg"))
