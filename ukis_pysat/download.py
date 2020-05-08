@@ -8,15 +8,18 @@ import traceback
 
 import fiona
 import landsatxplore.api
+import numpy as np
 import pyproj
-import rasterio
 import requests
 import sentinelsat
+from io import BytesIO
+from PIL import Image
 from pylandsat import Product
 from shapely import geometry, wkt, ops
 
 from ukis_pysat.members import Datahub, Platform
 from ukis_pysat.file import env_get, pack
+
 
 logger = logging.getLogger(__name__)
 
@@ -335,15 +338,16 @@ class Source:
                     f"{traceback.format_exc()} Could not download and save quicklook. This Exception was raised: {e}."
                 )
 
-        # download quicklook from url
+        # download quicklook and crop no-data borders
+        # NOTE: use threshold of 50 to overcome noise in JPEG compression
         response = requests.get(url, auth=(self.user, self.pw))
-        with open(os.path.join(target_dir, product_srcid + ".jpg"), "wb") as f:
-            f.write(response.content)
-        with rasterio.open(os.path.join(target_dir, product_srcid + ".jpg"), driver="JPEG") as ds:
-            quicklook = ds.read()
-        quicklook_size = (quicklook.shape[1], quicklook.shape[0])
+        quicklook = np.asarray(Image.open(BytesIO(response.content)))
+        xs, ys, zs = np.where(quicklook >= 50)
+        quicklook = quicklook[min(xs):max(xs)+1, min(ys):max(ys)+1, min(zs):max(zs)+1]
+        Image.fromarray(quicklook).save(os.path.join(target_dir, product_srcid + ".jpg"))
 
         # geocode quicklook
+        quicklook_size = (quicklook.shape[1], quicklook.shape[0])
         dist_x = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[2], bounds[1])) / quicklook_size[0]
         dist_y = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[0], bounds[3])) / quicklook_size[1]
         ul_x, ul_y = bounds[0], bounds[3]
