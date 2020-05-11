@@ -35,7 +35,10 @@ class Source:
         :param source: Name of the data source ['file', 'scihub', 'earthexplorer'] (String).
         :param source_dir: Path to directory if source is 'file' (String).
         """
-        self.src = source
+        try:
+            self.src = source
+        except AttributeError:
+            raise AttributeError(f"{source} is not supported [Datahub.file, Datahub.EarthExplorer, Datahub.Scihub]")
 
         if self.src == Datahub.file:
             if not source_dir:
@@ -66,7 +69,7 @@ class Source:
                 )
 
         else:
-            raise NotImplementedError(f"{source} is not supported [file, earthexplorer, scihub]")
+            raise NotImplementedError(f"{source} is not supported [file, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
@@ -266,7 +269,7 @@ class Source:
         :param target_dir: Target directory that holds the downloaded images (String)
         """
         if self.src == Datahub.file:
-            logger.warning(f"download_image not supported for {self.src}.")
+            raise Exception("download_image() not supported for Datahub.file.")
 
         elif self.src == Datahub.EarthExplorer:
             try:
