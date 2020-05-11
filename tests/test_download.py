@@ -86,9 +86,7 @@ class DownloadTest(unittest.TestCase):
         with self.assertRaises(NotImplementedError, msg=f"Hub is not supported [file, EarthExplorer, Scihub]."):
             Source("Hub")
 
-        with self.assertRaises(
-            AttributeError, msg=f"Datahub.hub is not supported [Datahub.file, Datahub.EarthExplorer, Datahub.Scihub]"
-        ):
+        with self.assertRaises(AttributeError):
             Source(Datahub.Hub)
 
     def test_exceptions(self):

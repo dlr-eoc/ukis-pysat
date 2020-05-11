@@ -35,10 +35,7 @@ class Source:
         :param source: Name of the data source ['file', 'scihub', 'earthexplorer'] (String).
         :param source_dir: Path to directory if source is 'file' (String).
         """
-        try:
-            self.src = source
-        except AttributeError:
-            raise AttributeError(f"{source} is not supported [Datahub.file, Datahub.EarthExplorer, Datahub.Scihub]")
+        self.src = source
 
         if self.src == Datahub.file:
             if not source_dir:
