@@ -18,7 +18,9 @@ something was changed
 
 Added
 *****
-- ``download.Source()``: Static method ``_prep_aoi()`` for on the fly perparation of aoi for queries #1
+- ``download.Source()``: Classes ``Metadata`` and ``MetadataCollection`` for metadata handling #13
+- expanded metadata part in README #13- requirements: pandas, pyfields
+- ``download.Source()``: Static method ``prep_aoi()`` for on the fly perparation of aoi for queries #1
 - ``download.Source()``: ``query()`` accepts now aoi in forms of geojson file with varying CRS or bounding box coordinates in Lat Lon #1
 - requirements: pyproj #1
 - ``download.Source()``: added methods to filter and download metadata #4
@@ -31,7 +33,7 @@ Fixed
 
 Changed
 *******
-
+- ``download.Source()``: Moved ``download_metadata()`` and ``filter_metadata()`` to ``Metadata`` class #13
 - ``download.Source()``: Moved all metadata mapping from ``query()`` to ``construct_metadata()`` #1
 - ``download.Source()``: Changed ``_construct_metadata()`` to ``construct_metadata()`` and removed static #1
 - ``download.Source()``: Simplified api queries in ``query()`` #1
