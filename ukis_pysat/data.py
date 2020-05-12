@@ -278,7 +278,7 @@ class Image:
         return [wave_bands[platform][wavelength.lower()] for wavelength in wavelengths]
 
     def get_tiles(self, width=256, height=256, overlap=0):
-        """calculates rasterio.windows.Window, idea from https://stackoverflow.com/a/54525931
+        """Calculates rasterio.windows.Window, idea from https://stackoverflow.com/a/54525931
 
         TODO boundless with 'reflect' padding
 
@@ -305,6 +305,16 @@ class Image:
     def smooth_tiles(self, window_tile):
         # TODO using tukey --> https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.tukey.html
         pass
+
+    def get_subset(self, tile):
+        """
+        Build a subset of an array. Shape of array is announced with (bands, height, width).
+        :param tile:
+        :return: Sliced numpy array, bounding box of array slice
+        """
+        # access window bounds
+        bounds = windows.bounds(tile, self.dataset.transform)
+        return self.arr[(slice(None),) + tile.toslices()], bounds
 
     def get_dask_array(self, chunk_size=(1, 6000, 6000)):
         """ transforms numpy to dask array
