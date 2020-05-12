@@ -6,25 +6,23 @@ import logging
 import os
 import shutil
 import traceback
+from io import BytesIO
+from typing import List
 
 import fiona
 import landsatxplore.api
 import numpy as np
-import pandas as pd
 import pyproj
 import requests
 import sentinelsat
-from dateutil.parser import parse
-from io import BytesIO
 from PIL import Image
+from dateutil.parser import parse
 from pyfields import field, make_init
 from pylandsat import Product
 from shapely import geometry, wkt, ops
-from typing import List
 
-from ukis_pysat.members import Datahub, Platform
 from ukis_pysat.file import env_get, pack
-
+from ukis_pysat.members import Datahub, Platform
 
 logger = logging.getLogger(__name__)
 
@@ -471,6 +469,11 @@ class MetadataCollection:
 
         :returns: MetadataCollection (Pandas Dataframe)
         """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError("to_pandas requires optional dependency Pandas.")
+
         d = [item.to_dict() for item in self.items]
         return pd.DataFrame(d)
 

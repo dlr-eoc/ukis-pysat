@@ -94,7 +94,7 @@ class DataTest(unittest.TestCase):
         self.assertEqual(idx, 20807)
 
     def test_get_dask_array(self):
-        self.assertIsInstance(img.get_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
+        self.assertIsInstance(img.to_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
 
     def test_write_to_file(self):
         img.write_to_file(r"result.tif")

@@ -35,7 +35,7 @@ setup(
     zip_safe=False,
     packages=find_packages(),
     install_requires=open("requirements.txt").read().splitlines(),
-    extras_require={"dev": ["sphinx >= 1.3", "sphinx_rtd_theme",],},
+    extras_require={"dev": ["sphinx >= 1.3", "sphinx_rtd_theme", "coverage", "pandas", "dask[array]",],},
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",

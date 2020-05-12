@@ -38,7 +38,7 @@ Changed
 - ``download.Source()``: Changed ``_construct_metadata()`` to ``construct_metadata()`` and removed static #1
 - ``download.Source()``: Simplified api queries in ``query()`` #1
 - ``download.Source()``: removed ``get_metadata()`` #4
-- requirements: Removed matplotlib #9
+- requirements: Removed matplotlib, pandas and dask optional #9
 
 [0.1.0] – 2020-04-29
 --------------------
