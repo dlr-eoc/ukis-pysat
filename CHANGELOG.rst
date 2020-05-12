@@ -18,6 +18,7 @@ something was changed
 
 Added
 *****
+- ``data.Image()``: method ``get_subset()`` to retrieve subset array and bounding box of image tile #12
 - ``download.Source()``: Static method ``_prep_aoi()`` for on the fly perparation of aoi for queries #1
 - ``download.Source()``: ``query()`` accepts now aoi in forms of geojson file with varying CRS or bounding box coordinates in Lat Lon #1
 - requirements: pyproj #1
