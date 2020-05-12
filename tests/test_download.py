@@ -85,11 +85,11 @@ class DownloadTest(unittest.TestCase):
                     cloud_cover=queries[i]["cloud_cover"],
                 )
                 # filter metadata by srcid
-                meta = src.filter_metadata(meta=meta, filter_dict={"srcid": queries[i]["returns_srcid"]},)
-                # download filtered metadata
-                src.download_metadata(meta, target_dir)
-            returns_srcid = meta[0].to_geojson()["properties"]["srcid"]
-            returns_uuid = meta[0].to_geojson()["properties"]["srcuuid"]
+                meta.filter(filter_dict={"srcid": queries[i]["returns_srcid"]},)
+                # save filtered metadata
+                meta.save(target_dir)
+            returns_srcid = meta.to_geojson()[0]["properties"]["srcid"]
+            returns_uuid = meta.to_geojson()[0]["properties"]["srcuuid"]
             self.assertEqual(returns_srcid, (queries[i]["returns_srcid"]))
             self.assertEqual(returns_uuid, (queries[i]["returns_uuid"]))
             self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".json"))

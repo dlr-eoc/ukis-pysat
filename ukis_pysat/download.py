@@ -10,6 +10,7 @@ import traceback
 import fiona
 import landsatxplore.api
 import numpy as np
+import pandas as pd
 import pyproj
 import requests
 import sentinelsat
@@ -19,6 +20,7 @@ from PIL import Image
 from pyfields import field, make_init
 from pylandsat import Product
 from shapely import geometry, wkt, ops
+from typing import List
 
 from ukis_pysat.members import Datahub, Platform
 from ukis_pysat.file import env_get, pack
@@ -29,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 class Source:
     """
-    This class provides methods to query data sources for metadata and download images and quicklooks (APIs only).
+    Provides methods to query data sources for metadata and download images and quicklooks (APIs only).
     Remote APIs and local data directories that hold metadata files are supported.
     """
 
@@ -77,7 +79,7 @@ class Source:
         return self
 
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
-        """This method queries satellite image metadata from data source.
+        """Queries satellite image metadata from data source.
 
         :param platform: image platform (<enum 'Platform'>).
         :param date: Date from - to (String or Datetime tuple). Expects a tuple of (start, end), e.g.
@@ -127,11 +129,11 @@ class Source:
                 )
 
         try:
-            # construct list of harmonized metadata objects
+            # construct MetadataCollection from list of Metadata objects
             meta = []
             for m in meta_src:
                 meta.append(self.construct_metadata(meta_src=m))
-            return meta
+            return MetadataCollection(meta)
         except Exception as e:
             raise Exception(
                 f"{traceback.format_exc()} Could not convert metadata to custom metadata. "
@@ -139,7 +141,7 @@ class Source:
             )
 
     def construct_metadata(self, meta_src):
-        """This method constructs a metadata object that is harmonized across the different satellite image sources.
+        """Constructs a metadata object that is harmonized across the different satellite image sources.
 
         :param meta_src: Source metadata (GeoJSON-like mapping)
         :returns: Harmonized metadata (Metadata object)
@@ -158,9 +160,11 @@ class Source:
                 ),
                 producttype="L1TP",
                 orbitdirection="DESCENDING",
-                orbitnumber=int(meta_src["summary"][
-                    meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
-                ]),
+                orbitnumber=int(
+                    meta_src["summary"][
+                        meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
+                    ]
+                ),
                 relativeorbitnumber=int(meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :]),
                 acquisitiondate=meta_src["acquisitionDate"],
                 ingestiondate=meta_src["modifiedDate"],
@@ -196,7 +200,7 @@ class Source:
         return meta
 
     def download_image(self, platform, product_uuid, target_dir):
-        """This method downloads satellite image data to a target directory for a specific product_id.
+        """Downloads satellite image data to a target directory for a specific product_id.
         Incomplete downloads are continued and complete files are skipped.
 
         :param platform: image platform (<enum 'Platform'>).
@@ -214,8 +218,6 @@ class Source:
                 )
                 product_srcid = meta_src[0]["displayId"]
                 # download data from AWS
-                # landsatxplore is great for metadata search on EE but download via EE is slow. pylandsat is great
-                # for fast download from AWS but does not provide good metadata search. Here we combine their benefits.
                 product = Product(product_srcid)
                 product.download(out_dir=target_dir, progressbar=False)
             except Exception as e:
@@ -245,7 +247,7 @@ class Source:
                 )
 
     def download_quicklook(self, platform, product_uuid, target_dir):
-        """This method downloads a quicklook of the satellite image to a target directory for a specific product_id.
+        """Downloads a quicklook of the satellite image to a target directory for a specific product_id.
         It performs a very rough geocoding of the quicklooks by shifting the image to the location of the footprint.
 
         :param platform: image platform (<enum 'Platform'>).
@@ -308,34 +310,8 @@ class Source:
             out_file.write(str(ul_y) + "\n")
 
     @staticmethod
-    def filter_metadata(meta, filter_dict):
-        """This method filters metadata as returned by query_metadata() based on filter_dict.
-
-        :param meta: Metadata of product(s) (List of Metadata objects).
-        :param filter_dict: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
-        :returns: Metadata of products that match filter criteria (List of Metadata objects).
-        """
-        m = []
-        k = list(filter_dict.keys())[0]
-        for i in range(len(meta)):
-            if filter_dict[k] == meta[i].to_geojson()["properties"][k]:
-                m.append(meta[i])
-        return m
-
-    @staticmethod
-    def download_metadata(meta, target_dir):
-        """This method writes metadata as returned by query_metadata() to geojson file.
-
-        :param meta: Metadata of product(s) (Metadata object).
-        :param target_dir: Target directory that holds the downloaded metadata (String)
-        """
-        for i in range(len(meta)):
-            with open(os.path.join(target_dir, meta[i].to_geojson()["properties"]["srcid"] + ".json"), "w") as f:
-                json.dump(meta[i].to_geojson(), f)
-
-    @staticmethod
     def prep_aoi(aoi):
-        """ This method converts aoi to Shapely Polygon and reprojects to WGS84.
+        """Converts aoi to Shapely Polygon and reprojects to WGS84.
 
         :param aoi: Area of interest as Geojson file or bounding box in lat lon coordinates (String, Tuple)
         :return: Shapely Polygon
@@ -360,7 +336,7 @@ class Source:
         return aoi
 
     def close(self):
-        """closes connection to or logs out of Datahub"""
+        """Closes connection to or logs out of Datahub"""
         if self.src == Datahub.EarthExplorer:
             self.api.logout()
         elif self.src == Datahub.Scihub:
@@ -373,9 +349,14 @@ class Source:
 
 
 class Metadata:
+    """
+    Provides a container to store metadata. Fields are assigned a default value, checked for dtype, validated
+    and converted if needed.
+    """
+
     __init__ = make_init()
     id: str = field(check_type=True, read_only=True, doc="Product ID")
-    platformname: Platform = field(check_type=True, default="", doc="Platform name")
+    platformname: Platform = field(check_type=True, default=None, doc="Platform name")
     producttype: str = field(check_type=True, default="", doc="Product type")
     orbitdirection: str = field(check_type=True, default="", doc="Orbitdirection")
     orbitnumber: int = field(check_type=True, default=None, doc="Orbitnumber")
@@ -385,27 +366,34 @@ class Metadata:
     processingdate = field(type_hint=datetime.date, check_type=True, default=None, doc="Processingdate")
     processingsteps: str = field(check_type=True, default="", doc="Processingsteps")
     processingversion: str = field(check_type=True, default="", doc="Processing version")
-    bandlist: str = field(check_type=True, default="[{}]", doc="Bandlist")
+    bandlist: str = field(check_type=True, default="", doc="Bandlist")
     cloudcoverpercentage: float = field(check_type=True, default=None, doc="Cloudcover [percent]")
     format: str = field(check_type=True, default="", doc="File format")
-    size: str = field(check_type=True, default=None, doc="File size [MB]")
+    size: str = field(check_type=True, default="", doc="File size [MB]")
     srcid: str = field(check_type=True, doc="Source product ID")
     srcurl: str = field(check_type=True, default="", doc="Source product URL")
     srcuuid: str = field(check_type=True, doc="Source product UUID")
-    geom: dict = field(check_type=True, default="", doc="Geometry [multipolygon dict]")
+    geom: dict = field(check_type=True, default=None, doc="Geometry [multipolygon dict]")
 
     @acquisitiondate.converter(accepts=str)
     @ingestiondate.converter(accepts=str)
     @processingdate.converter(accepts=str)
     def _prep_date(self, value):
+        """Converts a date string to datetime.date object.
+
+        :returns: Datetime.date
+        """
         if value is not None:
-            # if date string is provided convert it to datetime.date object
             return parse(value)
 
     def to_dict(self):
+        """Converts Metadata to Dict.
+
+        :returns: Metadata (Dict)
+        """
         return {
             "id": self.id,
-            "platformname": self.platformname.value,
+            "platformname": None if self.platformname is None else self.platformname.value,
             "producttype": self.producttype,
             "orbitdirection": self.orbitdirection,
             "orbitnumber": self.orbitnumber,
@@ -425,10 +413,84 @@ class Metadata:
         }
 
     def to_json(self):
+        """Converts Metadata to JSON.
+
+        :returns: Metadata (JSON)
+        """
         return json.dumps(self.to_dict())
 
     def to_geojson(self):
+        """Converts Metadata to GeoJSON.
+
+        :returns: Metadata (GeoJSON)
+        """
         return geometry.mapping(_GeoInterface({"type": "Feature", "properties": self.to_dict(), "geometry": self.geom}))
+
+    def save(self, target_dir):
+        """Saves Metadata to GeoJSON file in target_dir with srcid as filename.
+
+        :param target_dir: Target directory that holds the downloaded metadata (String)
+        """
+        g = self.to_geojson()
+        with open(os.path.join(target_dir, g["properties"]["srcid"] + ".json"), "w") as f:
+            json.dump(g, f)
+
+
+class MetadataCollection:
+    """
+    Provides a container to store a collection of metadata objects. Conversion methods are provided to
+    analyse the metadata collection further.
+    """
+
+    __init__ = make_init()
+    items: List[Metadata] = field(type_hint=List[Metadata])
+
+    def to_dict(self):
+        """Converts MetadataCollection to List of Dict.
+
+        :returns: MetadataCollection (List of Dict)
+        """
+        return [item.to_dict() for item in self.items]
+
+    def to_json(self):
+        """Converts MetadataCollection to List of JSON.
+
+        :returns: MetadataCollection (List of JSON)
+        """
+        return [item.to_json() for item in self.items]
+
+    def to_geojson(self):
+        """Converts MetadataCollection to list of GeoJSON.
+
+        :returns: MetadataCollection (List of GeoJSON)
+        """
+        return [item.to_geojson() for item in self.items]
+
+    def to_pandas(self):
+        """Converts MetadataCollection to Pandas Dataframe.
+
+        :returns: MetadataCollection (Pandas Dataframe)
+        """
+        d = [item.to_dict() for item in self.items]
+        return pd.DataFrame(d)
+
+    def filter(self, filter_dict):
+        """Filters MetadataCollection based on filter_dict.
+
+        :param filter_dict: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
+        :returns: self
+        """
+        k = list(filter_dict.keys())[0]
+        self.items = [item for item in self.items if filter_dict[k] == item.to_geojson()["properties"][k]]
+        return self
+
+    def save(self, target_dir):
+        """Saves MetadataCollection to GeoJSON files in target_dir with srcid as filenames.
+
+        :param target_dir: Target directory (String)
+        """
+        for item in self.items:
+            item.save(target_dir)
 
 
 class _GeoInterface(object):
