@@ -306,15 +306,16 @@ class Image:
         # TODO using tukey --> https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.tukey.html
         pass
 
-    def get_subset(self, tile):
-        """
-        Build a subset of an array. Shape of array is announced with (bands, height, width).
-        :param tile:
-        :return: Sliced numpy array, bounding box of array slice
+    def get_subset(self, tile, band=0):
+        """Get slice of array.
+
+        :param tile: rasterio.windows.Window tile from get_tiles().
+        :param band: Band number (default: 0).
+        :return: Sliced numpy array, bounding box of array slice.
         """
         # access window bounds
         bounds = windows.bounds(tile, self.dataset.transform)
-        return self.arr[(slice(None),) + tile.toslices()], bounds
+        return self.arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
 
     def get_dask_array(self, chunk_size=(1, 6000, 6000)):
         """ transforms numpy to dask array

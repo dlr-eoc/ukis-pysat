@@ -97,7 +97,7 @@ class DataTest(unittest.TestCase):
         for idx, each in enumerate(img.get_tiles(5, 5, 1)):
             if idx == 2578:
                 array, bounds = img.get_subset(each)
-                self.assertEqual(array, np.zeros(shape=(1, 7, 7)))
+                self.assertTrue(np.array_equal(array, np.zeros(shape=(7, 7), dtype=array.dtype)))
                 self.assertEqual(bounds, (11.903960582768779, 51.45624717410995, 11.904589403469808, 51.45687599481152))
 
     def test_get_dask_array(self):
