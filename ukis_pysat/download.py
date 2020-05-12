@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import json
 import logging
 import os
@@ -12,8 +13,10 @@ import numpy as np
 import pyproj
 import requests
 import sentinelsat
+from dateutil.parser import parse
 from io import BytesIO
 from PIL import Image
+from pyfields import field, make_init
 from pylandsat import Product
 from shapely import geometry, wkt, ops
 
@@ -45,6 +48,7 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             try:
+                # connect to Earthexplorer
                 self.user = env_get("EARTHEXPLORER_USER")
                 self.pw = env_get("EARTHEXPLORER_PW")
                 self.api = landsatxplore.api.API(self.user, self.pw)
@@ -55,6 +59,7 @@ class Source:
 
         elif self.src == Datahub.Scihub:
             try:
+                # connect to Scihub
                 self.user = env_get("SCIHUB_USER")
                 self.pw = env_get("SCIHUB_PW")
                 self.api = sentinelsat.SentinelAPI(
@@ -71,32 +76,6 @@ class Source:
     def __enter__(self):
         return self
 
-    @staticmethod
-    def _prep_aoi(aoi):
-        """ This method converts aoi to Shapely Polygon and reprojects to WGS84.
-
-        :param aoi: Area of interest as Geojson file or bounding box in lat lon coordinates (String, Tuple)
-        :return: Shapely Polygon
-        """
-        if isinstance(aoi, str):
-            with fiona.open(aoi, "r") as aoi:
-                # make sure crs is in epsg:4326
-                project = pyproj.Transformer.from_proj(
-                    proj_from=pyproj.Proj(aoi.crs["init"]),
-                    proj_to=pyproj.Proj("epsg:4326"),
-                    skip_equivalent=True,
-                    always_xy=True,
-                )
-                aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
-
-        elif isinstance(aoi, tuple):
-            aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
-
-        else:
-            raise TypeError(f"aoi must be of type string or tuple")
-
-        return aoi
-
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
         """This method queries satellite image metadata from data source.
 
@@ -105,7 +84,7 @@ class Source:
             (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
         :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
-        :returns: Metadata of products that match query criteria (List of GeoJSON-like mappings).
+        :returns: Metadata of products that match query criteria (List of Metadata objects).
         """
         if self.src == Datahub.file:
             raise NotImplementedError("File metadata query not yet supported.")
@@ -113,7 +92,7 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             try:
                 # query Earthexplorer for metadata
-                bbox = self._prep_aoi(aoi).bounds
+                bbox = self.prep_aoi(aoi).bounds
                 kwargs = {}
                 if cloud_cover:
                     kwargs["max_cloud_cover"] = cloud_cover[1]
@@ -131,14 +110,14 @@ class Source:
                     f"The following Exception was raised: {e}."
                 )
 
-        elif self.src == Datahub.Scihub:
+        else:
             try:
                 # query Scihub for metadata
                 kwargs = {}
                 if cloud_cover and platform != platform.Sentinel1:
                     kwargs["cloudcoverpercentage"] = cloud_cover
                 meta_src = self.api.query(
-                    area=self._prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,
+                    area=self.prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,
                 )
                 meta_src = self.api.to_geojson(meta_src)["features"]
             except Exception as e:
@@ -148,7 +127,7 @@ class Source:
                 )
 
         try:
-            # construct list of harmonized metadata
+            # construct list of harmonized metadata objects
             meta = []
             for m in meta_src:
                 meta.append(self.construct_metadata(meta_src=m))
@@ -160,102 +139,61 @@ class Source:
             )
 
     def construct_metadata(self, meta_src):
-        """This method constructs metadata that is harmonized across different satellite image sources and
-        maps it into __geo_interface__ https://gist.github.com/sgillies/2217756
-        Example Metadata: tests/testfiles/S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618.json
+        """This method constructs a metadata object that is harmonized across the different satellite image sources.
 
         :param meta_src: Source metadata (GeoJSON-like mapping)
-        :returns: Harmonized metadata (GeoJSON-like mapping)
+        :returns: Harmonized metadata (Metadata object)
         """
         if self.src == Datahub.file:
             raise NotImplementedError("File metadata construction not yet supported.")
 
         elif self.src == Datahub.EarthExplorer:
-            prop = {
-                "id": meta_src["displayId"],
-                "platformname": Platform(
+            meta = Metadata(
+                id=meta_src["displayId"],
+                platformname=Platform(
                     meta_src["dataAccessUrl"][
                         meta_src["dataAccessUrl"].find("dataset_name=")
                         + len("dataset_name=") : meta_src["dataAccessUrl"].rfind("&ordered=")
                     ]
-                ).name,
-                "producttype": "L1TP",
-                "orbitdirection": "DESCENDING",
-                "orbitnumber": meta_src["summary"][
+                ),
+                producttype="L1TP",
+                orbitdirection="DESCENDING",
+                orbitnumber=int(meta_src["summary"][
                     meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
-                ],
-                "relativeorbitnumber": meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :],
-                "acquisitiondate": meta_src["acquisitionDate"],
-                "ingestiondate": meta_src["modifiedDate"],
-                "processingdate": "",
-                "processingsteps": "",
-                "processingversion": "",
-                "bandlist": [{}],
-            }
-            try:
-                prop["cloudcoverpercentage"] = round(meta_src["cloudCover"], 2)
-            except KeyError:
-                prop["cloudcoverpercentage"] = ""
-            prop["format"] = "GeoTIFF"
-            prop["size"] = ""
-            prop["srcid"] = meta_src["displayId"]
-            prop["srcurl"] = meta_src["dataAccessUrl"]
-            prop["srcuuid"] = meta_src["entityId"]
-            geom = meta_src["spatialFootprint"]
+                ]),
+                relativeorbitnumber=int(meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :]),
+                acquisitiondate=meta_src["acquisitionDate"],
+                ingestiondate=meta_src["modifiedDate"],
+                cloudcoverpercentage=float(round(meta_src["cloudCover"], 2)) if "cloudCover" in meta_src else None,
+                format="GeoTIFF",
+                srcid=meta_src["displayId"],
+                srcurl=meta_src["dataAccessUrl"],
+                srcuuid=meta_src["entityId"],
+                geom=meta_src["spatialFootprint"],
+            )
 
-        else:  # self.src must be Datahub.Scihub
-            prop = {
-                "id": meta_src["properties"]["identifier"],
-                "platformname": Platform(meta_src["properties"]["platformname"]).name,
-                "producttype": meta_src["properties"]["producttype"],
-                "orbitdirection": meta_src["properties"]["orbitdirection"],
-                "orbitnumber": meta_src["properties"]["orbitnumber"],
-                "relativeorbitnumber": meta_src["properties"]["relativeorbitnumber"],
-                "acquisitiondate": meta_src["properties"]["beginposition"],
-                "ingestiondate": meta_src["properties"]["ingestiondate"],
-                "processingdate": "",
-                "processingsteps": "",
-                "processingversion": "",
-                "bandlist": [{}],
-            }
-            try:
-                prop["cloudcoverpercentage"] = round(meta_src["properties"]["cloudcoverpercentage"], 2)
-            except KeyError:
-                prop["cloudcoverpercentage"] = ""
-            prop["format"] = meta_src["properties"]["format"]
-            prop["size"] = meta_src["properties"]["size"]
-            prop["srcid"] = meta_src["properties"]["identifier"]
-            prop["srcurl"] = meta_src["properties"]["link"]
-            prop["srcuuid"] = meta_src["properties"]["uuid"]
-            geom = meta_src["geometry"]
+        else:
+            meta = Metadata(
+                id=meta_src["properties"]["identifier"],
+                platformname=Platform(meta_src["properties"]["platformname"]),
+                producttype=meta_src["properties"]["producttype"],
+                orbitdirection=meta_src["properties"]["orbitdirection"],
+                orbitnumber=int(meta_src["properties"]["orbitnumber"]),
+                relativeorbitnumber=int(meta_src["properties"]["relativeorbitnumber"]),
+                acquisitiondate=meta_src["properties"]["beginposition"],
+                ingestiondate=meta_src["properties"]["ingestiondate"],
+                cloudcoverpercentage=float(round(meta_src["properties"]["cloudcoverpercentage"], 2))
+                if "cloudcoverpercentage" in meta_src["properties"]
+                else None,
+                format=meta_src["properties"]["format"],
+                size=meta_src["properties"]["size"],
+                srcid=meta_src["properties"]["identifier"],
+                srcurl=meta_src["properties"]["link"],
+                srcuuid=meta_src["properties"]["uuid"],
+                geom=meta_src["geometry"],
+            )
 
-        return geometry.mapping(_GeoInterface({"type": "Feature", "properties": prop, "geometry": geom}))
-
-    @staticmethod
-    def filter_metadata(meta, filter_dict):
-        """This method filters metadata as returned by query_metadata() based on filter_dict.
-
-        :param meta: Metadata of product(s) (List of GeoJSON-like mappings).
-        :param filter_dict: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
-        :returns: Metadata of products that match filter criteria (List of GeoJSON-like mappings).
-        """
-        m = []
-        k = list(filter_dict.keys())
-        for i in range(len(meta)):
-            if filter_dict[k[0]] == meta[i]["properties"][k[0]]:
-                m.append(meta[i])
-        return m
-
-    @staticmethod
-    def download_metadata(meta, target_dir):
-        """This method writes metadata as returned by query_metadata() to file.
-
-        :param meta: Metadata of product(s) (GeoJSON-like mapping).
-        :param target_dir: Target directory that holds the downloaded metadata (String)
-        """
-        for i in range(len(meta)):
-            with open(os.path.join(target_dir, meta[i]["properties"]["srcid"] + ".json"), "w") as f:
-                json.dump(meta[i], f)
+        return meta
 
     def download_image(self, platform, product_uuid, target_dir):
         """This method downloads satellite image data to a target directory for a specific product_id.
@@ -297,7 +235,7 @@ class Source:
                     f"This Exception was raised: {e}."
                 )
 
-        else:  # self.src must be Datahub.Scihub
+        else:
             try:
                 self.api.download(product_uuid, target_dir, checksum=True)
             except Exception as e:
@@ -333,7 +271,7 @@ class Source:
                 )
                 return
 
-        else:  # self.src must be Datahub.Scihub
+        else:
             try:
                 # query Scihub for url, srcid and bounds of product
                 meta_src = self.api.get_product_odata(product_uuid)
@@ -369,6 +307,58 @@ class Source:
             out_file.write(str(ul_x) + "\n")
             out_file.write(str(ul_y) + "\n")
 
+    @staticmethod
+    def filter_metadata(meta, filter_dict):
+        """This method filters metadata as returned by query_metadata() based on filter_dict.
+
+        :param meta: Metadata of product(s) (List of Metadata objects).
+        :param filter_dict: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
+        :returns: Metadata of products that match filter criteria (List of Metadata objects).
+        """
+        m = []
+        k = list(filter_dict.keys())[0]
+        for i in range(len(meta)):
+            if filter_dict[k] == meta[i].to_geojson()["properties"][k]:
+                m.append(meta[i])
+        return m
+
+    @staticmethod
+    def download_metadata(meta, target_dir):
+        """This method writes metadata as returned by query_metadata() to geojson file.
+
+        :param meta: Metadata of product(s) (Metadata object).
+        :param target_dir: Target directory that holds the downloaded metadata (String)
+        """
+        for i in range(len(meta)):
+            with open(os.path.join(target_dir, meta[i].to_geojson()["properties"]["srcid"] + ".json"), "w") as f:
+                json.dump(meta[i].to_geojson(), f)
+
+    @staticmethod
+    def prep_aoi(aoi):
+        """ This method converts aoi to Shapely Polygon and reprojects to WGS84.
+
+        :param aoi: Area of interest as Geojson file or bounding box in lat lon coordinates (String, Tuple)
+        :return: Shapely Polygon
+        """
+        if isinstance(aoi, str):
+            with fiona.open(aoi, "r") as aoi:
+                # make sure crs is in epsg:4326
+                project = pyproj.Transformer.from_proj(
+                    proj_from=pyproj.Proj(aoi.crs["init"]),
+                    proj_to=pyproj.Proj("epsg:4326"),
+                    skip_equivalent=True,
+                    always_xy=True,
+                )
+                aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
+
+        elif isinstance(aoi, tuple):
+            aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
+
+        else:
+            raise TypeError(f"aoi must be of type string or tuple")
+
+        return aoi
+
     def close(self):
         """closes connection to or logs out of Datahub"""
         if self.src == Datahub.EarthExplorer:
@@ -380,6 +370,65 @@ class Source:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+
+class Metadata:
+    __init__ = make_init()
+    id: str = field(check_type=True, read_only=True, doc="Product ID")
+    platformname: Platform = field(check_type=True, default="", doc="Platform name")
+    producttype: str = field(check_type=True, default="", doc="Product type")
+    orbitdirection: str = field(check_type=True, default="", doc="Orbitdirection")
+    orbitnumber: int = field(check_type=True, default=None, doc="Orbitnumber")
+    relativeorbitnumber: int = field(check_type=True, default=None, doc="Relative orbitnumber")
+    acquisitiondate = field(type_hint=datetime.date, check_type=True, default=None, doc="Acquisitiondate")
+    ingestiondate = field(type_hint=datetime.date, check_type=True, default=None, doc="Ingestiondate")
+    processingdate = field(type_hint=datetime.date, check_type=True, default=None, doc="Processingdate")
+    processingsteps: str = field(check_type=True, default="", doc="Processingsteps")
+    processingversion: str = field(check_type=True, default="", doc="Processing version")
+    bandlist: str = field(check_type=True, default="[{}]", doc="Bandlist")
+    cloudcoverpercentage: float = field(check_type=True, default=None, doc="Cloudcover [percent]")
+    format: str = field(check_type=True, default="", doc="File format")
+    size: str = field(check_type=True, default=None, doc="File size [MB]")
+    srcid: str = field(check_type=True, doc="Source product ID")
+    srcurl: str = field(check_type=True, default="", doc="Source product URL")
+    srcuuid: str = field(check_type=True, doc="Source product UUID")
+    geom: dict = field(check_type=True, default="", doc="Geometry [multipolygon dict]")
+
+    @acquisitiondate.converter(accepts=str)
+    @ingestiondate.converter(accepts=str)
+    @processingdate.converter(accepts=str)
+    def _prep_date(self, value):
+        if value is not None:
+            # if date string is provided convert it to datetime.date object
+            return parse(value)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "platformname": self.platformname.value,
+            "producttype": self.producttype,
+            "orbitdirection": self.orbitdirection,
+            "orbitnumber": self.orbitnumber,
+            "relativeorbitnumber": self.relativeorbitnumber,
+            "acquisitiondate": None if self.acquisitiondate is None else self.acquisitiondate.strftime("%Y/%m/%d"),
+            "ingestiondate": None if self.ingestiondate is None else self.ingestiondate.strftime("%Y/%m/%d"),
+            "processingdate": None if self.processingdate is None else self.processingdate.strftime("%Y/%m/%d"),
+            "processingsteps": self.processingsteps,
+            "processingversion": self.processingversion,
+            "bandlist": self.bandlist,
+            "cloudcoverpercentage": self.cloudcoverpercentage,
+            "format": self.format,
+            "size": self.size,
+            "srcid": self.srcid,
+            "srcurl": self.srcurl,
+            "srcuuid": self.srcuuid,
+        }
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
+
+    def to_geojson(self):
+        return geometry.mapping(_GeoInterface({"type": "Feature", "properties": self.to_dict(), "geometry": self.geom}))
 
 
 class _GeoInterface(object):
