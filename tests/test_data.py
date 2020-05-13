@@ -1,115 +1,152 @@
 import os
+import traceback
 import unittest
 
-import dask.array
-import numpy as np
-from rasterio import windows
-from rasterio.coords import BoundingBox
-from shapely.geometry import box
+from ukis_pysat.members import Datahub, Platform
+from ukis_pysat.data import Source
 
-from ukis_pysat.members import Platform
-from ukis_pysat.data import Image
+# os.environ["EARTHEXPLORER_USER"] = "Tim"
+# os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
+# os.environ["SCIHUB_USER"] = "Tim"
+# os.environ["SCIHUB_PW"] = "TheEnchanter"
 
-img = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"))
+aoi_4326 = os.path.join(os.path.dirname(__file__), "testfiles", "aoi_4326.geojson")
+aoi_3857 = os.path.join(os.path.dirname(__file__), "testfiles", "aoi_3857.geojson")
+aoi_bbox = (11.90, 51.46, 11.94, 51.50)
+target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
+
+queries = [
+    {
+        "source": Datahub.Scihub,
+        "platform_name": Platform.Sentinel1,
+        "date": ("20200224", "20200225"),
+        "aoi": aoi_4326,
+        "cloud_cover": None,
+        "returns_srcid": "S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6",
+        "returns_uuid": "8a611d5b-f9d9-437e-9f55-eca18cf79fd4",
+    },
+    {
+        "source": Datahub.Scihub,
+        "platform_name": Platform.Sentinel2,
+        "date": ("20200220", "20200225"),
+        "aoi": aoi_3857,
+        "cloud_cover": (0, 100),
+        "returns_srcid": "S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618",
+        "returns_uuid": "560f78fb-22b8-4904-87de-160d9236d33e",
+    },
+    {
+        "source": Datahub.Scihub,
+        "platform_name": Platform.Sentinel3,
+        "date": ("20200220", "20200225"),
+        "aoi": aoi_bbox,
+        "cloud_cover": (0, 100),
+        "returns_srcid": "S3B_OL_2_LRR____20200220T092808_20200220T101154_20200221T143235_2626_035_364______LN1_O_NT_002",
+        "returns_uuid": "a50c1e2f-0688-4be1-ae2f-dc69fe8b170a",
+    },
+    {
+        "source": Datahub.EarthExplorer,
+        "platform_name": Platform.Landsat5,
+        "date": ("20100201", "20100225"),
+        "aoi": aoi_4326,
+        "cloud_cover": (0, 100),
+        "returns_srcid": "LT05_L1GS_193024_20100207_20161016_01_T2",
+        "returns_uuid": "LT51930242010038MOR00",
+    },
+    {
+        "source": Datahub.EarthExplorer,
+        "platform_name": Platform.Landsat7,
+        "date": ("20150810", "20150825"),
+        "aoi": aoi_3857,
+        "cloud_cover": (0, 50),
+        "returns_srcid": "LE07_L1TP_193024_20150824_20161025_01_T1",
+        "returns_uuid": "LE71930242015236ASN00",
+    },
+    {
+        "source": Datahub.EarthExplorer,
+        "platform_name": Platform.Landsat8,
+        "date": ("20200310", "20200325"),
+        "aoi": aoi_bbox,
+        "cloud_cover": (0, 20),
+        "returns_srcid": "LC08_L1TP_193024_20200322_20200326_01_T1",
+        "returns_uuid": "LC81930242020082LGN00",
+    },
+]
 
 
-class DataTest(unittest.TestCase):
+class DownloadTest(unittest.TestCase):
     def test_init(self):
-        with self.assertRaises(TypeError, msg=f"path must be of type str"):
-            Image(path=1)
-
         with self.assertRaises(
-            TypeError, msg=f"dataset must be of type rasterio.io.DatasetReader and arr must be of type numpy.ndarray"
+            AttributeError, msg=f"{traceback.format_exc()} source_dir has to be set if source is Datahub.file."
         ):
-            Image(dataset=1, arr=img.arr)
+            Source(Datahub.file)
 
-        with self.assertRaises(
-            TypeError, msg=f"dataset must be of type rasterio.io.DatasetReader and arr must be of type numpy.ndarray"
-        ):
-            Image(arr=img.arr)
+        src = Source(Datahub.file, source_dir=target_dir)
+        self.assertEqual(src.api, target_dir)
 
-        self.assertTrue(np.array_equal(img.arr, Image(dataset=img.dataset, arr=img.arr).arr))
+        with self.assertRaises(NotImplementedError, msg=f"Hub is not supported [file, EarthExplorer, Scihub]."):
+            Source("Hub")
 
-    def test_get_valid_data_bbox(self):
-        self.assertEqual(
-            img.get_valid_data_bbox(), (11.896863892, 51.515176657, 11.896863892, 51.515176657),
-        )
-        self.assertEqual(
-            img.get_valid_data_bbox(nodata=1), (11.896863892, 51.446545369, 11.9578595, 51.515176657),
-        )
+        with self.assertRaises(AttributeError):
+            Source(Datahub.Hub)
 
-    def test_mask_image(self):
-        with self.assertRaises(TypeError, msg="bbox must be of type tuple or Shapely Polygon"):
-            img.mask_image([1, 2, 3])
+    def test_exceptions(self):
+        src = Source(Datahub.file, source_dir=target_dir)
+        with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
+            src.prep_aoi(1)
 
-        img.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
-        self.assertEqual(
-            img.dataset.bounds,
-            BoundingBox(left=11.896863892, bottom=51.446545369, right=11.9578595, top=51.515176657,),
-        )
+        with self.assertRaises(NotImplementedError, msg="File metadata query not yet supported."):
+            src.query_metadata(platform=Datahub.file, date="20200101", aoi=aoi_4326,)
 
-        img.mask_image((11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
-        self.assertEqual(
-            img.dataset.bounds,
-            BoundingBox(left=11.896863892, bottom=51.446545369, right=11.9578595, top=51.515176657,),
-        )
+        with self.assertRaises(NotImplementedError, msg="File metadata construction  not yet supported."):
+            src.construct_metadata("")
 
-        img.mask_image(
-            box(11.8919236802142620, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,), pad=True,
-        )
-        self.assertEqual(
-            img.dataset.bounds,
-            BoundingBox(
-                left=11.897762207287187, bottom=51.4614574027801, right=11.952739102863033, top=51.50592400953403,
-            ),
-        )
+    # @unittest.skip("uncomment when you set ENVs with credentials")
+    def test_query_metadata(self):
+        for i in range(len(queries)):
+            with Source(source=queries[i]["source"]) as src:
+                # query metadata
+                meta = src.query_metadata(
+                    platform=queries[i]["platform_name"],
+                    date=queries[i]["date"],
+                    aoi=queries[i]["aoi"],
+                    cloud_cover=queries[i]["cloud_cover"],
+                )
+                # filter metadata by srcid
+                meta.filter(filter_dict={"srcid": queries[i]["returns_srcid"]},)
+                # save filtered metadata
+                meta.save(target_dir)
+            returns_srcid = meta.to_geojson()[0]["properties"]["srcid"]
+            returns_uuid = meta.to_geojson()[0]["properties"]["srcuuid"]
+            self.assertEqual(returns_srcid, (queries[i]["returns_srcid"]))
+            self.assertEqual(returns_uuid, (queries[i]["returns_uuid"]))
+            self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".json"))
+            os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".json")
 
-    def test_warp(self):
-        self.assertEqual(img.crs, "EPSG:4326")
+    # @unittest.skip("uncomment when you set ENVs with credentials")
+    def test_download_image(self):
+        src = Source(Datahub.file, source_dir=target_dir)
+        with self.assertRaises(Exception, msg="download_image() not supported for Datahub.file."):
+            src.download_image(platform=Datahub.file, product_uuid="1", target_dir=target_dir,)
+        # TODO download tests
 
-        img.warp("EPSG:3857")
-        self.assertEqual(img.crs, "EPSG:3857")
+    # @unittest.skip("uncomment when you set ENVs with credentials")
+    def test_download_quicklook(self):
+        for i in range(len(queries)):
+            with Source(source=queries[i]["source"]) as src:
+                # download geocoded quicklook
+                src.download_quicklook(
+                    platform=queries[i]["platform_name"],
+                    product_uuid=queries[i]["returns_uuid"],
+                    target_dir=target_dir,
+                )
+            self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpg"))
+            self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpgw"))
+            os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpg")
+            os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpgw")
 
-        img.warp("EPSG:4326", resolution=1.0)
-        self.assertEqual(1.0, img.transform.to_gdal()[1])
-
-    def test_dn2toa(self):
-        # TODO add more testcases
-        self.assertLogs(img.dn2toa(Platform.Sentinel1), level="WARNING")
-
-    def test__lookup_bands(self):
-        self.assertEqual(
-            ["1", "2", "3"], img._lookup_bands(Platform.Landsat5, ["Blue", "Green", "Red"]),
-        )
-        self.assertEqual(
-            ["9", "10", "11"], img._lookup_bands(Platform.Landsat8, ["PAN", "Tirs1", "Tirs2"]),
-        )
-
-    def test_get_tiles(self):
-        for idx, each in enumerate(img.get_tiles(5, 5, 1)):
-            self.assertIsInstance(each, windows.Window)
-            if idx == 2578:
-                self.assertEqual(each, windows.Window(col_off=79, row_off=649, width=7, height=7))
-
-        self.assertEqual(idx, 20807)
-
-    def test_get_subset(self):
-        for idx, each in enumerate(img.get_tiles(5, 5, 1)):
-            if idx == 2578:
-                array, bounds = img.get_subset(each)
-                self.assertTrue(np.array_equal(array, np.zeros(shape=(7, 7), dtype=array.dtype)))
-                self.assertEqual(bounds, (11.903960582768779, 51.45624717410995, 11.904589403469808, 51.45687599481152))
-
-    def test_get_dask_array(self):
-        self.assertIsInstance(img.to_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
-
-    def test_write_to_file(self):
-        img.write_to_file(r"result.tif")
-        img2 = Image("result.tif")
-        self.assertTrue(np.array_equal(img2.arr, img.arr))
-
-        img2.close()
-        os.remove(r"result.tif")
+        src = Source(Datahub.file, source_dir=target_dir)
+        with self.assertRaises(NotImplementedError, msg=f"download_quicklook not supported for Datahub.file."):
+            src.download_quicklook(platform=Datahub.file, product_uuid="1", target_dir=target_dir,)
 
 
 if __name__ == "__main__":

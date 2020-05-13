@@ -1,360 +1,440 @@
 #!/usr/bin/env python3
 
+import datetime
+import json
 import logging
-import math
-from itertools import product
+import os
+import shutil
+import traceback
+from io import BytesIO
+from typing import List
 
+import fiona
+import landsatxplore.api
 import numpy as np
-import rasterio
-import rasterio.mask
-from rasterio import windows
-from rasterio.io import MemoryFile
-from rasterio.warp import calculate_default_transform, reproject
-from rio_toa import reflectance, brightness_temp, toa_utils
-from shapely.geometry import box, polygon
+import pyproj
+import requests
+import sentinelsat
+from PIL import Image
+from dateutil.parser import parse
+from pyfields import field, make_init
+from pylandsat import Product
+from shapely import geometry, wkt, ops
 
-from ukis_pysat.members import Platform
+from ukis_pysat.file import env_get, pack
+from ukis_pysat.members import Datahub, Platform
 
 logger = logging.getLogger(__name__)
 
 
-class Image:
-    def __init__(self, path=None, dataset=None, arr=None):
-        if path:
-            if isinstance(path, str):
-                self.dataset = rasterio.open(path)
-                self.arr = self.dataset.read()
+class Source:
+    """
+    Provides methods to query data sources for metadata and download images and quicklooks (APIs only).
+    Remote APIs and local data directories that hold metadata files are supported.
+    """
+
+    def __init__(self, source, source_dir=None):
+        """
+        :param source: Name of the data source ['file', 'scihub', 'earthexplorer'] (String).
+        :param source_dir: Path to directory if source is 'file' (String).
+        """
+        self.src = source
+
+        if self.src == Datahub.file:
+            if not source_dir:
+                raise AttributeError(f"{traceback.format_exc()} 'source_dir' has to be set if source is {self.src}.")
             else:
-                raise TypeError(f"path must be of type str")
-        else:
-            if isinstance(dataset, rasterio.io.DatasetReader) and isinstance(arr, np.ndarray):
-                self.dataset = dataset
-                self.arr = arr
-            else:
-                raise TypeError(
-                    f"dataset must be of type rasterio.io.DatasetReader and arr must be of type " f"numpy.ndarray"
-                )
-        self.transform = self.dataset.transform
-        self.crs = self.dataset.crs
-        self.da_arr = None
+                self.api = source_dir
 
-    def get_valid_data_bbox(self, nodata=0):
-        """bounding box covering the input array's valid data pixels.
+        elif self.src == Datahub.EarthExplorer:
+            # connect to Earthexplorer
+            self.user = env_get("EARTHEXPLORER_USER")
+            self.pw = env_get("EARTHEXPLORER_PW")
+            self.api = landsatxplore.api.API(self.user, self.pw)
 
-        :param nodata: nodata value, optional (default: 0)
-        :return: tuple with valid data bounds
-        """
-        valid_data_window = windows.get_data_window(self.arr, nodata=nodata)
-        return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.transform))
-
-    def mask_image(self, bbox, crop=True, pad=False, **kwargs):
-        """
-        TODO https://github.com/mapbox/rasterio/issues/995
-        :param bbox: bounding box of type tuple or Shapely Polygon
-        :param crop: bool, see rasterio.mask. Optional, (default: True)
-        :param pad: pads image, should only be used when bbox.bounds extent img.bounds, optional (default: False)
-        """
-        if pad:
-            self.dataset = self._pad_to_bbox(bbox, **kwargs).open()
-
-        if isinstance(bbox, polygon.Polygon):
-            self.arr, self.transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
-        elif isinstance(bbox, tuple):
-            self.arr, self.transform = rasterio.mask.mask(self.dataset, [box(*bbox)], crop=crop)
-        else:
-            raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
-
-    def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
-        """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
-        array with nodata values before masking in case bbox only partially overlaps dataset bounds.
-
-        :param bbox: bounding box of type tuple or Shapely Polygon
-        :param mode: str, how to pad, see rasterio.pad. Optional (default: 'constant')
-        :param constant_values: nodata value, padding should be filled with, optional (default: 0)
-        :return: open, buffered dataset in memory
-        """
-        if isinstance(bbox, polygon.Polygon):
-            bbox = bbox.bounds
-        elif isinstance(bbox, tuple):
-            pass
-        else:
-            raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
-
-        max_diff_ur = np.max(np.subtract(bbox[2:], tuple(self.dataset.bounds[2:])))
-        max_diff_ll = np.max(np.subtract(tuple(self.dataset.bounds[:2]), bbox[:2]))
-        max_diff = max(max_diff_ll, max_diff_ur)  # buffer in units
-
-        pad_width = math.ceil(max_diff / self.transform.to_gdal()[1])  # units / pixel_size
-
-        destination = np.zeros(
-            (self.dataset.count, self.arr.shape[1] + 2 * pad_width, self.arr.shape[2] + 2 * pad_width,), self.arr.dtype,
-        )
-
-        for i in range(0, self.dataset.count):
-            destination[i], self.transform = rasterio.pad(
-                self.arr[0], self.transform, pad_width, mode, constant_values=constant_values,
+        elif self.src == Datahub.Scihub:
+            # connect to Scihub
+            self.user = env_get("SCIHUB_USER")
+            self.pw = env_get("SCIHUB_PW")
+            self.api = sentinelsat.SentinelAPI(
+                self.user, self.pw, "https://scihub.copernicus.eu/dhus", show_progressbars=False,
             )
 
-        self.arr = destination
-
-        mem_profile = self.dataset.meta
-        mem_profile.update(
-            {"height": self.arr.shape[-2], "width": self.arr.shape[-1], "transform": self.transform,}
-        )
-
-        memfile = MemoryFile()
-        ds = memfile.open(**mem_profile)
-        ds.write(self.arr)
-
-        return memfile
-
-    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None):
-        """Reproject a source raster to a destination raster.
-
-        :param dst_crs: CRS or dict, Target coordinate reference system.
-        :param resampling_method: Resampling algorithm, int, defaults to 0 (Nearest)
-            numbers: https://github.com/mapbox/rasterio/blob/master/rasterio/enums.py#L28
-        :param num_threads: int, number of workers, optional (default: 4)
-        :param resolution: tuple (x resolution, y resolution) or float, optional.
-            Target resolution, in units of target coordinate reference system.
-        """
-        # output dimensions and transform for reprojection.
-        if resolution:
-            transform, width, height = calculate_default_transform(
-                self.dataset.crs,
-                dst_crs,
-                self.dataset.width,
-                self.dataset.height,
-                *self.dataset.bounds,
-                resolution=resolution,
-            )
         else:
-            transform, width, height = calculate_default_transform(
-                self.dataset.crs, dst_crs, self.dataset.width, self.dataset.height, *self.dataset.bounds,
-            )
+            raise NotImplementedError(f"{source} is not supported [file, EarthExplorer, Scihub]")
 
-        destination = np.zeros((self.dataset.count, height, width), self.arr.dtype)
+    def __enter__(self):
+        return self
 
-        for i in range(0, self.dataset.count):
-            reproject(
-                source=rasterio.band(self.dataset, i + 1),  # index starting at 1
-                destination=destination[i],
-                src_transform=self.dataset.transform,
-                src_crs=self.dataset.crs,
-                dst_transform=transform,
-                dst_crs=dst_crs,
-                resampling=resampling_method,
-                num_threads=num_threads,
-            )
+    def query_metadata(self, platform, date, aoi, cloud_cover=None):
+        """Queries satellite image metadata from data source.
 
-        # update for further processing
-        self.arr = destination
-        self.transform = transform
-        self.crs = dst_crs
-
-    def dn2toa(self, platform, metadata=None, wavelengths=None):
-        """This method converts digital numbers to top of atmosphere reflectance, like described here:
-        https://www.usgs.gov/land-resources/nli/landsat/using-usgs-landsat-level-1-data-product
-        TODO rio-toa does not seem to be maintained anymore
-
-        :param platform: image platform, possible Platform.Landsat[5, 7, 8] or Platform.Sentinel2 (<enum 'Platform'>).
-        :param metadata: path to metadata file for Landsat (str).
-        :param wavelengths: like ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"] for Landsat-5 (list of str).
+        :param platform: image platform (<enum 'Platform'>).
+        :param date: Date from - to (String or Datetime tuple). Expects a tuple of (start, end), e.g.
+            (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
+        :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
+        :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
+        :returns: Metadata of products that match query criteria (List of Metadata objects).
         """
-        if platform in [
-            Platform.Landsat5,
-            Platform.Landsat7,
-            Platform.Landsat8,
-        ]:
-            if metadata is None:
-                logger.warning(
-                    "No metadata file provided. Using a simplified DN2TOA conversion that ignores sun angle and "
-                    "band specific rescaling factors."
-                )
-                simple_toa = 0.00002 * self.arr.astype(np.float32) + (-0.100000)
-                self.arr = np.array(np.dstack(simple_toa))
-            else:
-                # if metadata file is provided use a more sophisticated conversion that accounts for the sun angle
-                # get factors from metadata file
-                mtl = toa_utils._load_mtl(metadata)  # no obvious reason not to call this
-                metadata = mtl["L1_METADATA_FILE"]
-                sun_elevation = metadata["IMAGE_ATTRIBUTES"]["SUN_ELEVATION"]
-                toa = []
+        if self.src == Datahub.file:
+            raise NotImplementedError("File metadata query not yet supported.")
 
-                for idx, b in enumerate(sorted(self._lookup_bands(platform, wavelengths))):
-                    multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_MULT_BAND_{b}"]
-                    additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
-
-                    if platform == Platform.Landsat8:  # exception for Landsat-8
-                        if b in ["10", "11"]:
-                            thermal_conversion_constant1 = metadata["THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
-                            toa.append(
-                                brightness_temp.brightness_temp(
-                                    self.arr[:, :, idx],
-                                    ML=multiplicative_rescaling_factors,
-                                    AL=additive_rescaling_factors,
-                                    K1=thermal_conversion_constant1,
-                                    K2=thermal_conversion_constant2,
-                                )
-                            )
-                            continue
-                    else:
-                        if b.startswith("6"):
-                            thermal_conversion_constant1 = metadata["TIRS_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["TIRS_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
-                            toa.append(
-                                brightness_temp.brightness_temp(
-                                    self.arr[:, :, idx],
-                                    ML=multiplicative_rescaling_factors,
-                                    AL=additive_rescaling_factors,
-                                    K1=thermal_conversion_constant1,
-                                    K2=thermal_conversion_constant2,
-                                )
-                            )
-                            continue
-
-                    toa.append(
-                        reflectance.reflectance(
-                            self.arr[:, :, idx],
-                            MR=multiplicative_rescaling_factors,
-                            AR=additive_rescaling_factors,
-                            E=sun_elevation,
-                        )
-                    )
-
-                self.arr = np.array(np.dstack(toa))
-        elif platform == Platform.Sentinel2:
-            self.arr = self.arr.astype(np.float32) / 10000.0
-        else:
-            logger.warning(
-                f"Cannot convert dn2toa. Platform {platform} not supported [Landsat-5, Landsat-7, Landsat-8, "
-                f"Sentinel-2]. "
+        elif self.src == Datahub.EarthExplorer:
+            # query Earthexplorer for metadata
+            bbox = self.prep_aoi(aoi).bounds
+            kwargs = {}
+            if cloud_cover:
+                kwargs["max_cloud_cover"] = cloud_cover[1]
+            meta_src = self.api.search(
+                dataset=platform.value,
+                bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
+                start_date=sentinelsat.format_query_date(date[0]),
+                end_date=sentinelsat.format_query_date(date[1]),
+                max_results=10000,
+                **kwargs,
             )
+
+        else:
+            # query Scihub for metadata
+            kwargs = {}
+            if cloud_cover and platform != platform.Sentinel1:
+                kwargs["cloudcoverpercentage"] = cloud_cover
+            meta_src = self.api.query(area=self.prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,)
+            meta_src = self.api.to_geojson(meta_src)["features"]
+
+        # construct MetadataCollection from list of Metadata objects
+        meta = []
+        for m in meta_src:
+            meta.append(self.construct_metadata(meta_src=m))
+        return MetadataCollection(meta)
+
+    def construct_metadata(self, meta_src):
+        """Constructs a metadata object that is harmonized across the different satellite image sources.
+
+        :param meta_src: Source metadata (GeoJSON-like mapping)
+        :returns: Harmonized metadata (Metadata object)
+        """
+        if self.src == Datahub.file:
+            raise NotImplementedError("File metadata construction not yet supported.")
+
+        elif self.src == Datahub.EarthExplorer:
+            meta = Metadata(
+                id=meta_src["displayId"],
+                platformname=Platform(
+                    meta_src["dataAccessUrl"][
+                        meta_src["dataAccessUrl"].find("dataset_name=")
+                        + len("dataset_name=") : meta_src["dataAccessUrl"].rfind("&ordered=")
+                    ]
+                ),
+                producttype="L1TP",
+                orbitdirection="DESCENDING",
+                orbitnumber=int(
+                    meta_src["summary"][
+                        meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
+                    ]
+                ),
+                relativeorbitnumber=int(meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :]),
+                acquisitiondate=meta_src["acquisitionDate"],
+                ingestiondate=meta_src["modifiedDate"],
+                cloudcoverpercentage=float(round(meta_src["cloudCover"], 2)) if "cloudCover" in meta_src else None,
+                format="GeoTIFF",
+                srcid=meta_src["displayId"],
+                srcurl=meta_src["dataAccessUrl"],
+                srcuuid=meta_src["entityId"],
+                geom=meta_src["spatialFootprint"],
+            )
+
+        else:
+            meta = Metadata(
+                id=meta_src["properties"]["identifier"],
+                platformname=Platform(meta_src["properties"]["platformname"]),
+                producttype=meta_src["properties"]["producttype"],
+                orbitdirection=meta_src["properties"]["orbitdirection"],
+                orbitnumber=int(meta_src["properties"]["orbitnumber"]),
+                relativeorbitnumber=int(meta_src["properties"]["relativeorbitnumber"]),
+                acquisitiondate=meta_src["properties"]["beginposition"],
+                ingestiondate=meta_src["properties"]["ingestiondate"],
+                cloudcoverpercentage=float(round(meta_src["properties"]["cloudcoverpercentage"], 2))
+                if "cloudcoverpercentage" in meta_src["properties"]
+                else None,
+                format=meta_src["properties"]["format"],
+                size=meta_src["properties"]["size"],
+                srcid=meta_src["properties"]["identifier"],
+                srcurl=meta_src["properties"]["link"],
+                srcuuid=meta_src["properties"]["uuid"],
+                geom=meta_src["geometry"],
+            )
+
+        return meta
+
+    def download_image(self, platform, product_uuid, target_dir):
+        """Downloads satellite image data to a target directory for a specific product_id.
+        Incomplete downloads are continued and complete files are skipped.
+
+        :param platform: image platform (<enum 'Platform'>).
+        :param product_uuid: UUID of the satellite image product (String).
+        :param target_dir: Target directory that holds the downloaded images (String)
+        """
+        if self.src == Datahub.file:
+            raise Exception("download_image() not supported for Datahub.file.")
+
+        elif self.src == Datahub.EarthExplorer:
+            # query EarthExplorer for srcid of product
+            meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+            product_srcid = meta_src[0]["displayId"]
+            # download data from AWS
+            product = Product(product_srcid)
+            product.download(out_dir=target_dir, progressbar=False)
+
+            # compress download directory and remove original files
+            pack(
+                os.path.join(target_dir, product_srcid), root_dir=os.path.join(target_dir, product_srcid),
+            )
+            shutil.rmtree(os.path.join(target_dir, product_srcid))
+
+        else:
+            self.api.download(product_uuid, target_dir, checksum=True)
+
+    def download_quicklook(self, platform, product_uuid, target_dir):
+        """Downloads a quicklook of the satellite image to a target directory for a specific product_id.
+        It performs a very rough geocoding of the quicklooks by shifting the image to the location of the footprint.
+
+        :param platform: image platform (<enum 'Platform'>).
+        :param product_uuid: UUID of the satellite image product (String).
+        :param target_dir: Target directory that holds the downloaded images (String)
+        """
+        if self.src == Datahub.file:
+            raise NotImplementedError(f"download_quicklook not supported for {self.src}.")
+
+        elif self.src == Datahub.EarthExplorer:
+            # query EarthExplorer for url, srcid and bounds of product
+            meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+            url = meta_src[0]["browseUrl"]
+            bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
+            product_srcid = meta_src[0]["displayId"]
+
+        else:
+            # query Scihub for url, srcid and bounds of product
+            meta_src = self.api.get_product_odata(product_uuid)
+            url = "https://scihub.copernicus.eu/apihub/odata/v1/Products('{}')/Products('Quicklook')/$value".format(
+                product_uuid
+            )
+            bounds = wkt.loads(meta_src["footprint"]).bounds
+            product_srcid = meta_src["title"]
+
+        # download quicklook and crop no-data borders
+        response = requests.get(url, auth=(self.user, self.pw))
+        quicklook = np.asarray(Image.open(BytesIO(response.content)))
+        # use threshold of 50 to overcome noise in JPEG compression
+        xs, ys, zs = np.where(quicklook >= 50)
+        quicklook = quicklook[min(xs) : max(xs) + 1, min(ys) : max(ys) + 1, min(zs) : max(zs) + 1]
+        Image.fromarray(quicklook).save(os.path.join(target_dir, product_srcid + ".jpg"))
+
+        # geocode quicklook
+        quicklook_size = (quicklook.shape[1], quicklook.shape[0])
+        dist_x = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[2], bounds[1])) / quicklook_size[0]
+        dist_y = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[0], bounds[3])) / quicklook_size[1]
+        ul_x, ul_y = bounds[0], bounds[3]
+        with open(os.path.join(os.path.join(target_dir, product_srcid + ".jpgw")), "w") as out_file:
+            out_file.write(str(dist_x) + "\n")
+            out_file.write(str(0.0) + "\n")
+            out_file.write(str(0.0) + "\n")
+            out_file.write(str(-dist_y) + "\n")
+            out_file.write(str(ul_x) + "\n")
+            out_file.write(str(ul_y) + "\n")
 
     @staticmethod
-    def _lookup_bands(platform, wavelengths):
-        """lookup for bands and their according wavelength for Landsat-5, -7 & -8.
+    def prep_aoi(aoi):
+        """Converts aoi to Shapely Polygon and reprojects to WGS84.
 
-        :param: platform: Platform.Landsat[5, 7, 8]
-        :param wavelengths: list like ["Blue", "Green", "Red"]
-        :return: list of bands like ["1", "2", "3"]
+        :param aoi: Area of interest as Geojson file or bounding box in lat lon coordinates (String, Tuple)
+        :return: Shapely Polygon
         """
-        wave_bands = {
-            Platform.Landsat5: {
-                "blue": "1",
-                "green": "2",
-                "red": "3",
-                "nir": "4",
-                "swir1": "5",
-                "tirs": "6",
-                "swir2": "7",
-            },
-            Platform.Landsat7: {
-                "blue": "1",
-                "green": "2",
-                "red": "3",
-                "nir": "4",
-                "swir1": "5",
-                "tirs1": "6_VCID_1",
-                "tirs2": "6_VCID_2",
-                "swir2": "7",
-            },
-            Platform.Landsat8: {
-                "aerosol": "1",
-                "blue": "2",
-                "green": "3",
-                "red": "4",
-                "nir": "5",
-                "swir1": "6",
-                "swir2": "7",
-                "pan": "9",
-                "tirs1": "10",
-                "tirs2": "11",
-            },
-        }
+        if isinstance(aoi, str):
+            with fiona.open(aoi, "r") as aoi:
+                # make sure crs is in epsg:4326
+                project = pyproj.Transformer.from_proj(
+                    proj_from=pyproj.Proj(aoi.crs["init"]),
+                    proj_to=pyproj.Proj("epsg:4326"),
+                    skip_equivalent=True,
+                    always_xy=True,
+                )
+                aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
 
-        return [wave_bands[platform][wavelength.lower()] for wavelength in wavelengths]
+        elif isinstance(aoi, tuple):
+            aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
 
-    def get_tiles(self, width=256, height=256, overlap=0):
-        """Calculates rasterio.windows.Window, idea from https://stackoverflow.com/a/54525931
+        else:
+            raise TypeError(f"aoi must be of type string or tuple")
 
-        TODO boundless with 'reflect' padding
-
-        :param width: int, optional (default: 256). Tile size in pixels.
-        :param height: int, optional (default: 256). Tile size in pixels.
-        :param overlap: int, optional (default: 0). Overlap in pixels.
-        :yields: window of tile
-        """
-        logger.info(f"Get tiles with size {width}x{height}.")
-        rows = self.arr.shape[-2]
-        cols = self.arr.shape[-1]
-        offsets = product(range(0, cols, width), range(0, rows, height))
-        bounding_window = windows.Window(col_off=0, row_off=0, width=cols, height=rows)
-        for col_off, row_off in offsets:
-            yield windows.Window(
-                col_off=col_off - overlap,
-                row_off=row_off - overlap,
-                width=width + 2 * overlap,
-                height=height + 2 * overlap,
-            ).intersection(
-                bounding_window
-            )  # clip off window parts not in original array
-
-    def smooth_tiles(self, window_tile):
-        # TODO using tukey --> https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.tukey.html
-        pass
-
-    def get_subset(self, tile, band=0):
-        """Get slice of array.
-
-        :param tile: rasterio.windows.Window tile from get_tiles().
-        :param band: Band number (default: 0).
-        :return: Sliced numpy array, bounding box of array slice.
-        """
-        # access window bounds
-        bounds = windows.bounds(tile, self.dataset.transform)
-        return self.arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
-
-    def to_dask_array(self, chunk_size=(1, 6000, 6000)):
-        """ transforms numpy to dask array
-
-        :param chunk_size: tuple, size of chunk, optional (default: (1, 6000, 6000))
-        :return: dask array
-        """
-        try:
-            import dask.array as da
-        except ImportError:
-            raise ImportError("to_dask_array requires optional dependency dask[array].")
-
-        self.da_arr = da.from_array(self.arr, chunks=chunk_size)
-        return self.da_arr
-
-    def write_to_file(self, path_to_file, dtype=rasterio.uint16, driver="GTiff"):
-        """
-        Write a dataset to file.
-        :param path_to_file: str, path to new file
-        :param dtype: datatype, optional (default: rasterio.uint16)
-        :param driver: str, optional (default: 'GTiff')
-        """
-        profile = self.dataset.meta
-        profile.update(
-            {
-                "driver": driver,
-                "height": self.arr.shape[-2],
-                "width": self.arr.shape[-1],
-                "dtype": dtype,
-                "transform": self.transform,
-                "crs": self.crs,
-            }
-        )
-
-        with rasterio.open(path_to_file, "w", **profile) as dst:
-            dst.write(self.arr.astype(dtype))
+        return aoi
 
     def close(self):
-        """closes Image"""
-        self.dataset.close()
+        """Closes connection to or logs out of Datahub"""
+        if self.src == Datahub.EarthExplorer:
+            self.api.logout()
+        elif self.src == Datahub.Scihub:
+            self.api.session.close()
+        else:
+            pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+
+class Metadata:
+    """
+    Provides a container to store metadata. Fields are assigned a default value, checked for dtype, validated
+    and converted if needed.
+    """
+
+    __init__ = make_init()
+    id: str = field(check_type=True, read_only=True, doc="Product ID")
+    platformname: Platform = field(check_type=True, default=None, doc="Platform name")
+    producttype: str = field(check_type=True, default="", doc="Product type")
+    orbitdirection: str = field(check_type=True, default="", doc="Orbitdirection")
+    orbitnumber: int = field(check_type=True, default=None, doc="Orbitnumber")
+    relativeorbitnumber: int = field(check_type=True, default=None, doc="Relative orbitnumber")
+    acquisitiondate = field(type_hint=datetime.date, check_type=True, default=None, doc="Acquisitiondate")
+    ingestiondate = field(type_hint=datetime.date, check_type=True, default=None, doc="Ingestiondate")
+    processingdate = field(type_hint=datetime.date, check_type=True, default=None, doc="Processingdate")
+    processingsteps: str = field(check_type=True, default="", doc="Processingsteps")
+    processingversion: str = field(check_type=True, default="", doc="Processing version")
+    bandlist: str = field(check_type=True, default="", doc="Bandlist")
+    cloudcoverpercentage: float = field(check_type=True, default=None, doc="Cloudcover [percent]")
+    format: str = field(check_type=True, default="", doc="File format")
+    size: str = field(check_type=True, default="", doc="File size [MB]")
+    srcid: str = field(check_type=True, doc="Source product ID")
+    srcurl: str = field(check_type=True, default="", doc="Source product URL")
+    srcuuid: str = field(check_type=True, doc="Source product UUID")
+    geom: dict = field(check_type=True, default=None, doc="Geometry [multipolygon dict]")
+
+    @acquisitiondate.converter(accepts=str)
+    @ingestiondate.converter(accepts=str)
+    @processingdate.converter(accepts=str)
+    def _prep_date(self, value):
+        """Converts a date string to datetime.date object.
+
+        :returns: Datetime.date
+        """
+        if value is not None:
+            return parse(value)
+
+    def to_dict(self):
+        """Converts Metadata to Dict.
+
+        :returns: Metadata (Dict)
+        """
+        return {
+            "id": self.id,
+            "platformname": None if self.platformname is None else self.platformname.value,
+            "producttype": self.producttype,
+            "orbitdirection": self.orbitdirection,
+            "orbitnumber": self.orbitnumber,
+            "relativeorbitnumber": self.relativeorbitnumber,
+            "acquisitiondate": None if self.acquisitiondate is None else self.acquisitiondate.strftime("%Y/%m/%d"),
+            "ingestiondate": None if self.ingestiondate is None else self.ingestiondate.strftime("%Y/%m/%d"),
+            "processingdate": None if self.processingdate is None else self.processingdate.strftime("%Y/%m/%d"),
+            "processingsteps": self.processingsteps,
+            "processingversion": self.processingversion,
+            "bandlist": self.bandlist,
+            "cloudcoverpercentage": self.cloudcoverpercentage,
+            "format": self.format,
+            "size": self.size,
+            "srcid": self.srcid,
+            "srcurl": self.srcurl,
+            "srcuuid": self.srcuuid,
+        }
+
+    def to_json(self):
+        """Converts Metadata to JSON.
+
+        :returns: Metadata (JSON)
+        """
+        return json.dumps(self.to_dict())
+
+    def to_geojson(self):
+        """Converts Metadata to GeoJSON.
+
+        :returns: Metadata (GeoJSON)
+        """
+        return geometry.mapping(_GeoInterface({"type": "Feature", "properties": self.to_dict(), "geometry": self.geom}))
+
+    def save(self, target_dir):
+        """Saves Metadata to GeoJSON file in target_dir with srcid as filename.
+
+        :param target_dir: Target directory that holds the downloaded metadata (String)
+        """
+        g = self.to_geojson()
+        with open(os.path.join(target_dir, g["properties"]["srcid"] + ".json"), "w") as f:
+            json.dump(g, f)
+
+
+class MetadataCollection:
+    """
+    Provides a container to store a collection of metadata objects. Conversion methods are provided to
+    analyse the metadata collection further.
+    """
+
+    __init__ = make_init()
+    items: List[Metadata] = field(type_hint=List[Metadata])
+
+    def to_dict(self):
+        """Converts MetadataCollection to List of Dict.
+
+        :returns: MetadataCollection (List of Dict)
+        """
+        return [item.to_dict() for item in self.items]
+
+    def to_json(self):
+        """Converts MetadataCollection to List of JSON.
+
+        :returns: MetadataCollection (List of JSON)
+        """
+        return [item.to_json() for item in self.items]
+
+    def to_geojson(self):
+        """Converts MetadataCollection to list of GeoJSON.
+
+        :returns: MetadataCollection (List of GeoJSON)
+        """
+        return [item.to_geojson() for item in self.items]
+
+    def to_pandas(self):
+        """Converts MetadataCollection to Pandas Dataframe.
+
+        :returns: MetadataCollection (Pandas Dataframe)
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise ImportError("to_pandas requires optional dependency Pandas.")
+
+        d = [item.to_dict() for item in self.items]
+        return pd.DataFrame(d)
+
+    def filter(self, filter_dict):
+        """Filters MetadataCollection based on filter_dict.
+
+        :param filter_dict: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
+        :returns: self
+        """
+        k = list(filter_dict.keys())[0]
+        self.items = [item for item in self.items if filter_dict[k] == item.to_geojson()["properties"][k]]
+        return self
+
+    def save(self, target_dir):
+        """Saves MetadataCollection to GeoJSON files in target_dir with srcid as filenames.
+
+        :param target_dir: Target directory (String)
+        """
+        for item in self.items:
+            item.save(target_dir)
+
+
+class _GeoInterface(object):
+    def __init__(self, d):
+        self.__geo_interface__ = d
 
 
 if __name__ == "__main__":

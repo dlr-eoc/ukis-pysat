@@ -10,16 +10,41 @@ The UKIS-pysat package provides generic classes and functions to query, access a
 
 .. code-block:: python
 
+  from ukis_pysat.data import Source
+  from ukis_pysat.raster import Image
   from ukis_pysat.file import get_sentinel_scene_from_dir
-  from ukis_pysat.download import Source
-  from ukis_pysat.data import Image
-  from ukis_pysat.members import Datahub
+  from ukis_pysat.members import Datahub, Platform
 
-  download_source = Source(source=Datahub.Scihub)
-  download_source.download_image(product_srcid, product_uuid, target_dir)
 
+  # connect to Scihub and query metadata (returns MetadataCollection)
+  src = Source(source=Datahub.Scihub)
+  meta = src.query_metadata(
+      platform=Platform.Sentinel2,
+      date=("20200101", "NOW"),
+      aoi=(11.90, 51.46, 11.94, 51.50),
+      cloud_cover=(0, 50),
+  )
+
+  # filter MetadataCollection by producttype
+  meta.filter(filter_dict={"producttype": "S2MSI1C"})
+
+  # inspect MetadataCollection with Pandas
+  meta_df = meta.to_pandas()
+  print(meta_df[["srcid", "producttype", "cloudcoverpercentage", "size", "srcuuid"]])
+
+  # save Metadata item as GeoJSON
+  meta.items[0].save(target_dir="target_dir/")
+
+  # download geocoded quicklook
+  uuid = meta.items[0].to_dict()["srcuuid"]
+  src.download_quicklook(platform=Platform.Sentinel2, product_uuid=uuid, target_dir="target_dir/")
+
+  # download image
+  src.download_image(platform=Platform.Sentinel2, product_uuid=uuid, target_dir="target_dir/")
+
+  # get sentinel scene from directory
   with get_sentinel_scene_from_dir(target_dir) as (full_path, ident):
-      img = Image(os.path.join(full_path, 'pre_nrcs.tif'))
+      img = Image(os.path_testfiles.join(full_path, 'pre_nrcs.tif'))
 
 
 .. toctree::

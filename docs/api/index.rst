@@ -4,7 +4,7 @@ Python API Reference
 .. toctree::
 
    data
-   download
    file
+   raster
 
    members
