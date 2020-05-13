@@ -76,7 +76,7 @@ queries = [
 class DownloadTest(unittest.TestCase):
     def test_init(self):
         with self.assertRaises(
-            Exception, msg=f"{traceback.format_exc()} source_dir has to be set if source is Datahub.file."
+            AttributeError, msg=f"{traceback.format_exc()} source_dir has to be set if source is Datahub.file."
         ):
             Source(Datahub.file)
 
@@ -92,7 +92,7 @@ class DownloadTest(unittest.TestCase):
     def test_exceptions(self):
         src = Source(Datahub.file, source_dir=target_dir)
         with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
-            src._prep_aoi(1)
+            src.prep_aoi(1)
 
         with self.assertRaises(NotImplementedError, msg="File metadata query not yet supported."):
             src.query_metadata(platform=Datahub.file, date="20200101", aoi=aoi_4326,)
@@ -112,11 +112,11 @@ class DownloadTest(unittest.TestCase):
                     cloud_cover=queries[i]["cloud_cover"],
                 )
                 # filter metadata by srcid
-                meta = src.filter_metadata(meta=meta, filter_dict={"srcid": queries[i]["returns_srcid"]},)
-                # download filtered metadata
-                src.download_metadata(meta, target_dir)
-            returns_srcid = meta[0]["properties"]["srcid"]
-            returns_uuid = meta[0]["properties"]["srcuuid"]
+                meta.filter(filter_dict={"srcid": queries[i]["returns_srcid"]},)
+                # save filtered metadata
+                meta.save(target_dir)
+            returns_srcid = meta.to_geojson()[0]["properties"]["srcid"]
+            returns_uuid = meta.to_geojson()[0]["properties"]["srcuuid"]
             self.assertEqual(returns_srcid, (queries[i]["returns_srcid"]))
             self.assertEqual(returns_uuid, (queries[i]["returns_uuid"]))
             self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".json"))

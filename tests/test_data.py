@@ -101,7 +101,7 @@ class DataTest(unittest.TestCase):
                 self.assertEqual(bounds, (11.903960582768779, 51.45624717410995, 11.904589403469808, 51.45687599481152))
 
     def test_get_dask_array(self):
-        self.assertIsInstance(img.get_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
+        self.assertIsInstance(img.to_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
 
     def test_write_to_file(self):
         img.write_to_file(r"result.tif")

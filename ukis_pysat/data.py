@@ -4,7 +4,6 @@ import logging
 import math
 from itertools import product
 
-import dask.array as da
 import numpy as np
 import rasterio
 import rasterio.mask
@@ -317,12 +316,17 @@ class Image:
         bounds = windows.bounds(tile, self.dataset.transform)
         return self.arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
 
-    def get_dask_array(self, chunk_size=(1, 6000, 6000)):
+    def to_dask_array(self, chunk_size=(1, 6000, 6000)):
         """ transforms numpy to dask array
 
         :param chunk_size: tuple, size of chunk, optional (default: (1, 6000, 6000))
         :return: dask array
         """
+        try:
+            import dask.array as da
+        except ImportError:
+            raise ImportError("to_dask_array requires optional dependency dask[array].")
+
         self.da_arr = da.from_array(self.arr, chunks=chunk_size)
         return self.da_arr
 
