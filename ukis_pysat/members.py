@@ -11,6 +11,6 @@ class Platform(Enum):
 
 
 class Datahub(Enum):
-    file = auto()
+    File = auto()
     EarthExplorer = auto()
     Scihub = auto()
