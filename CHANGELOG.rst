@@ -16,6 +16,19 @@ something was changed
 [master]  (2020-XX-XX)
 ----------------------
 
+Added
+*****
+- ``download.Source()``: support for local metadata queries #6
+
+Fixed
+*****
+
+Changed
+*******
+- ``download.Source()``: changed ``Source(source, source_dir)`` to ``Source(datahub, datadir)`` #6
+- ``members.Datahub()``: changed ``file`` to ``File`` #6
+- updated README #6
+
 [0.2.0]  (2020-05-13)
 ----------------------
 

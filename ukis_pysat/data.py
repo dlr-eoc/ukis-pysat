@@ -342,7 +342,6 @@ class Metadata:
     Provides a container to store metadata. Fields are assigned a default value, checked for dtype, validated
     and converted if needed.
     """
-
     __init__ = make_init()
     id: str = field(check_type=True, read_only=True, doc="Product ID")
     platformname: Platform = field(check_type=True, default=None, doc="Platform name")
@@ -427,12 +426,11 @@ class Metadata:
 
 class MetadataCollection:
     """
-    Provides a container to store a collection of metadata objects. Conversion methods are provided to
-    analyse the metadata collection further.
+    Provides a container to store a collection of Metadata objects. Conversion methods are provided to
+    analyse the MetadataCollection further.
     """
-
     __init__ = make_init()
-    items: List[Metadata] = field(type_hint=List[Metadata])
+    items: List[Metadata] = field(doc="Collection of Metadata objects")
 
     def to_dict(self):
         """Converts MetadataCollection to List of Dict.
