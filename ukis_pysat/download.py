@@ -42,36 +42,26 @@ class Source:
 
         if self.src == Datahub.file:
             if not source_dir:
-                raise Exception(f"{traceback.format_exc()} source_dir has to be set if source is {self.src}.")
+                raise AttributeError(f"{traceback.format_exc()} 'source_dir' has to be set if source is {self.src}.")
             else:
                 self.api = source_dir
 
         elif self.src == Datahub.EarthExplorer:
-            try:
-                # connect to Earthexplorer
-                self.user = env_get("EARTHEXPLORER_USER")
-                self.pw = env_get("EARTHEXPLORER_PW")
-                self.api = landsatxplore.api.API(self.user, self.pw)
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not connect to EarthExplorer. This Exception was raised {e}."
-                )
+            # connect to Earthexplorer
+            self.user = env_get("EARTHEXPLORER_USER")
+            self.pw = env_get("EARTHEXPLORER_PW")
+            self.api = landsatxplore.api.API(self.user, self.pw)
 
         elif self.src == Datahub.Scihub:
-            try:
-                # connect to Scihub
-                self.user = env_get("SCIHUB_USER")
-                self.pw = env_get("SCIHUB_PW")
-                self.api = sentinelsat.SentinelAPI(
-                    self.user, self.pw, "https://scihub.copernicus.eu/dhus", show_progressbars=False,
-                )
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not connect to SciHub. This Exception was raised: {e}."
-                )
+            # connect to Scihub
+            self.user = env_get("SCIHUB_USER")
+            self.pw = env_get("SCIHUB_PW")
+            self.api = sentinelsat.SentinelAPI(
+                self.user, self.pw, "https://scihub.copernicus.eu/dhus", show_progressbars=False,
+            )
 
         else:
-            raise NotImplementedError(f"{source} is not supported [file, earthexplorer, scihub]")
+            raise NotImplementedError(f"{source} is not supported [file, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
@@ -90,53 +80,33 @@ class Source:
             raise NotImplementedError("File metadata query not yet supported.")
 
         elif self.src == Datahub.EarthExplorer:
-            try:
-                # query Earthexplorer for metadata
-                bbox = self.prep_aoi(aoi).bounds
-                kwargs = {}
-                if cloud_cover:
-                    kwargs["max_cloud_cover"] = cloud_cover[1]
-                meta_src = self.api.search(
-                    dataset=platform.value,
-                    bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
-                    start_date=sentinelsat.format_query_date(date[0]),
-                    end_date=sentinelsat.format_query_date(date[1]),
-                    max_results=10000,
-                    **kwargs,
-                )
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not execute query to EarthExplorer. Check your query parameters. "
-                    f"The following Exception was raised: {e}."
-                )
+            # query Earthexplorer for metadata
+            bbox = self.prep_aoi(aoi).bounds
+            kwargs = {}
+            if cloud_cover:
+                kwargs["max_cloud_cover"] = cloud_cover[1]
+            meta_src = self.api.search(
+                dataset=platform.value,
+                bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
+                start_date=sentinelsat.format_query_date(date[0]),
+                end_date=sentinelsat.format_query_date(date[1]),
+                max_results=10000,
+                **kwargs,
+            )
 
         else:
-            try:
-                # query Scihub for metadata
-                kwargs = {}
-                if cloud_cover and platform != platform.Sentinel1:
-                    kwargs["cloudcoverpercentage"] = cloud_cover
-                meta_src = self.api.query(
-                    area=self.prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,
-                )
-                meta_src = self.api.to_geojson(meta_src)["features"]
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not execute query to Scihub. Check your query parameters."
-                    f"The following Exception was raised: {e}."
-                )
+            # query Scihub for metadata
+            kwargs = {}
+            if cloud_cover and platform != platform.Sentinel1:
+                kwargs["cloudcoverpercentage"] = cloud_cover
+            meta_src = self.api.query(area=self.prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,)
+            meta_src = self.api.to_geojson(meta_src)["features"]
 
-        try:
-            # construct MetadataCollection from list of Metadata objects
-            meta = []
-            for m in meta_src:
-                meta.append(self.construct_metadata(meta_src=m))
-            return MetadataCollection(meta)
-        except Exception as e:
-            raise Exception(
-                f"{traceback.format_exc()} Could not convert metadata to custom metadata. "
-                f"The following Exception was raised: {e}."
-            )
+        # construct MetadataCollection from list of Metadata objects
+        meta = []
+        for m in meta_src:
+            meta.append(self.construct_metadata(meta_src=m))
+        return MetadataCollection(meta)
 
     def construct_metadata(self, meta_src):
         """Constructs a metadata object that is harmonized across the different satellite image sources.
@@ -209,40 +179,21 @@ class Source:
             logger.warning(f"download_image not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
-            try:
-                # query EarthExplorer for srcid of product
-                meta_src = self.api.request(
-                    "metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},
-                )
-                product_srcid = meta_src[0]["displayId"]
-                # download data from AWS
-                product = Product(product_srcid)
-                product.download(out_dir=target_dir, progressbar=False)
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not download data through {self.src} (stored on AWS). "
-                    f"The following Exception was raised: {e}."
-                )
-            try:
-                # compress download directory and remove original files
-                pack(
-                    os.path.join(target_dir, product_srcid), root_dir=os.path.join(target_dir, product_srcid),
-                )
-                shutil.rmtree(os.path.join(target_dir, product_srcid))
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not download data through {self.src}. "
-                    f"This Exception was raised: {e}."
-                )
+            # query EarthExplorer for srcid of product
+            meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+            product_srcid = meta_src[0]["displayId"]
+            # download data from AWS
+            product = Product(product_srcid)
+            product.download(out_dir=target_dir, progressbar=False)
+
+            # compress download directory and remove original files
+            pack(
+                os.path.join(target_dir, product_srcid), root_dir=os.path.join(target_dir, product_srcid),
+            )
+            shutil.rmtree(os.path.join(target_dir, product_srcid))
 
         else:
-            try:
-                self.api.download(product_uuid, target_dir, checksum=True)
-            except Exception as e:
-                raise Exception(
-                    f"{traceback.format_exc()} Could not download data through {self.src}. "
-                    f"This Exception was raised: {e}."
-                )
+            self.api.download(product_uuid, target_dir, checksum=True)
 
     def download_quicklook(self, platform, product_uuid, target_dir):
         """Downloads a quicklook of the satellite image to a target directory for a specific product_id.
@@ -256,35 +207,20 @@ class Source:
             raise NotImplementedError(f"download_quicklook not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
-            try:
-                # query EarthExplorer for url, srcid and bounds of product
-                meta_src = self.api.request(
-                    "metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},
-                )
-                url = meta_src[0]["browseUrl"]
-                bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
-                product_srcid = meta_src[0]["displayId"]
-            except Exception as e:
-                logger.warning(
-                    f"{traceback.format_exc()} Could not download and save quicklook. "
-                    f"This Exception was raised: {e}."
-                )
-                return
+            # query EarthExplorer for url, srcid and bounds of product
+            meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+            url = meta_src[0]["browseUrl"]
+            bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
+            product_srcid = meta_src[0]["displayId"]
 
         else:
-            try:
-                # query Scihub for url, srcid and bounds of product
-                meta_src = self.api.get_product_odata(product_uuid)
-                url = "https://scihub.copernicus.eu/apihub/odata/v1/Products('{}')/Products('Quicklook')/$value".format(
-                    product_uuid
-                )
-                bounds = wkt.loads(meta_src["footprint"]).bounds
-                product_srcid = meta_src["title"]
-            except Exception as e:
-                logger.warning(
-                    f"{traceback.format_exc()} Could not download and save quicklook. This Exception was raised: {e}."
-                )
-                return
+            # query Scihub for url, srcid and bounds of product
+            meta_src = self.api.get_product_odata(product_uuid)
+            url = "https://scihub.copernicus.eu/apihub/odata/v1/Products('{}')/Products('Quicklook')/$value".format(
+                product_uuid
+            )
+            bounds = wkt.loads(meta_src["footprint"]).bounds
+            product_srcid = meta_src["title"]
 
         # download quicklook and crop no-data borders
         response = requests.get(url, auth=(self.user, self.pw))
