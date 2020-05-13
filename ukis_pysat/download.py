@@ -176,7 +176,7 @@ class Source:
         :param target_dir: Target directory that holds the downloaded images (String)
         """
         if self.src == Datahub.file:
-            logger.warning(f"download_image not supported for {self.src}.")
+            raise Exception("download_image() not supported for Datahub.file.")
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for srcid of product

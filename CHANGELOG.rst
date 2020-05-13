@@ -19,8 +19,9 @@ something was changed
 Added
 *****
 - ``download.Source()``: Classes ``Metadata`` and ``MetadataCollection`` for metadata handling #13
-- expanded metadata part in README #13- requirements: pandas, pyfields
-- ``download.Source()``: Static method ``prep_aoi()`` for on the fly perparation of aoi for queries #1
+- expanded metadata part in README #13 - requirements: pyfields
+- ``download.Source()``: ``prep_aoi()`` for on the fly preparation of aoi for queries #1
+- ``data.Image()``: method ``get_subset()`` to retrieve subset array and bounding box of image tile #12
 - ``download.Source()``: ``query()`` accepts now aoi in forms of geojson file with varying CRS or bounding box coordinates in Lat Lon #1
 - requirements: pyproj #1
 - ``download.Source()``: added methods to filter and download metadata #4

@@ -1,4 +1,5 @@
 import os
+import traceback
 import unittest
 
 from ukis_pysat.members import Datahub, Platform
@@ -73,6 +74,32 @@ queries = [
 
 
 class DownloadTest(unittest.TestCase):
+    def test_init(self):
+        with self.assertRaises(
+            AttributeError, msg=f"{traceback.format_exc()} source_dir has to be set if source is Datahub.file."
+        ):
+            Source(Datahub.file)
+
+        src = Source(Datahub.file, source_dir=target_dir)
+        self.assertEqual(src.api, target_dir)
+
+        with self.assertRaises(NotImplementedError, msg=f"Hub is not supported [file, EarthExplorer, Scihub]."):
+            Source("Hub")
+
+        with self.assertRaises(AttributeError):
+            Source(Datahub.Hub)
+
+    def test_exceptions(self):
+        src = Source(Datahub.file, source_dir=target_dir)
+        with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
+            src.prep_aoi(1)
+
+        with self.assertRaises(NotImplementedError, msg="File metadata query not yet supported."):
+            src.query_metadata(platform=Datahub.file, date="20200101", aoi=aoi_4326,)
+
+        with self.assertRaises(NotImplementedError, msg="File metadata construction  not yet supported."):
+            src.construct_metadata("")
+
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_query_metadata(self):
         for i in range(len(queries)):
@@ -95,10 +122,12 @@ class DownloadTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".json"))
             os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".json")
 
-    @unittest.skip("uncomment when you set ENVs with credentials")
+    # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_image(self):
-        # TODO
-        pass
+        src = Source(Datahub.file, source_dir=target_dir)
+        with self.assertRaises(Exception, msg="download_image() not supported for Datahub.file."):
+            src.download_image(platform=Datahub.file, product_uuid="1", target_dir=target_dir,)
+        # TODO download tests
 
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_quicklook(self):
@@ -114,6 +143,10 @@ class DownloadTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpgw"))
             os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpg")
             os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpgw")
+
+        src = Source(Datahub.file, source_dir=target_dir)
+        with self.assertRaises(NotImplementedError, msg=f"download_quicklook not supported for Datahub.file."):
+            src.download_quicklook(platform=Datahub.file, product_uuid="1", target_dir=target_dir,)
 
 
 if __name__ == "__main__":
