@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import traceback
+import warnings
 from io import BytesIO
 from typing import List
 
@@ -103,23 +104,32 @@ class Source:
             meta_src = []
             for meta_file in meta_files:
                 with open(meta_file) as f:
-                    # TODO: make sure that invalid json files are skipped
-                    m = json.load(f)
-                    m_platform = m["properties"]["platformname"]
-                    m_date = sentinelsat.format_query_date(m["properties"]["acquisitiondate"])
-                    m_geom = geometry.shape(m["geometry"])
-                    m_cloud_cover = m["properties"]["cloudcoverpercentage"]
-                    if m_cloud_cover is None:
-                        m_cloud_cover = 0
-                    if (
-                        m_platform == platform.value
-                        and m_date >= start_date
-                        and m_date < end_date
-                        and m_geom.intersects(geom)
-                        and m_cloud_cover >= min_cloud_cover
-                        and m_cloud_cover < max_cloud_cover
-                    ):
-                        meta_src.append(m)
+                    try:
+                        # make sure that metadata file is valid
+                        m = json.load(f)
+                        self.construct_metadata(m)
+                        # get values from metadata
+                        m_platform = m["properties"]["platformname"]
+                        m_date = sentinelsat.format_query_date(m["properties"]["acquisitiondate"])
+                        m_geom = geometry.shape(m["geometry"])
+                        m_cloud_cover = m["properties"]["cloudcoverpercentage"]
+                        if m_cloud_cover is None:
+                            m_cloud_cover = 0
+                        if (
+                            m_platform == platform.value
+                            and m_date >= start_date
+                            and m_date < end_date
+                            and m_geom.intersects(geom)
+                            and m_cloud_cover >= min_cloud_cover
+                            and m_cloud_cover < max_cloud_cover
+                        ):
+                            meta_src.append(m)
+                    except (json.decoder.JSONDecodeError, LookupError, TypeError) as e:
+                        warnings.warn(
+                            f"{os.path.basename(meta_file)} not a valid metadata file. {e}. Skipping it.",
+                            UserWarning,
+                            stacklevel=3,
+                        )
 
         elif self.src == Datahub.EarthExplorer:
             # query Earthexplorer for metadata
@@ -342,6 +352,7 @@ class Metadata:
     Provides a container to store metadata. Fields are assigned a default value, checked for dtype, validated
     and converted if needed.
     """
+
     __init__ = make_init()
     id: str = field(check_type=True, read_only=True, doc="Product ID")
     platformname: Platform = field(check_type=True, default=None, doc="Platform name")
@@ -429,6 +440,7 @@ class MetadataCollection:
     Provides a container to store a collection of Metadata objects. Conversion methods are provided to
     analyse the MetadataCollection further.
     """
+
     __init__ = make_init()
     items: List[Metadata] = field(doc="Collection of Metadata objects")
 
