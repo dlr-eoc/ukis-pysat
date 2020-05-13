@@ -16,6 +16,9 @@ something was changed
 [master]  (2020-XX-XX)
 ----------------------
 
+[0.2.0]  (2020-05-13)
+----------------------
+
 Added
 *****
 - ``download.Source()``: Classes ``Metadata`` and ``MetadataCollection`` for metadata handling #13
