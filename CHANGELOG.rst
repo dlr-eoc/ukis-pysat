@@ -32,7 +32,7 @@ Added
 
 Fixed
 *****
-- download.Source(): Improved geocoding quicklooks #5
+- ``download.Source()``: Improved geocoding quicklooks #5
 - fixed #7
 
 Changed
