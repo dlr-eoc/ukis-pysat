@@ -16,6 +16,9 @@ something was changed
 [master]  (2020-XX-XX)
 ----------------------
 
+[0.2.0]  (2020-05-13)
+----------------------
+
 Added
 *****
 - ``download.Source()``: Classes ``Metadata`` and ``MetadataCollection`` for metadata handling #13
@@ -34,6 +37,7 @@ Fixed
 
 Changed
 *******
+- renamed ``ukis_pysat.data`` to ``ukis_pysat.raster`` and ``ukis_pysat.download`` to ``ukis_pysat.data``, breaking compatibility with version 0.1.0 #18
 - ``download.Source()``: Moved ``download_metadata()`` and ``filter_metadata()`` to ``Metadata`` class #13
 - ``download.Source()``: Moved all metadata mapping from ``query()`` to ``construct_metadata()`` #1
 - ``download.Source()``: Changed ``_construct_metadata()`` to ``construct_metadata()`` and removed static #1

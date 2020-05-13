@@ -11,16 +11,16 @@
 
 The UKIS-pysat package provides generic classes and functions to query, access and process multi-spectral and SAR satellite images.
 
-### download
-Download satellites data from different sources (currently Earth Explorer, SciHub, local directory), deal with and structure metadata.
-
-
 ### data
-Reading satellite data and performing simple, but cumbersome tasks.
+Download satellites data from different sources (currently Earth Explorer, SciHub, local directory), deal with and structure metadata.
 
 
 ### file
 Work with you local satellite data files and read information out of file names and metadata files. Currently focusing on Sentinel-1.
+
+
+### raster
+Reading satellite data and performing simple, but cumbersome tasks.
 
 
 Read the documentation for more details: [https://ukis-pysat.readthedocs.io](https://ukis-pysat.readthedocs.io/en/latest/).
@@ -29,7 +29,8 @@ Read the documentation for more details: [https://ukis-pysat.readthedocs.io](htt
 Here's an example about some basic features, it might also help to read through the [tests](https://github.com/dlr-eoc/ukis-pysat/blob/master/tests).
 
 ````python
-from ukis_pysat.download import Source
+from ukis_pysat.data import Source
+from ukis_pysat.raster import Image
 from ukis_pysat.file import get_sentinel_scene_from_dir
 from ukis_pysat.members import Datahub, Platform
 
