@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import shutil
-import traceback
 from io import BytesIO
 from typing import List
 
@@ -33,18 +32,24 @@ class Source:
     Remote APIs and local data directories that hold metadata files are supported.
     """
 
-    def __init__(self, source, source_dir=None):
+    def __init__(self, datahub, datadir=None, datadir_substr=None):
         """
-        :param source: Name of the data source ['file', 'scihub', 'earthexplorer'] (String).
-        :param source_dir: Path to directory if source is 'file' (String).
+        :param datahub: Data source (<enum 'Datahub'>).
+        :param datadir: Path to directory that holds the metadata if datahub is 'File' (String).
+        :param datadir_substr: Optional substring patterns to identify metadata in datadir if datahub
+            is 'File' (List of String).
         """
-        self.src = source
+        self.src = datahub
 
-        if self.src == Datahub.file:
-            if not source_dir:
-                raise AttributeError(f"{traceback.format_exc()} 'source_dir' has to be set if source is {self.src}.")
+        if self.src == Datahub.File:
+            if not datadir:
+                raise AttributeError(f"'datadir' has to be set if datahub is 'File'.")
             else:
-                self.api = source_dir
+                self.api = datadir
+                if datadir_substr is None:
+                    self.api_substr = datadir_substr = [""]
+                else:
+                    self.api_substr = datadir_substr
 
         elif self.src == Datahub.EarthExplorer:
             # connect to Earthexplorer
@@ -61,7 +66,7 @@ class Source:
             )
 
         else:
-            raise NotImplementedError(f"{source} is not supported [file, EarthExplorer, Scihub]")
+            raise NotImplementedError(f"{datahub} is not supported [File, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
@@ -69,15 +74,61 @@ class Source:
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
         """Queries satellite image metadata from data source.
 
-        :param platform: image platform (<enum 'Platform'>).
+        :param platform: Image platform (<enum 'Platform'>).
         :param date: Date from - to (String or Datetime tuple). Expects a tuple of (start, end), e.g.
             (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
         :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
         :returns: Metadata of products that match query criteria (List of Metadata objects).
         """
-        if self.src == Datahub.file:
-            raise NotImplementedError("File metadata query not yet supported.")
+        if self.src == Datahub.File:
+            # query Filesystem for metadata
+            start_date = sentinelsat.format_query_date(date[0])
+            end_date = sentinelsat.format_query_date(date[1])
+            geom = self.prep_aoi(aoi)
+            if cloud_cover and platform != platform.Sentinel1:
+                min_cloud_cover = cloud_cover[0]
+                max_cloud_cover = cloud_cover[1]
+            else:
+                min_cloud_cover = 0
+                max_cloud_cover = 100
+
+            # get all json files in datadir that match substr
+            meta_files = sorted(
+                [
+                    os.path.join(dp, f)
+                    for dp, dn, filenames in os.walk(self.api)
+                    for substr in self.api_substr
+                    for f in filenames
+                    if f.endswith(".json") and substr in f
+                ],
+                key=str.lower,
+            )
+
+            # filter json files by query parameters
+            meta_src = []
+            for meta_file in meta_files:
+                with open(meta_file) as f:
+                    m = json.load(f)
+                    try:
+                        self.construct_metadata(m)
+                    except (json.decoder.JSONDecodeError, LookupError, TypeError) as e:
+                        raise ValueError(f"{os.path.basename(meta_file)} not a valid metadata file. {e}.")
+                    m_platform = m["properties"]["platformname"]
+                    m_date = sentinelsat.format_query_date(m["properties"]["acquisitiondate"])
+                    m_geom = geometry.shape(m["geometry"])
+                    m_cloud_cover = m["properties"]["cloudcoverpercentage"]
+                    if m_cloud_cover is None:
+                        m_cloud_cover = 0
+                    if (
+                        m_platform == platform.value
+                        and m_date >= start_date
+                        and m_date < end_date
+                        and m_geom.intersects(geom)
+                        and m_cloud_cover >= min_cloud_cover
+                        and m_cloud_cover < max_cloud_cover
+                    ):
+                        meta_src.append(m)
 
         elif self.src == Datahub.EarthExplorer:
             # query Earthexplorer for metadata
@@ -103,10 +154,7 @@ class Source:
             meta_src = self.api.to_geojson(meta_src)["features"]
 
         # construct MetadataCollection from list of Metadata objects
-        meta = []
-        for m in meta_src:
-            meta.append(self.construct_metadata(meta_src=m))
-        return MetadataCollection(meta)
+        return MetadataCollection([self.construct_metadata(meta_src=m) for m in meta_src])
 
     def construct_metadata(self, meta_src):
         """Constructs a metadata object that is harmonized across the different satellite image sources.
@@ -114,8 +162,24 @@ class Source:
         :param meta_src: Source metadata (GeoJSON-like mapping)
         :returns: Harmonized metadata (Metadata object)
         """
-        if self.src == Datahub.file:
-            raise NotImplementedError("File metadata construction not yet supported.")
+        if self.src == Datahub.File:
+            meta = Metadata(
+                id=meta_src["properties"]["id"],
+                platformname=Platform(meta_src["properties"]["platformname"]),
+                producttype=meta_src["properties"]["producttype"],
+                orbitdirection=meta_src["properties"]["orbitdirection"],
+                orbitnumber=int(meta_src["properties"]["orbitnumber"]),
+                relativeorbitnumber=int(meta_src["properties"]["relativeorbitnumber"]),
+                acquisitiondate=meta_src["properties"]["acquisitiondate"],
+                ingestiondate=meta_src["properties"]["ingestiondate"],
+                cloudcoverpercentage=meta_src["properties"]["cloudcoverpercentage"],
+                format=meta_src["properties"]["format"],
+                size=meta_src["properties"]["size"],
+                srcid=meta_src["properties"]["srcid"],
+                srcurl=meta_src["properties"]["srcurl"],
+                srcuuid=meta_src["properties"]["srcuuid"],
+                geom=meta_src["geometry"],
+            )
 
         elif self.src == Datahub.EarthExplorer:
             meta = Metadata(
@@ -171,12 +235,12 @@ class Source:
         """Downloads satellite image data to a target directory for a specific product_id.
         Incomplete downloads are continued and complete files are skipped.
 
-        :param platform: image platform (<enum 'Platform'>).
+        :param platform: Image platform (<enum 'Platform'>).
         :param product_uuid: UUID of the satellite image product (String).
         :param target_dir: Target directory that holds the downloaded images (String)
         """
-        if self.src == Datahub.file:
-            raise Exception("download_image() not supported for Datahub.file.")
+        if self.src == Datahub.File:
+            raise Exception("download_image not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for srcid of product
@@ -199,11 +263,11 @@ class Source:
         """Downloads a quicklook of the satellite image to a target directory for a specific product_id.
         It performs a very rough geocoding of the quicklooks by shifting the image to the location of the footprint.
 
-        :param platform: image platform (<enum 'Platform'>).
+        :param platform: Image platform (<enum 'Platform'>).
         :param product_uuid: UUID of the satellite image product (String).
         :param target_dir: Target directory that holds the downloaded images (String)
         """
-        if self.src == Datahub.file:
+        if self.src == Datahub.File:
             raise NotImplementedError(f"download_quicklook not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
@@ -372,12 +436,12 @@ class Metadata:
 
 class MetadataCollection:
     """
-    Provides a container to store a collection of metadata objects. Conversion methods are provided to
-    analyse the metadata collection further.
+    Provides a container to store a collection of Metadata objects. Conversion methods are provided to
+    analyse the MetadataCollection further.
     """
 
     __init__ = make_init()
-    items: List[Metadata] = field(type_hint=List[Metadata])
+    items: List[Metadata] = field(doc="Collection of Metadata objects")
 
     def to_dict(self):
         """Converts MetadataCollection to List of Dict.

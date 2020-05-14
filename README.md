@@ -30,9 +30,9 @@ Here's an example about some basic features, it might also help to read through 
 
 ````python
 from ukis_pysat.data import Source
-from ukis_pysat.raster import Image
 from ukis_pysat.file import get_sentinel_scene_from_dir
 from ukis_pysat.members import Datahub, Platform
+from ukis_pysat.raster import Image
 
 
 # connect to Scihub and query metadata (returns MetadataCollection)
@@ -44,21 +44,21 @@ meta = src.query_metadata(
     cloud_cover=(0, 50),
 )
 
-# filter MetadataCollection by producttype
-meta.filter(filter_dict={"producttype": "S2MSI1C"})
-
 # inspect MetadataCollection with Pandas
 meta_df = meta.to_pandas()
 print(meta_df[["srcid", "producttype", "cloudcoverpercentage", "size", "srcuuid"]])
 
-# save Metadata item as GeoJSON
-meta.items[0].save(target_dir="target_dir/")
+# filter MetadataCollection by producttype
+meta.filter(filter_dict={"producttype": "S2MSI1C"})
 
-# download geocoded quicklook
+# save Metadata items as GeoJSON
+meta.save(target_dir="target_dir/")
+
+# get product_uuid of first metadata item
 uuid = meta.items[0].to_dict()["srcuuid"]
-src.download_quicklook(platform=Platform.Sentinel2, product_uuid=uuid, target_dir="target_dir/")
 
-# download image
+# download geocoded quicklook and image
+src.download_quicklook(platform=Platform.Sentinel2, product_uuid=uuid, target_dir="target_dir/")
 src.download_image(platform=Platform.Sentinel2, product_uuid=uuid, target_dir="target_dir/")
 
 # get sentinel scene from directory
