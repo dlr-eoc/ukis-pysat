@@ -25,7 +25,8 @@ Fixed
 
 Changed
 *******
-- ``download.Source()``: changed ``Source(source, source_dir)`` to ``Source(datahub, datadir)`` #6
+- ``download.Source()``: removed ``traceback`` #6
+- ``download.Source()``: changed ``Source(source, source_dir=None)`` to ``Source(datahub, datadir=None, datadir_substr=None)`` #6
 - ``members.Datahub()``: changed ``file`` to ``File`` #6
 - updated README #6
 

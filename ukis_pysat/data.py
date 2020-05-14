@@ -5,8 +5,6 @@ import json
 import logging
 import os
 import shutil
-import traceback
-import warnings
 from io import BytesIO
 from typing import List
 
@@ -34,18 +32,24 @@ class Source:
     Remote APIs and local data directories that hold metadata files are supported.
     """
 
-    def __init__(self, datahub, datadir=None):
+    def __init__(self, datahub, datadir=None, datadir_substr=None):
         """
         :param datahub: Data source (<enum 'Datahub'>).
-        :param datadir: Path to directory if datahub is 'File' (String).
+        :param datadir: Path to directory that holds the metadata if datahub is 'File' (String).
+        :param datadir_substr: Optional substring patterns to identify metadata in datadir if datahub
+            is 'File' (List of String).
         """
         self.src = datahub
 
         if self.src == Datahub.File:
             if not datadir:
-                raise AttributeError(f"{traceback.format_exc()} 'datadir' has to be set if datahub is {self.src}.")
+                raise AttributeError(f"'datadir' has to be set if datahub is 'File'.")
             else:
                 self.api = datadir
+                if datadir_substr is None:
+                    self.api_substr = datadir_substr = [""]
+                else:
+                    self.api_substr = datadir_substr
 
         elif self.src == Datahub.EarthExplorer:
             # connect to Earthexplorer
@@ -89,13 +93,14 @@ class Source:
                 min_cloud_cover = 0
                 max_cloud_cover = 100
 
-            # get all json files in datadir
+            # get all json files in datadir that match substr
             meta_files = sorted(
                 [
                     os.path.join(dp, f)
                     for dp, dn, filenames in os.walk(self.api)
+                    for substr in self.api_substr
                     for f in filenames
-                    if f.endswith(".json")
+                    if f.endswith(".json") and substr in f
                 ],
                 key=str.lower,
             )
@@ -104,32 +109,26 @@ class Source:
             meta_src = []
             for meta_file in meta_files:
                 with open(meta_file) as f:
+                    m = json.load(f)
                     try:
-                        # make sure that metadata file is valid
-                        m = json.load(f)
                         self.construct_metadata(m)
-                        # get values from metadata
-                        m_platform = m["properties"]["platformname"]
-                        m_date = sentinelsat.format_query_date(m["properties"]["acquisitiondate"])
-                        m_geom = geometry.shape(m["geometry"])
-                        m_cloud_cover = m["properties"]["cloudcoverpercentage"]
-                        if m_cloud_cover is None:
-                            m_cloud_cover = 0
-                        if (
-                            m_platform == platform.value
-                            and m_date >= start_date
-                            and m_date < end_date
-                            and m_geom.intersects(geom)
-                            and m_cloud_cover >= min_cloud_cover
-                            and m_cloud_cover < max_cloud_cover
-                        ):
-                            meta_src.append(m)
                     except (json.decoder.JSONDecodeError, LookupError, TypeError) as e:
-                        warnings.warn(
-                            f"{os.path.basename(meta_file)} not a valid metadata file. {e}. Skipping it.",
-                            UserWarning,
-                            stacklevel=3,
-                        )
+                        raise ValueError(f"{os.path.basename(meta_file)} not a valid metadata file. {e}.")
+                    m_platform = m["properties"]["platformname"]
+                    m_date = sentinelsat.format_query_date(m["properties"]["acquisitiondate"])
+                    m_geom = geometry.shape(m["geometry"])
+                    m_cloud_cover = m["properties"]["cloudcoverpercentage"]
+                    if m_cloud_cover is None:
+                        m_cloud_cover = 0
+                    if (
+                        m_platform == platform.value
+                        and m_date >= start_date
+                        and m_date < end_date
+                        and m_geom.intersects(geom)
+                        and m_cloud_cover >= min_cloud_cover
+                        and m_cloud_cover < max_cloud_cover
+                    ):
+                        meta_src.append(m)
 
         elif self.src == Datahub.EarthExplorer:
             # query Earthexplorer for metadata

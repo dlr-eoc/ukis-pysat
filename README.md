@@ -32,6 +32,7 @@ Here's an example about some basic features, it might also help to read through 
 from ukis_pysat.data import Source
 from ukis_pysat.file import get_sentinel_scene_from_dir
 from ukis_pysat.members import Datahub, Platform
+from ukis_pysat.raster import Image
 
 
 # connect to Scihub and query metadata (returns MetadataCollection)
