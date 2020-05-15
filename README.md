@@ -66,6 +66,16 @@ with get_sentinel_scene_from_dir(target_dir) as (full_path, ident):
     img = Image(os.path_testfiles.join(full_path, 'pre_nrcs.tif'))
 ````
 
+### Environment variables to configure Datahub credentials
+To use ``ukis_pysat.data`` and to download from the respective Datahub you need to set the credentials as environment variables.
+
+For EarthExplorer that's: \
+``EARTHEXPLORER_USER=your_username`` \
+``EARTHEXPLORER_PW=your_password``
+
+For SciHub that's: \
+``SCIHUB_USER=your_username`` \
+``SCIHUB_PW=your_password``
 
 ## Installation
 The easiest way to install `pysat` is through pip. Be aware, that Rasterio requires GDAL >= 1.11, < 3.1.
