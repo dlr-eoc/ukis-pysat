@@ -121,6 +121,7 @@ def get_ts_from_sentinel_filename(filename, start_date=True):
     :param  filename: top-level SENTINEL product folder or file name
     :param start_date: boolean (default: True), False is Stop Date, optional
     :return: str
+
     >>> get_ts_from_sentinel_filename("S1M_BB_TTTR_LFPP_20200113T074619_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip")
     '20200113T074619'
     >>> get_ts_from_sentinel_filename("S1M_BB_TTTR_LFPP_YYYYMMDDTHHMMSS_20200113T002219_OOOOOO_DDDDDD_CCCC.SAFE.zip", False)

@@ -47,6 +47,17 @@ The UKIS-pysat package provides generic classes and functions to query, access a
       img = Image(os.path_testfiles.join(full_path, 'pre_nrcs.tif'))
 
 
+To use ``ukis_pysat.data`` and to download from the respective Datahub you need to set the credentials as environment variables.
+
+For EarthExplorer that's:
+ | ``EARTHEXPLORER_USER=your_username``
+ | ``EARTHEXPLORER_PW=your_password``
+
+For SciHub that's:
+ | ``SCIHUB_USER=your_username``
+ | ``SCIHUB_PW=your_password``
+
+
 .. toctree::
    :caption: Contents:
    :maxdepth: 2
