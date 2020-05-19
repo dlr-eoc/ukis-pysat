@@ -24,6 +24,32 @@ def get_version(rel_path):
         raise RuntimeError("Unable to find version string.")
 
 
+extras_require = {
+    "data": [
+        "fiona~=1.8.11",
+        "landsatxplore==0.6",
+        "numpy~=1.18.1",
+        "pyproj~=2.6.0",
+        "sentinelsat~=0.13",
+        "requests~=2.23.0",
+        "pillow~=7.1.2",
+        "pyfields~=1.1.4",
+        "pylandsat==0.4",
+        "python-dateutil~=2.8.1",
+        "shapely~=1.7.0",
+    ],
+    "raster": [
+        "numpy~=1.18.1",
+        "rasterio~=1.1.0",
+        "rio_toa==0.3.0",
+        "shapely~=1.7.0",
+    ],
+    "dev": ["sphinx >= 1.3", "sphinx_rtd_theme", "pandas~=1.0.3", "dask[array]~=2.14.0", "utm==0.5.0", ],
+}
+extras_require["complete"] = sorted(
+    [v for req in extras_require.values() for v in req if not v.startswith("sphinx")]
+)
+
 setup(
     name="ukis-pysat",
     version=get_version(os.path.join("ukis_pysat", "__init__.py")),
@@ -34,8 +60,8 @@ setup(
     description="generic classes and functions to query, access and process multi-spectral and SAR satellite images",
     zip_safe=False,
     packages=find_packages(),
-    install_requires=open("requirements.txt").read().splitlines(),
-    extras_require={"dev": ["sphinx >= 1.3", "sphinx_rtd_theme", "coverage", "pandas", "dask[array]",],},
+    install_requires=[],
+    extras_require=extras_require,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",

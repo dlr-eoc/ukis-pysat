@@ -4,9 +4,21 @@ Installation
 Installation with pip
 ---------------------
 
+Most users will want to do this:
+
 .. code-block:: console
 
-    pip install ukis-pysat
+    pip install ukis-pysat[complete]  # install everything
+
+There's also some lighter versions with less dependencies:
+
+.. code-block:: console
+
+    pip install ukis-pysat  # only install core features (ukis_pysat.file)
+
+    pip install ukis-pysat[data]  # install dependencies for ukis_pysat.file and ukis_pysat.data
+
+    pip install ukis-pysat[raster]  # install dependencies for ukis_pysat.file and ukis_pysat.raster
 
 Installation with Anaconda
 --------------------------
