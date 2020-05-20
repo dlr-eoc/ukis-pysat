@@ -78,11 +78,11 @@ pip install ukis-pysat[complete]  # install everything
 There's also some lighter versions with less dependencies:
 
 ```shell
-pip install ukis-pysat  # only install core features (ukis_pysat.file)
+pip install ukis-pysat  # only install core dependencies (ukis_pysat.file can be used)
 
-pip install ukis-pysat[data]  # install dependencies for ukis_pysat.file and ukis_pysat.data
+pip install ukis-pysat[data]  # also install dependencies for ukis_pysat.data
 
-pip install ukis-pysat[raster]  # install dependencies for ukis_pysat.file and ukis_pysat.raster
+pip install ukis-pysat[raster]  # also install dependencies for ukis_pysat.raster
 ```
 
 Some helper functions might need additional dependencies like `pandas`, `dask[array]` or `utm`. If this is the case you will receive an `ImportError`.
