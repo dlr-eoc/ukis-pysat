@@ -79,11 +79,25 @@ For SciHub that's: \
 
 ## Installation
 The easiest way to install `pysat` is through pip. Be aware, that Rasterio requires GDAL >= 1.11, < 3.1.
+
+Most users will want to do this:
 ```shell
-pip install ukis-pysat
+pip install ukis-pysat[complete]  # install everything
 ```
 
-in the meanwhile you could do something like this:
+There's also some lighter versions with less dependencies:
+
+```shell
+pip install ukis-pysat  # only install core dependencies (ukis_pysat.file can be used)
+
+pip install ukis-pysat[data]  # also install dependencies for ukis_pysat.data
+
+pip install ukis-pysat[raster]  # also install dependencies for ukis_pysat.raster
+```
+
+Some helper functions might need additional dependencies like `pandas`, `dask[array]` or `utm`. If this is the case you will receive an `ImportError`.
+
+You can also do this, even though `environment.yml` is updated less often:
 ```bash
 git clone https://github.com/dlr-eoc/ukis-pysat
 cd ukis-pysat

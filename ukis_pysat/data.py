@@ -8,17 +8,25 @@ import shutil
 from io import BytesIO
 from typing import List
 
-import fiona
-import landsatxplore.api
-import numpy as np
-import pyproj
-import requests
-import sentinelsat
-from PIL import Image
-from dateutil.parser import parse
-from pyfields import field, make_init
-from pylandsat import Product
-from shapely import geometry, wkt, ops
+try:
+    import fiona
+    import landsatxplore.api
+    import numpy as np
+    import pyproj
+    import requests
+    import sentinelsat
+    from PIL import Image
+    from dateutil.parser import parse
+    from pyfields import field, make_init
+    from pylandsat import Product
+    from shapely import geometry, wkt, ops
+except ImportError as e:
+    msg = (
+        "ukis_pysat.data dependencies are not installed.\n\n"
+        "Please pip install as follows:\n\n"
+        "  python -m pip install ukis-pysat[data] --upgrade"
+    )
+    raise ImportError(str(e) + "\n\n" + msg)
 
 from ukis_pysat.file import env_get, pack
 from ukis_pysat.members import Datahub, Platform

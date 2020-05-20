@@ -8,9 +8,7 @@ import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
-import utm
 
-from shapely.geometry import Polygon
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +154,10 @@ def get_footprint_from_manifest(xml_path):
     >>> get_footprint_from_manifest(os.path.join(r"../tests/testfiles/", "manifest.safe")).wkt
     'POLYGON ((149.766922 -24.439564, 153.728622 -23.51771, 154.075058 -24.737713, 150.077042 -25.668921, 149.766922 -24.439564))'
     """
+    try:
+        from shapely.geometry import Polygon
+    except ImportError:
+        raise ImportError("get_footprint_from_manifest requires optional dependency Shapely.")
     tree = ET.parse(xml_path)
     root = tree.getroot()
     for elem in root.iter("metadataSection"):
@@ -237,6 +239,10 @@ def get_proj_string(footprint):
     >>> get_proj_string(get_footprint_from_manifest(r"../tests/testfiles/"))
     +proj=utm +zone=56J, +ellps=WGS84 +datum=WGS84 +units=m +no_defs
     """
+    try:
+        import utm
+    except ImportError:
+        raise ImportError("get_proj_string requires optional dependency utm.")
     # get UTM coordinates from Lat/lon pair of centroid of footprint
     # coords contains UTM coordinates, UTM zone & UTM letter, e.g. (675539.8854425425, 4478111.711657521, 34, 'T')
     coords = utm.from_latlon(footprint.centroid.y, footprint.centroid.x)
