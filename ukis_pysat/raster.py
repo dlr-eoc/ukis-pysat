@@ -4,14 +4,22 @@ import logging
 import math
 from itertools import product
 
-import numpy as np
-import rasterio
-import rasterio.mask
-from rasterio import windows
-from rasterio.io import MemoryFile
-from rasterio.warp import calculate_default_transform, reproject
-from rio_toa import reflectance, brightness_temp, toa_utils
-from shapely.geometry import box, polygon
+try:
+    import numpy as np
+    import rasterio
+    import rasterio.mask
+    from rasterio import windows
+    from rasterio.io import MemoryFile
+    from rasterio.warp import calculate_default_transform, reproject
+    from rio_toa import reflectance, brightness_temp, toa_utils
+    from shapely.geometry import box, polygon
+except ImportError as e:
+    msg = (
+        "ukis_pysat.raster dependencies are not installed.\n\n"
+        "Please pip install as follows:\n\n"
+        "  python -m pip install ukis-pysat[raster] --upgrade"
+    )
+    raise ImportError(str(e) + "\n\n" + msg)
 
 from ukis_pysat.members import Platform
 
