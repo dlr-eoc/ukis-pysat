@@ -16,6 +16,9 @@ something was changed
 [master]  (2020-XX-XX)
 ----------------------
 
+[0.3.0]  (2020-05-26)
+----------------------
+
 Added
 *****
 - ``download.Source()``: support for local metadata queries #6
@@ -29,7 +32,7 @@ Changed
 - ``download.Source()``: removed ``traceback`` #6
 - ``download.Source()``: changed ``Source(source, source_dir=None)`` to ``Source(datahub, datadir=None, datadir_substr=None)`` #6
 - ``members.Datahub()``: changed ``file`` to ``File`` #6
-- updated README #6
+- updated README #6 #16
 
 [0.2.0]  (2020-05-13)
 ----------------------
