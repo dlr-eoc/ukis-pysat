@@ -24,6 +24,7 @@ def get_version(rel_path):
         raise RuntimeError("Unable to find version string.")
 
 
+# please also update requirements.txt for testing. Make sure package versions are the same in each subset.
 extras_require = {
     "data": [
         "fiona~=1.8.11",
@@ -38,16 +39,13 @@ extras_require = {
         "python-dateutil~=2.8.1",
         "shapely~=1.7.0",
     ],
-    "raster": [
-        "numpy~=1.18.1",
-        "rasterio~=1.1.0",
-        "rio_toa==0.3.0",
-        "shapely~=1.7.0",
-    ],
-    "dev": ["sphinx >= 1.3", "sphinx_rtd_theme", "pandas~=1.0.3", "dask[array]~=2.14.0", "utm==0.5.0", ],
+    "raster": ["numpy~=1.18.1", "rasterio~=1.1.0", "rio_toa==0.3.0", "shapely~=1.7.0",],
 }
-extras_require["complete"] = sorted(
-    [v for req in extras_require.values() for v in req if not v.startswith("sphinx")]
+extras_require["complete"] = list(set([v for req in extras_require.values() for v in req]))
+
+extras_require["dev"] = sorted(
+    extras_require["complete"]
+    + ["sphinx >= 1.3", "sphinx_rtd_theme", "pandas~=1.0.3", "dask[array]~=2.14.0", "utm==0.5.0",]
 )
 
 setup(

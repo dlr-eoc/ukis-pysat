@@ -25,6 +25,7 @@ Fixed
 
 Changed
 *******
+- split PyPI package into subsets to not require all dependencies for every installation #16
 - ``download.Source()``: removed ``traceback`` #6
 - ``download.Source()``: changed ``Source(source, source_dir=None)`` to ``Source(datahub, datadir=None, datadir_substr=None)`` #6
 - ``members.Datahub()``: changed ``file`` to ``File`` #6
