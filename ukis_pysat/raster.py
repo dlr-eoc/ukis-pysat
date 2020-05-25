@@ -175,12 +175,7 @@ class Image:
             Platform.Landsat8,
         ]:
             if mtl_file is None:
-                logger.warning(
-                    "No metadata file provided. Using a simplified DN2TOA conversion that ignores sun angle and "
-                    "band specific rescaling factors."
-                )
-                simple_toa = 0.00002 * self.arr.astype(np.float32) + (-0.100000)
-                self.arr = np.array(np.dstack(simple_toa))
+                raise AttributeError(f"'mtl_file' has to be set if platform is {platform}.")
             else:
                 # if metadata file is provided use a more sophisticated conversion that accounts for the sun angle
                 # get rescale factors from metadata file
