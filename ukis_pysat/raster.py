@@ -160,13 +160,13 @@ class Image:
         self.transform = transform
         self.crs = dst_crs
 
-    def dn2toa(self, platform, metadata=None, wavelengths=None):
+    def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
         https://www.usgs.gov/land-resources/nli/landsat/using-usgs-landsat-level-1-data-product
         TODO rio-toa does not seem to be maintained anymore
 
         :param platform: image platform, possible Platform.Landsat[5, 7, 8] or Platform.Sentinel2 (<enum 'Platform'>).
-        :param metadata: path to metadata file for Landsat (str).
+        :param mtl_file: path to Landsat MTL file that holds the band specific rescale factors (str).
         :param wavelengths: like ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"] for Landsat-5 (list of str).
         """
         if platform in [
@@ -174,7 +174,7 @@ class Image:
             Platform.Landsat7,
             Platform.Landsat8,
         ]:
-            if metadata is None:
+            if mtl_file is None:
                 logger.warning(
                     "No metadata file provided. Using a simplified DN2TOA conversion that ignores sun angle and "
                     "band specific rescaling factors."
@@ -183,46 +183,38 @@ class Image:
                 self.arr = np.array(np.dstack(simple_toa))
             else:
                 # if metadata file is provided use a more sophisticated conversion that accounts for the sun angle
-                # get factors from metadata file
-                mtl = toa_utils._load_mtl(metadata)  # no obvious reason not to call this
+                # get rescale factors from metadata file
+                mtl = toa_utils._load_mtl(mtl_file)  # no obvious reason not to call this
                 metadata = mtl["L1_METADATA_FILE"]
                 sun_elevation = metadata["IMAGE_ATTRIBUTES"]["SUN_ELEVATION"]
                 toa = []
 
-                for idx, b in enumerate(sorted(self._lookup_bands(platform, wavelengths))):
+                for idx, b in enumerate(self._lookup_bands(platform, wavelengths)):
                     print(idx, b)
-                    if platform == Platform.Landsat8:  # exception for Landsat-8
-                        if b in ["10", "11"]:
+                    if (platform == Platform.Landsat8 and b in ["10", "11"]) or (
+                        platform != Platform.Landsat8 and b.startswith("6")
+                    ):
+                        if platform == Platform.Landsat8:
                             thermal_conversion_constant1 = metadata["TIRS_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
                             thermal_conversion_constant2 = metadata["TIRS_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
-                            toa.append(
-                                brightness_temp.brightness_temp(
-                                    self.arr[:, :, idx],
-                                    ML=multiplicative_rescaling_factors,
-                                    AL=additive_rescaling_factors,
-                                    K1=thermal_conversion_constant1,
-                                    K2=thermal_conversion_constant2,
-                                )
+                        else:
+                            thermal_conversion_constant1 = metadata["THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata["THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
+                        # rescale thermal bands
+                        toa.append(
+                            brightness_temp.brightness_temp(
+                                self.arr[:, :, idx],
+                                ML=multiplicative_rescaling_factors,
+                                AL=additive_rescaling_factors,
+                                K1=thermal_conversion_constant1,
+                                K2=thermal_conversion_constant2,
                             )
-                            continue
-                    else:
-                        if b.startswith("6"):
-                            thermal_conversion_constant1 = metadata["TIRS_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["TIRS_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
-                            toa.append(
-                                brightness_temp.brightness_temp(
-                                    self.arr[:, :, idx],
-                                    ML=multiplicative_rescaling_factors,
-                                    AL=additive_rescaling_factors,
-                                    K1=thermal_conversion_constant1,
-                                    K2=thermal_conversion_constant2,
-                                )
-                            )
-                            continue
+                        )
+                        continue
 
+                    # rescale reflectance bands
                     multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_MULT_BAND_{b}"]
                     additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
-
                     toa.append(
                         reflectance.reflectance(
                             self.arr[:, :, idx],
@@ -268,6 +260,7 @@ class Image:
                 "tirs1": "6_VCID_1",
                 "tirs2": "6_VCID_2",
                 "swir2": "7",
+                "pan": "8",
             },
             Platform.Landsat8: {
                 "aerosol": "1",
