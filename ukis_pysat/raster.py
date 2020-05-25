@@ -190,13 +190,11 @@ class Image:
                 toa = []
 
                 for idx, b in enumerate(sorted(self._lookup_bands(platform, wavelengths))):
-                    multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_MULT_BAND_{b}"]
-                    additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
-
+                    print(idx, b)
                     if platform == Platform.Landsat8:  # exception for Landsat-8
                         if b in ["10", "11"]:
-                            thermal_conversion_constant1 = metadata["THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata["TIRS_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata["TIRS_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
                             toa.append(
                                 brightness_temp.brightness_temp(
                                     self.arr[:, :, idx],
@@ -221,6 +219,9 @@ class Image:
                                 )
                             )
                             continue
+
+                    multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_MULT_BAND_{b}"]
+                    additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
 
                     toa.append(
                         reflectance.reflectance(
@@ -276,7 +277,8 @@ class Image:
                 "nir": "5",
                 "swir1": "6",
                 "swir2": "7",
-                "pan": "9",
+                "pan": "8",
+                "cirrus": "9",
                 "tirs1": "10",
                 "tirs2": "11",
             },
