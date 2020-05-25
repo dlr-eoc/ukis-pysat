@@ -12,6 +12,7 @@ from ukis_pysat.data import Source
 
 aoi_4326 = os.path.join(os.path.dirname(__file__), "testfiles", "aoi_4326.geojson")
 aoi_3857 = os.path.join(os.path.dirname(__file__), "testfiles", "aoi_3857.geojson")
+aoi_wkt = 'POLYGON((11.09 47.94, 11.06 48.01, 11.12 48.11, 11.18 48.11, 11.18 47.94, 11.09 47.94))'
 aoi_bbox = (11.90, 51.46, 11.94, 51.50)
 target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
 
@@ -35,6 +36,16 @@ queries = [
         "cloud_cover": None,
         "returns_srcid": "S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6",
         "returns_uuid": "8a611d5b-f9d9-437e-9f55-eca18cf79fd4",
+    },
+    {
+        "datahub": Datahub.Scihub,
+        "datadir": None,
+        "platform_name": Platform.Sentinel1,
+        "date": ("20200502", "20200503"),
+        "aoi": aoi_wkt,
+        "cloud_cover": None,
+        "returns_srcid": "S1A_IW_GRDH_1SDV_20200502T170726_20200502T170751_032389_03BFFF_3105 ",
+        "returns_uuid": "a28e1042-f221-4716-8298-01bca35e6187",
     },
     {
         "datahub": Datahub.Scihub,
