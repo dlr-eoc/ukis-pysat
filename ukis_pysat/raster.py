@@ -177,15 +177,13 @@ class Image:
             if mtl_file is None:
                 raise AttributeError(f"'mtl_file' has to be set if platform is {platform}.")
             else:
-                # if metadata file is provided use a more sophisticated conversion that accounts for the sun angle
-                # get rescale factors from metadata file
+                # get rescale factors from mtl file
                 mtl = toa_utils._load_mtl(mtl_file)  # no obvious reason not to call this
                 metadata = mtl["L1_METADATA_FILE"]
                 sun_elevation = metadata["IMAGE_ATTRIBUTES"]["SUN_ELEVATION"]
                 toa = []
 
                 for idx, b in enumerate(self._lookup_bands(platform, wavelengths)):
-                    print(idx, b)
                     if (platform == Platform.Landsat8 and b in ["10", "11"]) or (
                         platform != Platform.Landsat8 and b.startswith("6")
                     ):
@@ -195,10 +193,13 @@ class Image:
                         else:
                             thermal_conversion_constant1 = metadata["THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
                             thermal_conversion_constant2 = metadata["THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
+                        multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"RADIANCE_MULT_BAND_{b}"]
+                        additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"RADIANCE_ADD_BAND_{b}"]
+
                         # rescale thermal bands
                         toa.append(
                             brightness_temp.brightness_temp(
-                                self.arr[:, :, idx],
+                                self.arr[idx, :, :],
                                 ML=multiplicative_rescaling_factors,
                                 AL=additive_rescaling_factors,
                                 K1=thermal_conversion_constant1,
@@ -212,14 +213,14 @@ class Image:
                     additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
                     toa.append(
                         reflectance.reflectance(
-                            self.arr[:, :, idx],
+                            self.arr[idx, :, :],
                             MR=multiplicative_rescaling_factors,
                             AR=additive_rescaling_factors,
                             E=sun_elevation,
                         )
                     )
 
-                self.arr = np.array(np.dstack(toa))
+                self.arr = np.array(np.stack(toa, axis=0))
         elif platform == Platform.Sentinel2:
             self.arr = self.arr.astype(np.float32) / 10000.0
         else:
