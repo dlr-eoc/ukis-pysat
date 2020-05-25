@@ -319,19 +319,32 @@ class Source:
     def prep_aoi(aoi):
         """Converts aoi to Shapely Polygon and reprojects to WGS84.
 
-        :param aoi: Area of interest as Geojson file or bounding box in lat lon coordinates (String, Tuple)
+        :param aoi: Area of interest as Geojson file, WKT string or bounding box in lat lon coordinates (String, Tuple)
         :return: Shapely Polygon
         """
+
+        # check if handed object is a string
+        # this could include both fiel paths and WKT strings
         if isinstance(aoi, str):
-            with fiona.open(aoi, "r") as aoi:
-                # make sure crs is in epsg:4326
-                project = pyproj.Transformer.from_proj(
-                    proj_from=pyproj.Proj(aoi.crs["init"]),
-                    proj_to=pyproj.Proj("epsg:4326"),
-                    skip_equivalent=True,
-                    always_xy=True,
-                )
-                aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
+            # check if handed object is a file
+            if os.path.isfile(aoi):
+                with fiona.open(aoi, "r") as aoi:
+                    # make sure crs is in epsg:4326
+                    project = pyproj.Transformer.from_proj(
+                        proj_from=pyproj.Proj(aoi.crs["init"]),
+                        proj_to=pyproj.Proj("epsg:4326"),
+                        skip_equivalent=True,
+                        always_xy=True,
+                    )
+                    aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
+
+            elif wkt.loads(aoi):
+                aoi = wkt.loads(aoi)
+
+            else:
+                raise ValueError(f"aoi must be a filepath or a WKT string")
+
+
 
         elif isinstance(aoi, tuple):
             aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
