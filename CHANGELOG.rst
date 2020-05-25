@@ -16,6 +16,19 @@ something was changed
 [master]  (2020-XX-XX)
 ----------------------
 
+Added
+*****
+- dn2toa tests and testfiles #17
+
+Fixed
+*****
+- ``raster.Image()``: bug in ``dn2toa()`` related to wrong array shape #17
+
+Changed
+*******
+- ``raster.Image()``: changed ``dn2toa(platform, metadata, wavelengths)`` to ``dn2toa(platform, mtl_file, wavelengths)`` #17
+
+
 [0.3.0]  (2020-05-26)
 ----------------------
 

@@ -74,15 +74,50 @@ class DataTest(unittest.TestCase):
         self.assertEqual(1.0, img.transform.to_gdal()[1])
 
     def test_dn2toa(self):
-        # TODO add more testcases
-        self.assertLogs(img.dn2toa(Platform.Sentinel1), level="WARNING")
+        target_dir = os.path.join(os.path.dirname(__file__), "testfiles", "satellite_data")
+        tests = [
+            {
+                "platform": Platform.Landsat8,
+                "dn_file": os.path.join(target_dir, "LC08_L1TP_193024_20200509_20200509_01_RT.tif"),
+                "toa_file": os.path.join(target_dir, "LC08_L1TP_193024_20200509_20200509_01_RT_toa.tif"),
+                "mtl_file": os.path.join(target_dir, "LC08_L1TP_193024_20200509_20200509_01_RT_MTL.txt"),
+                "wavelengths": ["Aerosol", "Blue", "Green", "Red", "NIR", "SWIR1", "SWIR2", "Cirrus", "TIRS1", "TIRS2"],
+            },
+            {
+                "platform": Platform.Landsat7,
+                "dn_file": os.path.join(target_dir, "LE07_L1TP_193024_20100420_20161215_01_T1.tif"),
+                "toa_file": os.path.join(target_dir, "LE07_L1TP_193024_20100420_20161215_01_T1_toa.tif"),
+                "mtl_file": os.path.join(target_dir, "LE07_L1TP_193024_20100420_20161215_01_T1_MTL.txt"),
+                "wavelengths": ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS1", "TIRS2", "SWIR2"],
+            },
+            {
+                "platform": Platform.Landsat5,
+                "dn_file": os.path.join(target_dir, "LT05_L1TP_193024_20050516_20161127_01_T1.tif"),
+                "toa_file": os.path.join(target_dir, "LT05_L1TP_193024_20050516_20161127_01_T1_toa.tif"),
+                "mtl_file": os.path.join(target_dir, "LT05_L1TP_193024_20050516_20161127_01_T1_MTL.txt"),
+                "wavelengths": ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"],
+            },
+            {
+                "platform": Platform.Sentinel2,
+                "dn_file": os.path.join(target_dir, "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159.tif"),
+                "toa_file": os.path.join(target_dir, "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_toa.tif"),
+                "mtl_file": None,
+                "wavelengths": None,
+            },
+        ]
+
+        for i in range(len(tests)):
+            img_dn = Image(path=tests[i]["dn_file"])
+            img_toa = Image(path=tests[i]["toa_file"])
+            img_dn.dn2toa(platform=tests[i]["platform"], mtl_file=tests[i]["mtl_file"], wavelengths=tests[i]["wavelengths"])
+            self.assertTrue(np.array_equal(img_dn.arr, img_toa.arr))
 
     def test__lookup_bands(self):
         self.assertEqual(
             ["1", "2", "3"], img._lookup_bands(Platform.Landsat5, ["Blue", "Green", "Red"]),
         )
         self.assertEqual(
-            ["9", "10", "11"], img._lookup_bands(Platform.Landsat8, ["PAN", "Tirs1", "Tirs2"]),
+            ["8", "10", "11"], img._lookup_bands(Platform.Landsat8, ["PAN", "Tirs1", "Tirs2"]),
         )
 
     def test_get_tiles(self):
