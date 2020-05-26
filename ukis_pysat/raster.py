@@ -10,6 +10,7 @@ try:
     import rasterio.mask
     from rasterio import windows
     from rasterio.io import MemoryFile
+    from rasterio.plot import reshape_as_image
     from rasterio.warp import calculate_default_transform, reproject
     from rio_toa import reflectance, brightness_temp, toa_utils
     from shapely.geometry import box, polygon
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class Image:
-    def __init__(self, path=None, dataset=None, arr=None, dimorder='channels_first'):
+    def __init__(self, path=None, dataset=None, arr=None, dimorder='first'):
         if path:
             if isinstance(path, str):
                 self.dataset = rasterio.open(path)
@@ -49,10 +50,12 @@ class Image:
 
     @property
     def arr(self):
-        if self.dimorder == "channels_last":
-            arr = np.moveaxis(self.__arr, 0, -1)
-        else:
+        if self.dimorder == "first":
             arr = self.__arr
+        elif self.dimorder == "last":
+            arr = reshape_as_image(self.__arr)
+        else:
+            raise AttributeError("dimorder for bands or channels must be either 'first' or 'last'.")
         return arr
 
     def get_valid_data_bbox(self, nodata=0):
