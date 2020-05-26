@@ -20,7 +20,7 @@ Added
 *****
 - ``raster.Image()``: expanded test_arr to test AttributeError #31
 - ``raster.Image()``: optional dimorder for arr and according test #31
-- dn2toa tests and testfiles #17
+- `dn2toa` tests and testfiles #17
 - ``data.source()``: accept WKT string as AOI #26
 - ``data.source()``: check if an AOI string is a file or a WKT string #26
 
@@ -31,6 +31,7 @@ Fixed
 Changed
 *******
 - ``raster.Image()``: changed ``dn2toa(platform, metadata, wavelengths)`` to ``dn2toa(platform, mtl_file, wavelengths)`` #17
+- ``raster.Image()``: auto-update of in-memory `dataset` #35
 
 
 [0.3.0]  (2020-05-26)
