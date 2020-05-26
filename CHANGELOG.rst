@@ -18,6 +18,7 @@ something was changed
 
 Added
 *****
+- ``raster.Image()``: optional dimorder for arr and according test #31
 - dn2toa tests and testfiles #17
 
 Fixed
