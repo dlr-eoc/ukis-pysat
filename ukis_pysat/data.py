@@ -344,8 +344,6 @@ class Source:
             else:
                 raise ValueError(f"aoi must be a filepath or a WKT string")
 
-
-
         elif isinstance(aoi, tuple):
             aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
 
