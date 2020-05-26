@@ -44,7 +44,7 @@ queries = [
         "date": ("20200502", "20200503"),
         "aoi": aoi_wkt,
         "cloud_cover": None,
-        "returns_srcid": "S1A_IW_GRDH_1SDV_20200502T170726_20200502T170751_032389_03BFFF_3105 ",
+        "returns_srcid": "S1A_IW_GRDH_1SDV_20200502T170726_20200502T170751_032389_03BFFF_3105",
         "returns_uuid": "a28e1042-f221-4716-8298-01bca35e6187",
     },
     {
