@@ -27,17 +27,17 @@ logger = logging.getLogger(__name__)
 
 
 class Image:
-    def __init__(self, path=None, dataset=None, arr=None):
+    def __init__(self, path=None, dataset=None, arr=None, dimorder='channels_first'):
         if path:
             if isinstance(path, str):
                 self.dataset = rasterio.open(path)
-                self.arr = self.dataset.read()
+                self.__arr = self.dataset.read()
             else:
                 raise TypeError(f"path must be of type str")
         else:
             if isinstance(dataset, rasterio.io.DatasetReader) and isinstance(arr, np.ndarray):
                 self.dataset = dataset
-                self.arr = arr
+                self.__arr = arr
             else:
                 raise TypeError(
                     f"dataset must be of type rasterio.io.DatasetReader and arr must be of type " f"numpy.ndarray"
@@ -45,6 +45,10 @@ class Image:
         self.transform = self.dataset.transform
         self.crs = self.dataset.crs
         self.da_arr = None
+        if dimorder == "channels_last":
+            self.arr = np.moveaxis(self.__arr, 0, -1)
+        else:
+            self.arr = self.__arr
 
     def get_valid_data_bbox(self, nodata=0):
         """bounding box covering the input array's valid data pixels.
@@ -52,7 +56,7 @@ class Image:
         :param nodata: nodata value, optional (default: 0)
         :return: tuple with valid data bounds
         """
-        valid_data_window = windows.get_data_window(self.arr, nodata=nodata)
+        valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
         return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.transform))
 
     def mask_image(self, bbox, crop=True, pad=False, **kwargs):
@@ -66,9 +70,9 @@ class Image:
             self.dataset = self._pad_to_bbox(bbox, **kwargs).open()
 
         if isinstance(bbox, polygon.Polygon):
-            self.arr, self.transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
+            self.__arr, self.transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
         elif isinstance(bbox, tuple):
-            self.arr, self.transform = rasterio.mask.mask(self.dataset, [box(*bbox)], crop=crop)
+            self.__arr, self.transform = rasterio.mask.mask(self.dataset, [box(*bbox)], crop=crop)
         else:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
@@ -95,24 +99,24 @@ class Image:
         pad_width = math.ceil(max_diff / self.transform.to_gdal()[1])  # units / pixel_size
 
         destination = np.zeros(
-            (self.dataset.count, self.arr.shape[1] + 2 * pad_width, self.arr.shape[2] + 2 * pad_width,), self.arr.dtype,
+            (self.dataset.count, self.__arr.shape[1] + 2 * pad_width, self.__arr.shape[2] + 2 * pad_width,), self.__arr.dtype,
         )
 
         for i in range(0, self.dataset.count):
             destination[i], self.transform = rasterio.pad(
-                self.arr[0], self.transform, pad_width, mode, constant_values=constant_values,
+                self.__arr[0], self.transform, pad_width, mode, constant_values=constant_values,
             )
 
-        self.arr = destination
+        self.__arr = destination
 
         mem_profile = self.dataset.meta
         mem_profile.update(
-            {"height": self.arr.shape[-2], "width": self.arr.shape[-1], "transform": self.transform,}
+            {"height": self.__arr.shape[-2], "width": self.__arr.shape[-1], "transform": self.transform,}
         )
 
         memfile = MemoryFile()
         ds = memfile.open(**mem_profile)
-        ds.write(self.arr)
+        ds.write(self.__arr)
 
         return memfile
 
@@ -141,7 +145,7 @@ class Image:
                 self.dataset.crs, dst_crs, self.dataset.width, self.dataset.height, *self.dataset.bounds,
             )
 
-        destination = np.zeros((self.dataset.count, height, width), self.arr.dtype)
+        destination = np.zeros((self.dataset.count, height, width), self.__arr.dtype)
 
         for i in range(0, self.dataset.count):
             reproject(
@@ -156,7 +160,7 @@ class Image:
             )
 
         # update for further processing
-        self.arr = destination
+        self.__arr = destination
         self.transform = transform
         self.crs = dst_crs
 
@@ -199,7 +203,7 @@ class Image:
                         # rescale thermal bands
                         toa.append(
                             brightness_temp.brightness_temp(
-                                self.arr[idx, :, :],
+                                self.__arr[idx, :, :],
                                 ML=multiplicative_rescaling_factors,
                                 AL=additive_rescaling_factors,
                                 K1=thermal_conversion_constant1,
@@ -213,16 +217,16 @@ class Image:
                     additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
                     toa.append(
                         reflectance.reflectance(
-                            self.arr[idx, :, :],
+                            self.__arr[idx, :, :],
                             MR=multiplicative_rescaling_factors,
                             AR=additive_rescaling_factors,
                             E=sun_elevation,
                         )
                     )
 
-                self.arr = np.array(np.stack(toa, axis=0))
+                self.__arr = np.array(np.stack(toa, axis=0))
         elif platform == Platform.Sentinel2:
-            self.arr = self.arr.astype(np.float32) / 10000.0
+            self.__arr = self.__arr.astype(np.float32) / 10000.0
         else:
             logger.warning(
                 f"Cannot convert dn2toa. Platform {platform} not supported [Landsat-5, Landsat-7, Landsat-8, "
@@ -286,8 +290,8 @@ class Image:
         :yields: window of tile
         """
         logger.info(f"Get tiles with size {width}x{height}.")
-        rows = self.arr.shape[-2]
-        cols = self.arr.shape[-1]
+        rows = self.__arr.shape[-2]
+        cols = self.__arr.shape[-1]
         offsets = product(range(0, cols, width), range(0, rows, height))
         bounding_window = windows.Window(col_off=0, row_off=0, width=cols, height=rows)
         for col_off, row_off in offsets:
@@ -313,7 +317,7 @@ class Image:
         """
         # access window bounds
         bounds = windows.bounds(tile, self.dataset.transform)
-        return self.arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
+        return self.__arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
 
     def to_dask_array(self, chunk_size=(1, 6000, 6000)):
         """ transforms numpy to dask array
@@ -326,7 +330,7 @@ class Image:
         except ImportError:
             raise ImportError("to_dask_array requires optional dependency dask[array].")
 
-        self.da_arr = da.from_array(self.arr, chunks=chunk_size)
+        self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
     def write_to_file(self, path_to_file, dtype=rasterio.uint16, driver="GTiff"):
@@ -340,8 +344,8 @@ class Image:
         profile.update(
             {
                 "driver": driver,
-                "height": self.arr.shape[-2],
-                "width": self.arr.shape[-1],
+                "height": self.__arr.shape[-2],
+                "width": self.__arr.shape[-1],
                 "dtype": dtype,
                 "transform": self.transform,
                 "crs": self.crs,
@@ -349,7 +353,7 @@ class Image:
         )
 
         with rasterio.open(path_to_file, "w", **profile) as dst:
-            dst.write(self.arr.astype(dtype))
+            dst.write(self.__arr.astype(dtype))
 
     def close(self):
         """closes Image"""
