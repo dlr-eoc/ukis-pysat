@@ -12,7 +12,7 @@ from ukis_pysat.data import Source
 
 aoi_4326 = os.path.join(os.path.dirname(__file__), "testfiles", "aoi_4326.geojson")
 aoi_3857 = os.path.join(os.path.dirname(__file__), "testfiles", "aoi_3857.geojson")
-aoi_wkt = 'POLYGON((11.09 47.94, 11.06 48.01, 11.12 48.11, 11.18 48.11, 11.18 47.94, 11.09 47.94))'
+aoi_wkt = "POLYGON((11.09 47.94, 11.06 48.01, 11.12 48.11, 11.18 48.11, 11.18 47.94, 11.09 47.94))"
 aoi_bbox = (11.90, 51.46, 11.94, 51.50)
 target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
 
