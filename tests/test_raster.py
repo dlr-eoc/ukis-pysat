@@ -6,6 +6,7 @@ import numpy as np
 from rasterio import windows
 from rasterio.coords import BoundingBox
 from shapely.geometry import box
+from rasterio.transform import from_bounds
 
 from ukis_pysat.members import Platform
 from ukis_pysat.raster import Image
@@ -29,6 +30,45 @@ class DataTest(unittest.TestCase):
             Image(arr=img.arr)
 
         self.assertTrue(np.array_equal(img.arr, Image(dataset=img.dataset, arr=img.arr).arr))
+
+    def test_arr(self):
+        img_first = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"), dimorder="first")
+        img_first.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        self.assertEqual(img_first.arr.shape, (1, 385, 502))
+        self.assertEqual(
+            str(img_first.transform),
+            str(
+                from_bounds(
+                    11.9027457562112939,
+                    51.4664152338322580,
+                    11.9477435281016131,
+                    51.5009522690838750,
+                    img_first.arr.shape[2],
+                    img_first.arr.shape[1],
+                )
+            ),
+        )
+
+        img_last = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"), dimorder="last")
+        img_last.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        self.assertEqual(img_last.arr.shape, (385, 502, 1))
+        self.assertEqual(
+            str(img_last.transform),
+            str(
+                from_bounds(
+                    11.9027457562112939,
+                    51.4664152338322580,
+                    11.9477435281016131,
+                    51.5009522690838750,
+                    img_last.arr.shape[1],
+                    img_last.arr.shape[0],
+                )
+            ),
+        )
+
+        with self.assertRaises(AttributeError, msg="dimorder for bands or channels must be either 'first' or 'last'."):
+            img_first = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"), dimorder="middle")
+            img_first.arr
 
     def test_get_valid_data_bbox(self):
         self.assertEqual(
@@ -100,7 +140,9 @@ class DataTest(unittest.TestCase):
             {
                 "platform": Platform.Sentinel2,
                 "dn_file": os.path.join(target_dir, "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159.tif"),
-                "toa_file": os.path.join(target_dir, "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_toa.tif"),
+                "toa_file": os.path.join(
+                    target_dir, "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_toa.tif"
+                ),
                 "mtl_file": None,
                 "wavelengths": None,
             },
@@ -109,7 +151,9 @@ class DataTest(unittest.TestCase):
         for i in range(len(tests)):
             img_dn = Image(path=tests[i]["dn_file"])
             img_toa = Image(path=tests[i]["toa_file"])
-            img_dn.dn2toa(platform=tests[i]["platform"], mtl_file=tests[i]["mtl_file"], wavelengths=tests[i]["wavelengths"])
+            img_dn.dn2toa(
+                platform=tests[i]["platform"], mtl_file=tests[i]["mtl_file"], wavelengths=tests[i]["wavelengths"]
+            )
             self.assertTrue(np.array_equal(img_dn.arr, img_toa.arr))
 
     def test__lookup_bands(self):

@@ -36,7 +36,7 @@ from ukis_pysat.raster import Image
 
 
 # connect to Scihub and query metadata (returns MetadataCollection)
-src = Source(source=Datahub.Scihub)
+src = Source(Datahub.Scihub)
 meta = src.query_metadata(
     platform=Platform.Sentinel2,
     date=("20200101", "NOW"),
