@@ -19,6 +19,8 @@ something was changed
 Added
 *****
 - dn2toa tests and testfiles #17
+- ``data.source()``: accept WKT string as AOI #26
+- ``data.source()``: check if an AOI string is a file or a WKT string #26
 
 Fixed
 *****
