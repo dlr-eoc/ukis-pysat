@@ -182,6 +182,7 @@ class Image:
         self.__arr = destination
         self.transform = transform
         self.crs = dst_crs
+        self.dataset = self.__update_dataset().open()
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
