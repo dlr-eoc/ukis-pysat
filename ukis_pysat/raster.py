@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class Image:
-    def __init__(self, path=None, dataset=None, arr=None, dimorder='first'):
+    def __init__(self, path=None, dataset=None, arr=None, dimorder="first"):
         if path:
             if isinstance(path, str):
                 self.dataset = rasterio.open(path)
@@ -51,12 +51,11 @@ class Image:
     @property
     def arr(self):
         if self.dimorder == "first":
-            arr = self.__arr
+            return self.__arr
         elif self.dimorder == "last":
-            arr = reshape_as_image(self.__arr)
+            return reshape_as_image(self.__arr)
         else:
             raise AttributeError("dimorder for bands or channels must be either 'first' or 'last'.")
-        return arr
 
     def get_valid_data_bbox(self, nodata=0):
         """bounding box covering the input array's valid data pixels.
@@ -107,7 +106,8 @@ class Image:
         pad_width = math.ceil(max_diff / self.transform.to_gdal()[1])  # units / pixel_size
 
         destination = np.zeros(
-            (self.dataset.count, self.__arr.shape[1] + 2 * pad_width, self.__arr.shape[2] + 2 * pad_width,), self.__arr.dtype,
+            (self.dataset.count, self.__arr.shape[1] + 2 * pad_width, self.__arr.shape[2] + 2 * pad_width,),
+            self.__arr.dtype,
         )
 
         for i in range(0, self.dataset.count):

@@ -18,6 +18,7 @@ something was changed
 
 Added
 *****
+- ``raster.Image()``: expanded test_arr to test AttributeError #31
 - ``raster.Image()``: optional dimorder for arr and according test #31
 - dn2toa tests and testfiles #17
 

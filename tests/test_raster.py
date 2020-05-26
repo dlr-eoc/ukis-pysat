@@ -66,6 +66,10 @@ class DataTest(unittest.TestCase):
             ),
         )
 
+        with self.assertRaises(AttributeError, msg="dimorder for bands or channels must be either 'first' or 'last'."):
+            img_first = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"), dimorder="middle")
+            img_first.arr
+
     def test_get_valid_data_bbox(self):
         self.assertEqual(
             img.get_valid_data_bbox(), (11.896863892, 51.515176657, 11.896863892, 51.515176657),
