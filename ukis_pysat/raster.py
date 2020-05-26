@@ -42,13 +42,18 @@ class Image:
                 raise TypeError(
                     f"dataset must be of type rasterio.io.DatasetReader and arr must be of type " f"numpy.ndarray"
                 )
+        self.dimorder = dimorder
         self.transform = self.dataset.transform
         self.crs = self.dataset.crs
         self.da_arr = None
-        if dimorder == "channels_last":
-            self.arr = np.moveaxis(self.__arr, 0, -1)
+
+    @property
+    def arr(self):
+        if self.dimorder == "channels_last":
+            arr = np.moveaxis(self.__arr, 0, -1)
         else:
-            self.arr = self.__arr
+            arr = self.__arr
+        return arr
 
     def get_valid_data_bbox(self, nodata=0):
         """bounding box covering the input array's valid data pixels.
