@@ -29,6 +29,12 @@ logger = logging.getLogger(__name__)
 
 class Image:
     def __init__(self, path=None, dataset=None, arr=None, dimorder="first"):
+        """
+        :param path: str, path to raster (default: None)
+        :param dataset: rasterio.io.DatasetReader (default: None)
+        :param arr: np.ndarray (default: None)
+        :param dimorder: order of channels or bands 'first' or 'last' (default: 'first)
+        """
         if path:
             if isinstance(path, str):
                 self.dataset = rasterio.open(path)
@@ -50,6 +56,7 @@ class Image:
 
     @property
     def arr(self):
+        """array property"""
         if self.dimorder == "first":
             return self.__arr
         elif self.dimorder == "last":
