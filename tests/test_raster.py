@@ -197,7 +197,7 @@ class DataTest(unittest.TestCase):
         img.write_to_file(r"result.tif", "min", compress="lzw")
         img2 = Image("result.tif")
         self.assertEqual(img2.arr.dtype, "uint8")
-        self.assertEqual(os.stat("result.tif").st_size, 10271)
+        self.assertEqual(img2.dataset.profile["compress"], "lzw")
 
         img2.close()
         os.remove(r"result.tif")
