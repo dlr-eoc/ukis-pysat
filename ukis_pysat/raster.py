@@ -30,6 +30,12 @@ logger = logging.getLogger(__name__)
 
 class Image:
     def __init__(self, path=None, dataset=None, arr=None, dimorder="first"):
+        """
+        :param path: str, path to raster (default: None)
+        :param dataset: rasterio.io.DatasetReader (default: None)
+        :param arr: np.ndarray (default: None)
+        :param dimorder: order of channels or bands 'first' or 'last' (default: 'first)
+        """
         if path:
             if isinstance(path, str):
                 self.dataset = rasterio.open(path)
@@ -51,6 +57,7 @@ class Image:
 
     @property
     def arr(self):
+        """array property"""
         if self.dimorder == "first":
             return self.__arr
         elif self.dimorder == "last":
@@ -68,12 +75,13 @@ class Image:
         return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.transform))
 
     def mask_image(self, bbox, crop=True, pad=False, **kwargs):
-        """
-        TODO https://github.com/mapbox/rasterio/issues/995
+        """Mask the area outside of the input shapes with no data.
+
         :param bbox: bounding box of type tuple or Shapely Polygon
         :param crop: bool, see rasterio.mask. Optional, (default: True)
         :param pad: pads image, should only be used when bbox.bounds extent img.bounds, optional (default: False)
         """
+        # TODO https://github.com/mapbox/rasterio/issues/995
         if pad:
             self.dataset = self._pad_to_bbox(bbox, **kwargs).open()
 
@@ -84,6 +92,9 @@ class Image:
         else:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
+        # update for further processing
+        self.dataset = self.__update_dataset().open()
+
     def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
         """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
         array with nodata values before masking in case bbox only partially overlaps dataset bounds.
@@ -91,7 +102,7 @@ class Image:
         :param bbox: bounding box of type tuple or Shapely Polygon
         :param mode: str, how to pad, see rasterio.pad. Optional (default: 'constant')
         :param constant_values: nodata value, padding should be filled with, optional (default: 0)
-        :return: open, buffered dataset in memory
+        :return: closed, buffered dataset in memory
         """
         if isinstance(bbox, polygon.Polygon):
             bbox = bbox.bounds
@@ -118,6 +129,13 @@ class Image:
 
         self.__arr = destination
 
+        return self.__update_dataset()
+
+    def __update_dataset(self):
+        """Update dataset without writing to file after it theoretically changed.
+
+        :return: closed dataset in memory
+        """
         mem_profile = self.dataset.meta
         mem_profile.update(
             {"height": self.__arr.shape[-2], "width": self.__arr.shape[-1], "transform": self.transform,}
@@ -172,6 +190,7 @@ class Image:
         self.__arr = destination
         self.transform = transform
         self.crs = dst_crs
+        self.dataset = self.__update_dataset().open()
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:

@@ -86,13 +86,17 @@ class DataTest(unittest.TestCase):
         img.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(
             img.dataset.bounds,
-            BoundingBox(left=11.896863892, bottom=51.446545369, right=11.9578595, top=51.515176657,),
+            BoundingBox(
+                left=11.902702941366716, bottom=51.46639813686387, right=11.947798368783504, top=51.50098327545026,
+            ),
         )
 
         img.mask_image((11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(
             img.dataset.bounds,
-            BoundingBox(left=11.896863892, bottom=51.446545369, right=11.9578595, top=51.515176657,),
+            BoundingBox(
+                left=11.902702941366716, bottom=51.46639813686387, right=11.947798368783504, top=51.50098327545026,
+            ),
         )
 
         img.mask_image(
@@ -101,7 +105,7 @@ class DataTest(unittest.TestCase):
         self.assertEqual(
             img.dataset.bounds,
             BoundingBox(
-                left=11.897762207287187, bottom=51.4614574027801, right=11.952739102863033, top=51.50592400953403,
+                left=11.891923157920472, bottom=51.46639813686387, right=11.947798368783504, top=51.50098327545026
             ),
         )
 
