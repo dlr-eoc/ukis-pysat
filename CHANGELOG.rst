@@ -31,6 +31,7 @@ Fixed
 Changed
 *******
 - ``raster.Image()``: changed ``dn2toa(platform, metadata, wavelengths)`` to ``dn2toa(platform, mtl_file, wavelengths)`` #17
+- ``raster.Image()``: ``dn2toa`` now raises an error (instead of logging a warning) if Platform is not supported.
 - ``raster.Image()``: explicit dtype when writing, optional compression #32
 - ``raster.Image()``: auto-update of in-memory `dataset` #35
 
