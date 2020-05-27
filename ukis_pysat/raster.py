@@ -9,6 +9,7 @@ try:
     import rasterio
     import rasterio.mask
     from rasterio import windows
+    from rasterio.dtypes import get_minimum_dtype
     from rasterio.io import MemoryFile
     from rasterio.plot import reshape_as_image
     from rasterio.warp import calculate_default_transform, reproject
@@ -341,13 +342,17 @@ class Image:
         self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
-    def write_to_file(self, path_to_file, dtype=rasterio.uint16, driver="GTiff"):
+    def write_to_file(self, path_to_file, dtype, driver="GTiff", compress=None):
         """
         Write a dataset to file.
         :param path_to_file: str, path to new file
-        :param dtype: datatype, optional (default: rasterio.uint16)
+        :param dtype: datatype, like rasterio.uint16, 'float32' or 'min' to use the minimum type to represent values
         :param driver: str, optional (default: 'GTiff')
+        :param compress: compression, e.g. 'lzw' (default: None)
         """
+        if dtype == 'min':
+            dtype = get_minimum_dtype(self.__arr)
+
         profile = self.dataset.meta
         profile.update(
             {
@@ -359,6 +364,9 @@ class Image:
                 "crs": self.crs,
             }
         )
+
+        if compress:
+            profile.update({"compress": compress})
 
         with rasterio.open(path_to_file, "w", **profile) as dst:
             dst.write(self.__arr.astype(dtype))
