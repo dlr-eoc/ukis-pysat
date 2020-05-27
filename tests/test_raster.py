@@ -160,6 +160,16 @@ class DataTest(unittest.TestCase):
             )
             self.assertTrue(np.array_equal(img_dn.arr, img_toa.arr))
 
+        with self.assertRaises(AttributeError, msg=f"'mtl_file' has to be set if platform is {Platform.Landsat8}."):
+            img.dn2toa(platform=Platform.Landsat8)
+
+        with self.assertRaises(
+            AttributeError,
+            msg=f"Cannot convert dn2toa. Platform {Platform.Sentinel1} not "
+            f"supported [Landsat-5, Landsat-7, Landsat-8, Sentinel-2]. ",
+        ):
+            img.dn2toa(platform=Platform.Sentinel1)
+
     def test__lookup_bands(self):
         self.assertEqual(
             ["1", "2", "3"], img._lookup_bands(Platform.Landsat5, ["Blue", "Green", "Red"]),

@@ -195,12 +195,12 @@ class Image:
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
         https://www.usgs.gov/land-resources/nli/landsat/using-usgs-landsat-level-1-data-product
-        TODO rio-toa does not seem to be maintained anymore
 
         :param platform: image platform, possible Platform.Landsat[5, 7, 8] or Platform.Sentinel2 (<enum 'Platform'>).
         :param mtl_file: path to Landsat MTL file that holds the band specific rescale factors (str).
         :param wavelengths: like ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"] for Landsat-5 (list of str).
         """
+        # TODO rio-toa does not seem to be maintained anymore
         if platform in [
             Platform.Landsat5,
             Platform.Landsat7,
@@ -256,7 +256,7 @@ class Image:
         elif platform == Platform.Sentinel2:
             self.__arr = self.__arr.astype(np.float32) / 10000.0
         else:
-            logger.warning(
+            raise AttributeError(
                 f"Cannot convert dn2toa. Platform {platform} not supported [Landsat-5, Landsat-7, Landsat-8, "
                 f"Sentinel-2]. "
             )
