@@ -5,8 +5,8 @@ import dask.array
 import numpy as np
 from rasterio import windows
 from rasterio.coords import BoundingBox
-from shapely.geometry import box
 from rasterio.transform import from_bounds
+from shapely.geometry import box
 
 from ukis_pysat.members import Platform
 from ukis_pysat.raster import Image
@@ -187,9 +187,17 @@ class DataTest(unittest.TestCase):
         self.assertIsInstance(img.to_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
 
     def test_write_to_file(self):
-        img.write_to_file(r"result.tif")
+        img.write_to_file(r"result.tif", np.uint16)
         img2 = Image("result.tif")
         self.assertTrue(np.array_equal(img2.arr, img.arr))
+
+        img2.close()
+        os.remove(r"result.tif")
+
+        img.write_to_file(r"result.tif", "min", compress="lzw")
+        img2 = Image("result.tif")
+        self.assertEqual(img2.arr.dtype, "uint8")
+        self.assertEqual(img2.dataset.profile["compress"], "lzw")
 
         img2.close()
         os.remove(r"result.tif")
