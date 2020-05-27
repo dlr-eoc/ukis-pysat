@@ -365,7 +365,8 @@ class Image:
         """
         Write a dataset to file.
         :param path_to_file: str, path to new file
-        :param dtype: datatype, like rasterio.uint16, 'float32' or 'min' to use the minimum type to represent values
+        :param dtype: datatype, like np.uint16, 'float32' or 'min' to use the minimum type to represent values
+
         :param driver: str, optional (default: 'GTiff')
         :param compress: compression, e.g. 'lzw' (default: None)
         """
