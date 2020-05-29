@@ -83,6 +83,6 @@ Changed
 - ``download.Source()``: removed ``get_metadata()`` #4
 - requirements: Removed matplotlib, pandas and dask optional #9
 
-[0.1.0] – 2020-04-29
---------------------
+[0.1.0]  (2020-04-29)
+---------------------
 - first release
