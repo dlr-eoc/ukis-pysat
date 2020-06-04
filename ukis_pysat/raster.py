@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import logging
 import math
 from itertools import product
 
@@ -24,8 +23,6 @@ except ImportError as e:
     raise ImportError(str(e) + "\n\n" + msg)
 
 from ukis_pysat.members import Platform
-
-logger = logging.getLogger(__name__)
 
 
 class Image:
@@ -317,7 +314,6 @@ class Image:
         :param overlap: int, optional (default: 0). Overlap in pixels.
         :yields: window of tile
         """
-        logger.info(f"Get tiles with size {width}x{height}.")
         rows = self.__arr.shape[-2]
         cols = self.__arr.shape[-1]
         offsets = product(range(0, cols, width), range(0, rows, height))

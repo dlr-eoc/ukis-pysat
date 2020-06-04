@@ -2,7 +2,6 @@
 
 import datetime
 import json
-import logging
 import os
 import shutil
 from io import BytesIO
@@ -30,8 +29,6 @@ except ImportError as e:
 
 from ukis_pysat.file import env_get, pack
 from ukis_pysat.members import Datahub, Platform
-
-logger = logging.getLogger(__name__)
 
 
 class Source:

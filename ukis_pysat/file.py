@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 
 import contextlib
-import logging
 import os
 import re
 import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
-
-
-logger = logging.getLogger(__name__)
 
 
 def env_get(key):
