@@ -22,21 +22,9 @@ There's also some lighter versions with less dependencies:
 
 Some helper functions might need additional dependencies like `pandas`, `dask[array]` or `utm`. If this is the case you will receive an `ImportError`.
 
-Installation with Anaconda
---------------------------
-You can install pysat using Anaconda using the following commands:
-
-.. code-block:: console
-
-    git clone https://github.com/dlr-eoc/ukis-pysat
-    cd ukis-pysat
-    conda env create -f environment.yml
-    conda activate ukis_pysat
-
-
 GDAL
 ----
-If you're having troubles installing GDAL and Rasterio follow these `instructions
+If you're having troubles installing GDAL and Rasterio use conda and/or follow these `instructions
 <https://rasterio.readthedocs.io/en/latest/installation.html>`__.
 
 Tests

@@ -97,13 +97,6 @@ pip install ukis-pysat[raster]  # also install dependencies for ukis_pysat.raste
 
 Some helper functions might need additional dependencies like `pandas`, `dask[array]` or `utm`. If this is the case you will receive an `ImportError`.
 
-You can also do this, even though `environment.yml` is updated less often:
-```bash
-git clone https://github.com/dlr-eoc/ukis-pysat
-cd ukis-pysat
-conda env create -f environment.yml
-conda activate ukis_pysat
-```
 
 ### Dependencies
 For the latest list of dependencies check the [requirements](https://github.com/dlr-eoc/ukis-pysat/blob/master/requirements.txt).
