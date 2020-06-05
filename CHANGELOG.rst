@@ -16,6 +16,9 @@ something was changed
 [master]  (2020-XX-XX)
 ----------------------
 
+[master]  (2020-05-06)
+----------------------
+
 Added
 *****
 - ``raster.Image()``: expanded test_arr to test AttributeError #31
@@ -34,6 +37,7 @@ Changed
 - ``raster.Image()``: ``dn2toa`` now raises an error (instead of logging a warning) if Platform is not supported.
 - ``raster.Image()``: explicit dtype when writing, optional compression #32
 - ``raster.Image()``: auto-update of in-memory `dataset` #35
+- removed logger
 
 
 [0.3.0]  (2020-05-26)
