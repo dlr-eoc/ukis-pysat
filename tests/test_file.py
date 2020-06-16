@@ -1,6 +1,8 @@
 import os
 import shutil
 import unittest
+from datetime import datetime, timezone
+
 import ukis_pysat.file as psf
 
 path_testfiles = os.path.join(os.path.dirname(__file__), "testfiles")
@@ -60,33 +62,33 @@ class FileTest(unittest.TestCase):
     def test_get_ts_from_sentinel_filename(self):
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
-                "S3M_OL_L_TTT____yyyymmddThhmmss_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3"
+                "S3M_OL_L_TTT____20200113T002219_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3"
             ),
-            "yyyymmddThhmmss",
+            datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
                 "S1M_BB_TTTR_LFPP_YYYYMMDDTHHMMSS_20200113T002219_OOOOOO_DDDDDD_CCCC.SAFE.zip", False,
             ),
-            "20200113T002219",
+            datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
                 "S1M_BB_TTTR_LFPP_20200113T074619_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip"
             ),
-            "20200113T074619",
+            datetime(2020, 1, 13, 7, 46, 19, tzinfo=timezone.utc),
         )
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
-                "S2AM_MSIXXX_YYYYMMDDHHMMSS_Nxxyy_ROOO_Txxxxx_<Product Discriminator>.SAFE"
+                "S2AM_MSIXXX_20200113T002219_Nxxyy_ROOO_Txxxxx_<Product Discriminator>.SAFE"
             ),
-            "YYYYMMDDHHMMSS",
+            datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
-                "S3M_OL_L_TTTTTT_yyyymmddThhmmss_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3", False
+                "S3M_OL_L_TTTTTT_yyyymmddThhmmss_20200113T002219_YYYYMMDDTHHMMSS_i_GGG_c.SEN3", False
             ),
-            "YYYYMMDDTHHMMSS",
+            datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
 
     def test_get_footprint_from_manifest(self):

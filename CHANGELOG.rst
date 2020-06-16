@@ -13,10 +13,14 @@ Changed
 ~~~~~~~
 something was changed
 
-[master]  (2020-XX-XX)
+[master]  (2020-06-16)
 ----------------------
 
-[master]  (2020-05-06)
+Fixed
+*****
+- ``file.get_ts_from_sentinel_filename()``: Return datetime.datetime objects instead of timestamp strings #42
+
+[0.4.0]  (2020-06-05)
 ----------------------
 
 Added

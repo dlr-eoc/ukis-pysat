@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
+from datetime import datetime, timezone
 
 
 def env_get(key):
@@ -110,35 +111,35 @@ def get_polarization_from_s1_filename(filename, dual=False):
 
 def get_ts_from_sentinel_filename(filename, start_date=True):
     """Get timestamp from the filename of a Sentinel scene, according to naming conventions.
-    Currently works for S1, S2 (generated after the 6th of December, 2016) & S3.
+    Currently works for S1, S2 & S3.
 
     :param  filename: top-level SENTINEL product folder or file name
     :param start_date: boolean (default: True), False is Stop Date, optional
-    :return: str
+    :return: datetime.datetime object with timezone information
 
     >>> get_ts_from_sentinel_filename("S1M_BB_TTTR_LFPP_20200113T074619_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip")
-    '20200113T074619'
+    datetime.datetime(2020, 1, 13, 7, 46, 19, tzinfo=datetime.timezone.utc)
     >>> get_ts_from_sentinel_filename("S1M_BB_TTTR_LFPP_YYYYMMDDTHHMMSS_20200113T002219_OOOOOO_DDDDDD_CCCC.SAFE.zip", False)
-    '20200113T002219'
-    >>> get_ts_from_sentinel_filename("S3M_OL_L_TTT____yyyymmddThhmmss_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3")
-    'yyyymmddThhmmss'
-    >>> get_ts_from_sentinel_filename("S3M_OL_L_TTTTTT_yyyymmddThhmmss_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3", False)
-    'YYYYMMDDTHHMMSS'
-    >>> get_ts_from_sentinel_filename("S2AM_MSIXXX_YYYYMMDDHHMMSS_Nxxyy_ROOO_Txxxxx_<Product Discriminator>.SAFE")
-    'YYYYMMDDHHMMSS'
+    datetime.datetime(2020, 1, 13, 0, 22, 19, tzinfo=datetime.timezone.utc)
+    >>> get_ts_from_sentinel_filename("S3M_OL_L_TTT____20200113T074619_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3")
+    datetime.datetime(2020, 1, 13, 7, 46, 19, tzinfo=datetime.timezone.utc)
+    >>> get_ts_from_sentinel_filename("S3M_OL_L_TTTTTT_yyyymmddThhmmss_20200113T074619_YYYYMMDDTHHMMSS_i_GGG_c.SEN3", False)
+    datetime.datetime(2020, 1, 13, 7, 46, 19, tzinfo=datetime.timezone.utc)
+    >>> get_ts_from_sentinel_filename("S2AM_MSIXXX_20200113T074619_Nxxyy_ROOO_Txxxxx_<Product Discriminator>.SAFE")
+    datetime.datetime(2020, 1, 13, 7, 46, 19, tzinfo=datetime.timezone.utc)
     """
     if filename.startswith("S2"):
-        return filename.split("_")[2]
+        return datetime.strptime(filename.split("_")[2], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
     elif filename.startswith("S1"):
         if start_date:
-            return filename.split("_")[4]
+            return datetime.strptime(filename.split("_")[4], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
         else:
-            return filename.split("_")[5]
+            return datetime.strptime(filename.split("_")[5], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
     else:
         if start_date:
-            return filename[16:31]
+            return datetime.strptime(filename[16:31], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
         else:
-            return filename[32:47]
+            return datetime.strptime(filename[32:47], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
 
 
 def get_footprint_from_manifest(xml_path):
