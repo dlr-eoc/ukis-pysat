@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
+from datetime import datetime
 
 
 def env_get(key):
@@ -128,17 +129,17 @@ def get_ts_from_sentinel_filename(filename, start_date=True):
     'YYYYMMDDHHMMSS'
     """
     if filename.startswith("S2"):
-        return filename.split("_")[2]
+        return datetime.strptime(filename.split("_")[2], "%Y%m%dT%H%M%S")
     elif filename.startswith("S1"):
         if start_date:
-            return filename.split("_")[4]
+            return datetime.strptime(filename.split("_")[4], "%Y%m%dT%H%M%S")
         else:
-            return filename.split("_")[5]
+            return datetime.strptime(filename.split("_")[5], "%Y%m%dT%H%M%S")
     else:
         if start_date:
-            return filename[16:31]
+            return datetime.strptime(filename[16:31], "%Y%m%dT%H%M%S")
         else:
-            return filename[32:47]
+            return datetime.strptime(filename[32:47], "%Y%m%dT%H%M%S")
 
 
 def get_footprint_from_manifest(xml_path):
