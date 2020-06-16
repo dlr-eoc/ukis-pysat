@@ -111,11 +111,11 @@ def get_polarization_from_s1_filename(filename, dual=False):
 
 def get_ts_from_sentinel_filename(filename, start_date=True):
     """Get timestamp from the filename of a Sentinel scene, according to naming conventions.
-    Currently works for S1, S2 (generated after the 6th of December, 2016) & S3.
+    Currently works for S1, S2 & S3.
 
     :param  filename: top-level SENTINEL product folder or file name
     :param start_date: boolean (default: True), False is Stop Date, optional
-    :return: str
+    :return: datetime.datetime object with timezone information
 
     >>> get_ts_from_sentinel_filename("S1M_BB_TTTR_LFPP_20200113T074619_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip")
     datetime.datetime(2020, 1, 13, 7, 46, 19, tzinfo=datetime.timezone.utc)
