@@ -10,7 +10,7 @@ try:
     from rasterio import windows
     from rasterio.dtypes import get_minimum_dtype
     from rasterio.io import MemoryFile
-    from rasterio.plot import reshape_as_image
+    from rasterio.plot import reshape_as_image, reshape_as_raster
     from rasterio.warp import calculate_default_transform, reproject
     from rio_toa import reflectance, brightness_temp, toa_utils
     from shapely.geometry import box, polygon
@@ -31,7 +31,8 @@ class Image:
         :param path: str, path to raster (default: None)
         :param dataset: rasterio.io.DatasetReader (default: None)
         :param arr: np.ndarray (default: None)
-        :param dimorder: order of channels or bands 'first' or 'last' (default: 'first)
+        :param dimorder: dimensions order of arr. return channels or bands as 'first' or 'last' dimension. should match
+            the dimensions order of the input array when initializing an image from an array (default: 'first)
         """
         if path:
             if isinstance(path, str):
@@ -42,7 +43,12 @@ class Image:
         else:
             if isinstance(dataset, rasterio.io.DatasetReader) and isinstance(arr, np.ndarray):
                 self.dataset = dataset
-                self.__arr = arr
+                if dimorder == "first":
+                    self.__arr = arr
+                elif dimorder == "last":
+                    self.__arr = reshape_as_raster(arr)
+                else:
+                    raise AttributeError("dimorder for bands or channels must be either 'first' or 'last'.")
             else:
                 raise TypeError(
                     f"dataset must be of type rasterio.io.DatasetReader and arr must be of type " f"numpy.ndarray"
