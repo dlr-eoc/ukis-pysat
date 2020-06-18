@@ -66,6 +66,13 @@ class DataTest(unittest.TestCase):
             ),
         )
 
+        img = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"), dimorder="first")
+        img_first = Image(dataset=img.dataset, arr=np.ones((1, 385, 502)), dimorder="first")
+        self.assertEqual(img_first.arr.shape, (1, 385, 502))
+
+        img_last = Image(dataset=img.dataset, arr=np.ones((385, 502, 1)), dimorder="last")
+        self.assertEqual(img_last.arr.shape, (385, 502, 1))
+
         with self.assertRaises(AttributeError, msg="dimorder for bands or channels must be either 'first' or 'last'."):
             img_first = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"), dimorder="middle")
             img_first.arr
