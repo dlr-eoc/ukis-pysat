@@ -31,7 +31,8 @@ class Image:
         :param path: str, path to raster (default: None)
         :param dataset: rasterio.io.DatasetReader (default: None)
         :param arr: np.ndarray (default: None)
-        :param dimorder: order of channels or bands 'first' or 'last' (default: 'first)
+        :param dimorder: dimensions order of arr. return channels or bands as 'first' or 'last' dimension. should match
+            the dimensions order of the input array when initializing an image from an array (default: 'first)
         """
         if path:
             if isinstance(path, str):
