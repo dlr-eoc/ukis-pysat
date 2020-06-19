@@ -363,13 +363,14 @@ class Image:
         self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
-    def write_to_file(self, path_to_file, dtype, driver="GTiff", compress=None):
+    def write_to_file(self, path_to_file, dtype, driver="GTiff", nodata=None, compress=None):
         """
         Write a dataset to file.
         :param path_to_file: str, path to new file
         :param dtype: datatype, like np.uint16, 'float32' or 'min' to use the minimum type to represent values
 
         :param driver: str, optional (default: 'GTiff')
+        :param nodata: nodata value, e.g. 255 (default: None, means nodata value of dataset will be used)
         :param compress: compression, e.g. 'lzw' (default: None)
         """
         if dtype == 'min':
@@ -386,6 +387,9 @@ class Image:
                 "crs": self.crs,
             }
         )
+
+        if nodata:
+            profile.update({"nodata": nodata})
 
         if compress:
             profile.update({"compress": compress})
