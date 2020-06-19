@@ -25,6 +25,11 @@ class DataTest(unittest.TestCase):
         self.assertTrue(np.array_equal(self.img.arr, img.arr))
         img.close()
 
+    def test_init_with_path(self):
+        img = Image(path=self.img.dataset)
+        self.assertTrue(np.array_equal(self.img.arr, img.arr))
+        img.close()
+
     def test_init_fail_invalid_path(self):
         with self.assertRaises(TypeError):
             Image(dataset=1)
@@ -40,6 +45,9 @@ class DataTest(unittest.TestCase):
     def test_dimorder_error(self):
         with self.assertRaises(TypeError):
             img_first = Image(dataset=TEST_FILE, dimorder="middle")
+
+    def test_init_with_array(self):
+        self.fail("Intit with array needs some testing.")
 
     def test_arr_first(self):
         img_first = Image(TEST_FILE, dimorder="first")

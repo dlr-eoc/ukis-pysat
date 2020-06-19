@@ -24,46 +24,29 @@ except ImportError as e:
     raise ImportError(str(e) + "\n\n" + msg)
 
 
-"""
-# Image(path=None, dataset=None, arr=myarray, crs=mycrs, transform=mytransform, dimorder="first")
-
-
-dataset
-dataset.crs, 
-dataset.width,
-dataset.height,
-dataset.bounds,
-dataset.count,
-dataset.transform,
-dataset.meta = {
-            'driver': self.driver,
-            'dtype': self.dtypes[0],
-            'nodata': self.nodata,
-            'width': self.width,
-            'height': self.height,
-            'count': self.count,
-            'crs': self.crs,
-            'transform': self.transform,
-        }
-"""
-
-
 class Image:
 
     da_arr = None
 
-    # TODO: update from dataset
-    def __init__(self, dataset=None, arr=None, crs=None, transform=None, dimorder="first"):
+    def __init__(self, path=None, dataset=None, arr=None, dimorder="first", crs=None, transform=None, driver="GTiff"):
         """
         :param path: str, path to raster (default: None)
         :param dataset: rasterio.io.DatasetReader (default: None)
-        :param arr: np.ndarray (default: None)
-        :param dimorder: order of channels or bands 'first' or 'last' (default: 'first)
+        :param arr: np.ndarray of shape (bands, rows, columns) (default: None)
+        :param dimorder: order of channels or bands 'first' or 'last' (default: 'first')
+        :param crs: coordinate reference system used when creating form array (default: None)
+        :param transform: transformation mapping the pixel space to geographic space used when creating form array (default:None) 
+        :param driver: short format driver name used used when creating form array (defaut: 'GTiff')
         """
+
+        if path and not dataset:  # only here for backwards compatibility
+            dataset = path
         if dimorder in ("first", "last"):
             self.dimorder = dimorder
         else:
             raise TypeError("dimorder for bands or channels must be either 'first' or 'last'.")
+        if dataset and isinstance(arr, np.ndarray):
+            raise TypeError("dataset and array are mutually exclusive.")
         if dataset:
             try:
                 self.dataset = rasterio.open(dataset)
@@ -79,7 +62,14 @@ class Image:
                 else:
                     raise TypeError("dataset must be of type rasterio.io.DatasetReader")
         elif isinstance(arr, np.ndarray) and crs and transform:
-            raise NotImplementedError()
+            dtype = arr.dtype
+            count = arr.shape[1]
+            meta = {"dtype": dtype, "count": count, "crs": crs, "driver": driver}
+            self._arr = arr
+            self.transform = transform
+            self.dataset = self.__update_dataset(meta)
+        else:
+            raise TypeError("arr, crs and transform must be provided")
 
     @property
     def arr(self):
@@ -100,7 +90,6 @@ class Image:
         valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
         return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.transform))
 
-    # TODO: update from dataset
     def mask_image(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
         """Mask the area outside of the input shapes with no data.
 
@@ -122,9 +111,8 @@ class Image:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
         # update for further processing
-        self.dataset = self.__update_dataset(self.dataset.meta).open()  # TODO: update from dataset
+        self.dataset = self.__update_dataset(self.dataset.meta).open()
 
-    # TODO: update from dataset
     def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
         """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
         array with nodata values before masking in case bbox only partially overlaps dataset bounds.
@@ -177,7 +165,6 @@ class Image:
         ds.write(self.__arr)
         return memfile
 
-    # TODO: update from dataset
     def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None):
         """Reproject a source raster to a destination raster.
 
@@ -361,7 +348,6 @@ class Image:
         # TODO using tukey --> https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.tukey.html
         pass
 
-    # TODO: update from dataset
     def get_subset(self, tile, band=0):
         """Get slice of array.
 
@@ -390,7 +376,6 @@ class Image:
         self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
-    # TODO: update from dataset
     def write_to_file(self, path_to_file, dtype, driver="GTiff", compress=None):
         """
         Write a dataset to file.
@@ -421,7 +406,6 @@ class Image:
         with rasterio.open(path_to_file, "w", **profile) as dst:
             dst.write(self.__arr.astype(dtype))
 
-    # TODO: update from dataset
     def close(self):
         """closes Image"""
         self.dataset.close()
