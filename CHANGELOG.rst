@@ -16,6 +16,10 @@ something was changed
 [master]  (2020-06-16)
 ----------------------
 
+Added
+*****
+- `raster.Image()``: optional nodata value for writing #32
+
 Fixed
 *****
 - ``file.get_ts_from_sentinel_filename()``: Return datetime.datetime objects instead of timestamp strings #42
