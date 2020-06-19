@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
-
+# -*- coding: utf-8 -*-
 import math
 from itertools import product
+
+from ukis_pysat.members import Platform
 
 try:
     import numpy as np
@@ -22,35 +23,63 @@ except ImportError as e:
     )
     raise ImportError(str(e) + "\n\n" + msg)
 
-from ukis_pysat.members import Platform
+
+"""
+# Image(path=None, dataset=None, arr=myarray, crs=mycrs, transform=mytransform, dimorder="first")
+
+
+dataset
+dataset.crs, 
+dataset.width,
+dataset.height,
+dataset.bounds,
+dataset.count,
+dataset.transform,
+dataset.meta = {
+            'driver': self.driver,
+            'dtype': self.dtypes[0],
+            'nodata': self.nodata,
+            'width': self.width,
+            'height': self.height,
+            'count': self.count,
+            'crs': self.crs,
+            'transform': self.transform,
+        }
+"""
 
 
 class Image:
-    def __init__(self, path=None, dataset=None, arr=None, dimorder="first"):
+
+    da_arr = None
+
+    # TODO: update from dataset
+    def __init__(self, dataset=None, arr=None, crs=None, transform=None, dimorder="first"):
         """
         :param path: str, path to raster (default: None)
         :param dataset: rasterio.io.DatasetReader (default: None)
         :param arr: np.ndarray (default: None)
         :param dimorder: order of channels or bands 'first' or 'last' (default: 'first)
         """
-        if path:
-            if isinstance(path, str):
-                self.dataset = rasterio.open(path)
-                self.__arr = self.dataset.read()
-            else:
-                raise TypeError(f"path must be of type str")
+        if dimorder in ("first", "last"):
+            self.dimorder = dimorder
         else:
-            if isinstance(dataset, rasterio.io.DatasetReader) and isinstance(arr, np.ndarray):
-                self.dataset = dataset
-                self.__arr = arr
-            else:
-                raise TypeError(
-                    f"dataset must be of type rasterio.io.DatasetReader and arr must be of type " f"numpy.ndarray"
-                )
-        self.dimorder = dimorder
-        self.transform = self.dataset.transform
-        self.crs = self.dataset.crs
-        self.da_arr = None
+            raise TypeError("dimorder for bands or channels must be either 'first' or 'last'.")
+        if dataset:
+            try:
+                self.dataset = rasterio.open(dataset)
+                self.crs = self.dataset.crs
+                self.transform = self.dataset.transform
+                self.__arr = self.dataset.read()
+            except (TypeError, AttributeError):
+                if dataset and isinstance(dataset, rasterio.io.DatasetReader):
+                    self.dataset = dataset
+                    self.crs = self.dataset.crs
+                    self.transform = self.dataset.transform
+                    self.__arr = self.dataset.read()
+                else:
+                    raise TypeError("dataset must be of type rasterio.io.DatasetReader")
+        elif isinstance(arr, np.ndarray) and crs and transform:
+            raise NotImplementedError()
 
     @property
     def arr(self):
@@ -71,16 +100,19 @@ class Image:
         valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
         return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.transform))
 
-    def mask_image(self, bbox, crop=True, pad=False, **kwargs):
+    # TODO: update from dataset
+    def mask_image(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
         """Mask the area outside of the input shapes with no data.
 
         :param bbox: bounding box of type tuple or Shapely Polygon
         :param crop: bool, see rasterio.mask. Optional, (default: True)
         :param pad: pads image, should only be used when bbox.bounds extent img.bounds, optional (default: False)
+        :param mode: str, how to pad, see rasterio.pad. Optional (default: 'constant') 
+        :param constant_values: nodata value, padding should be filled with, optional (default: 0)
         """
         # TODO https://github.com/mapbox/rasterio/issues/995
         if pad:
-            self.dataset = self._pad_to_bbox(bbox, **kwargs).open()
+            self.dataset = self._pad_to_bbox(bbox, mode, constant_values).open()
 
         if isinstance(bbox, polygon.Polygon):
             self.__arr, self.transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
@@ -90,8 +122,9 @@ class Image:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
         # update for further processing
-        self.dataset = self.__update_dataset().open()
+        self.dataset = self.__update_dataset(self.dataset.meta).open()  # TODO: update from dataset
 
+    # TODO: update from dataset
     def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
         """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
         array with nodata values before masking in case bbox only partially overlaps dataset bounds.
@@ -126,24 +159,25 @@ class Image:
 
         self.__arr = destination
 
-        return self.__update_dataset()
+        return self.__update_dataset(self.dataset.meta)
 
-    def __update_dataset(self):
+    def __update_dataset(self, meta):
         """Update dataset without writing to file after it theoretically changed.
+
+        :param meta: The basic metadata of the dataset as returned from the meta property of rasterio Datasets 
 
         :return: closed dataset in memory
         """
-        mem_profile = self.dataset.meta
-        mem_profile.update(
+        meta.update(
             {"height": self.__arr.shape[-2], "width": self.__arr.shape[-1], "transform": self.transform,}
         )
 
         memfile = MemoryFile()
-        ds = memfile.open(**mem_profile)
+        ds = memfile.open(**meta)
         ds.write(self.__arr)
-
         return memfile
 
+    # TODO: update from dataset
     def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None):
         """Reproject a source raster to a destination raster.
 
@@ -155,25 +189,20 @@ class Image:
             Target resolution, in units of target coordinate reference system.
         """
         # output dimensions and transform for reprojection.
-        if resolution:
-            transform, width, height = calculate_default_transform(
-                self.dataset.crs,
-                dst_crs,
-                self.dataset.width,
-                self.dataset.height,
-                *self.dataset.bounds,
-                resolution=resolution,
-            )
-        else:
-            transform, width, height = calculate_default_transform(
-                self.dataset.crs, dst_crs, self.dataset.width, self.dataset.height, *self.dataset.bounds,
-            )
+        transform, width, height = calculate_default_transform(
+            self.dataset.crs,
+            dst_crs,
+            self.dataset.width,
+            self.dataset.height,
+            *self.dataset.bounds,
+            resolution=resolution,
+        )
 
         destination = np.zeros((self.dataset.count, height, width), self.__arr.dtype)
 
         for i in range(0, self.dataset.count):
             reproject(
-                source=rasterio.band(self.dataset, i + 1),  # index starting at 1
+                source=rasterio.band(self.dataset, i + 1),  # index starting at 1 --> replace with _arr
                 destination=destination[i],
                 src_transform=self.dataset.transform,
                 src_crs=self.dataset.crs,
@@ -187,7 +216,7 @@ class Image:
         self.__arr = destination
         self.transform = transform
         self.crs = dst_crs
-        self.dataset = self.__update_dataset().open()
+        self.dataset = self.__update_dataset(self.dataset.meta).open()
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
@@ -307,7 +336,7 @@ class Image:
     def get_tiles(self, width=256, height=256, overlap=0):
         """Calculates rasterio.windows.Window, idea from https://stackoverflow.com/a/54525931
 
-        TODO boundless with 'reflect' padding
+        TODO: boundless with 'reflect' padding
 
         :param width: int, optional (default: 256). Tile size in pixels.
         :param height: int, optional (default: 256). Tile size in pixels.
@@ -332,6 +361,7 @@ class Image:
         # TODO using tukey --> https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.tukey.html
         pass
 
+    # TODO: update from dataset
     def get_subset(self, tile, band=0):
         """Get slice of array.
 
@@ -341,7 +371,10 @@ class Image:
         """
         # access window bounds
         bounds = windows.bounds(tile, self.dataset.transform)
-        return self.__arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
+        return (
+            self.__arr[(band,) + tile.toslices()],
+            bounds,
+        )  # Shape of array is announced with (bands, height, width)
 
     def to_dask_array(self, chunk_size=(1, 6000, 6000)):
         """ transforms numpy to dask array
@@ -357,6 +390,7 @@ class Image:
         self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
+    # TODO: update from dataset
     def write_to_file(self, path_to_file, dtype, driver="GTiff", compress=None):
         """
         Write a dataset to file.
@@ -366,7 +400,7 @@ class Image:
         :param driver: str, optional (default: 'GTiff')
         :param compress: compression, e.g. 'lzw' (default: None)
         """
-        if dtype == 'min':
+        if dtype == "min":
             dtype = get_minimum_dtype(self.__arr)
 
         profile = self.dataset.meta
@@ -387,10 +421,7 @@ class Image:
         with rasterio.open(path_to_file, "w", **profile) as dst:
             dst.write(self.__arr.astype(dtype))
 
+    # TODO: update from dataset
     def close(self):
         """closes Image"""
         self.dataset.close()
-
-
-if __name__ == "__main__":
-    pass

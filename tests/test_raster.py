@@ -7,32 +7,42 @@ from rasterio import windows
 from rasterio.coords import BoundingBox
 from rasterio.transform import from_bounds
 from shapely.geometry import box
-
 from ukis_pysat.members import Platform
 from ukis_pysat.raster import Image
 
-img = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"))
+TEST_FILE = os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif")
 
 
 class DataTest(unittest.TestCase):
+    def setUp(self):
+        self.img = Image(dataset=TEST_FILE)
+
+    def tearDown(self):
+        self.img.close()
+
     def test_init(self):
-        with self.assertRaises(TypeError, msg=f"path must be of type str"):
-            Image(path=1)
+        img = Image(dataset=self.img.dataset)
+        self.assertTrue(np.array_equal(self.img.arr, img.arr))
+        img.close()
 
-        with self.assertRaises(
-            TypeError, msg=f"dataset must be of type rasterio.io.DatasetReader and arr must be of type numpy.ndarray"
-        ):
-            Image(dataset=1, arr=img.arr)
+    def test_init_fail_invalid_path(self):
+        with self.assertRaises(TypeError):
+            Image(dataset=1)
 
-        with self.assertRaises(
-            TypeError, msg=f"dataset must be of type rasterio.io.DatasetReader and arr must be of type numpy.ndarray"
-        ):
-            Image(arr=img.arr)
+    def test_init_fail_invalid_dataset(self):
+        with self.assertRaises(TypeError,):
+            Image(dataset=1)
 
-        self.assertTrue(np.array_equal(img.arr, Image(dataset=img.dataset, arr=img.arr).arr))
+    def test_init_fail_missing_datset(self):
+        with self.assertRaises(TypeError):
+            Image(arr=self.img.arr)
 
-    def test_arr(self):
-        img_first = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"), dimorder="first")
+    def test_dimorder_error(self):
+        with self.assertRaises(TypeError):
+            img_first = Image(dataset=TEST_FILE, dimorder="middle")
+
+    def test_arr_first(self):
+        img_first = Image(TEST_FILE, dimorder="first")
         img_first.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(img_first.arr.shape, (1, 385, 502))
         self.assertEqual(
@@ -49,7 +59,8 @@ class DataTest(unittest.TestCase):
             ),
         )
 
-        img_last = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"), dimorder="last")
+    def test_arr_last(self):
+        img_last = Image(TEST_FILE, dimorder="last")
         img_last.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
         self.assertEqual(
@@ -66,56 +77,53 @@ class DataTest(unittest.TestCase):
             ),
         )
 
-        with self.assertRaises(AttributeError, msg="dimorder for bands or channels must be either 'first' or 'last'."):
-            img_first = Image(path=os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif"), dimorder="middle")
-            img_first.arr
-
     def test_get_valid_data_bbox(self):
         self.assertEqual(
-            img.get_valid_data_bbox(), (11.896863892, 51.515176657, 11.896863892, 51.515176657),
+            self.img.get_valid_data_bbox(), (11.896863892, 51.515176657, 11.896863892, 51.515176657),
         )
         self.assertEqual(
-            img.get_valid_data_bbox(nodata=1), (11.896863892, 51.446545369, 11.9578595, 51.515176657),
+            self.img.get_valid_data_bbox(nodata=1), (11.896863892, 51.446545369, 11.9578595, 51.515176657),
         )
+
+    def test_mask_image_invalid_bbox(self):
+        with self.assertRaises(TypeError, msg="bbox must be of type tuple or Shapely Polygon"):
+            self.img.mask_image([1, 2, 3])
 
     def test_mask_image(self):
-        with self.assertRaises(TypeError, msg="bbox must be of type tuple or Shapely Polygon"):
-            img.mask_image([1, 2, 3])
-
-        img.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        self.img.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(
-            img.dataset.bounds,
+            self.img.dataset.bounds,
             BoundingBox(
                 left=11.902702941366716, bottom=51.46639813686387, right=11.947798368783504, top=51.50098327545026,
             ),
         )
 
-        img.mask_image((11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        self.img.mask_image((11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(
-            img.dataset.bounds,
+            self.img.dataset.bounds,
             BoundingBox(
                 left=11.902702941366716, bottom=51.46639813686387, right=11.947798368783504, top=51.50098327545026,
             ),
         )
 
-        img.mask_image(
+        self.img.mask_image(
             box(11.8919236802142620, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,), pad=True,
         )
         self.assertEqual(
-            img.dataset.bounds,
+            self.img.dataset.bounds,
             BoundingBox(
                 left=11.891923157920472, bottom=51.46639813686387, right=11.947798368783504, top=51.50098327545026
             ),
         )
 
     def test_warp(self):
-        self.assertEqual(img.crs, "EPSG:4326")
+        self.assertEqual(self.img.crs, "EPSG:4326")
 
-        img.warp("EPSG:3857")
-        self.assertEqual(img.crs, "EPSG:3857")
+        self.img.warp("EPSG:3857")
+        self.assertEqual(self.img.crs, "EPSG:3857")
 
-        img.warp("EPSG:4326", resolution=1.0)
-        self.assertEqual(1.0, img.transform.to_gdal()[1])
+        self.img.warp("EPSG:4326", resolution=1.0)
+        self.assertEqual(1.0, self.img.transform.to_gdal()[1])
 
     def test_dn2toa(self):
         target_dir = os.path.join(os.path.dirname(__file__), "testfiles", "satellite_data")
@@ -153,33 +161,33 @@ class DataTest(unittest.TestCase):
         ]
 
         for i in range(len(tests)):
-            img_dn = Image(path=tests[i]["dn_file"])
-            img_toa = Image(path=tests[i]["toa_file"])
+            img_dn = Image(dataset=tests[i]["dn_file"])
+            img_toa = Image(dataset=tests[i]["toa_file"])
             img_dn.dn2toa(
                 platform=tests[i]["platform"], mtl_file=tests[i]["mtl_file"], wavelengths=tests[i]["wavelengths"]
             )
             self.assertTrue(np.array_equal(img_dn.arr, img_toa.arr))
 
         with self.assertRaises(AttributeError, msg=f"'mtl_file' has to be set if platform is {Platform.Landsat8}."):
-            img.dn2toa(platform=Platform.Landsat8)
+            self.img.dn2toa(platform=Platform.Landsat8)
 
         with self.assertRaises(
             AttributeError,
             msg=f"Cannot convert dn2toa. Platform {Platform.Sentinel1} not "
             f"supported [Landsat-5, Landsat-7, Landsat-8, Sentinel-2]. ",
         ):
-            img.dn2toa(platform=Platform.Sentinel1)
+            self.img.dn2toa(platform=Platform.Sentinel1)
 
     def test__lookup_bands(self):
         self.assertEqual(
-            ["1", "2", "3"], img._lookup_bands(Platform.Landsat5, ["Blue", "Green", "Red"]),
+            ["1", "2", "3"], self.img._lookup_bands(Platform.Landsat5, ["Blue", "Green", "Red"]),
         )
         self.assertEqual(
-            ["8", "10", "11"], img._lookup_bands(Platform.Landsat8, ["PAN", "Tirs1", "Tirs2"]),
+            ["8", "10", "11"], self.img._lookup_bands(Platform.Landsat8, ["PAN", "Tirs1", "Tirs2"]),
         )
 
     def test_get_tiles(self):
-        for idx, each in enumerate(img.get_tiles(5, 5, 1)):
+        for idx, each in enumerate(self.img.get_tiles(5, 5, 1)):
             self.assertIsInstance(each, windows.Window)
             if idx == 2578:
                 self.assertEqual(each, windows.Window(col_off=79, row_off=649, width=7, height=7))
@@ -187,24 +195,24 @@ class DataTest(unittest.TestCase):
         self.assertEqual(idx, 20807)
 
     def test_get_subset(self):
-        for idx, each in enumerate(img.get_tiles(5, 5, 1)):
+        for idx, each in enumerate(self.img.get_tiles(5, 5, 1)):
             if idx == 2578:
-                array, bounds = img.get_subset(each)
+                array, bounds = self.img.get_subset(each)
                 self.assertTrue(np.array_equal(array, np.zeros(shape=(7, 7), dtype=array.dtype)))
                 self.assertEqual(bounds, (11.903960582768779, 51.45624717410995, 11.904589403469808, 51.45687599481152))
 
     def test_get_dask_array(self):
-        self.assertIsInstance(img.to_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
+        self.assertIsInstance(self.img.to_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
 
     def test_write_to_file(self):
-        img.write_to_file(r"result.tif", np.uint16)
+        self.img.write_to_file(r"result.tif", np.uint16)
         img2 = Image("result.tif")
-        self.assertTrue(np.array_equal(img2.arr, img.arr))
+        self.assertTrue(np.array_equal(img2.arr, self.img.arr))
 
         img2.close()
         os.remove(r"result.tif")
 
-        img.write_to_file(r"result.tif", "min", compress="lzw")
+        self.img.write_to_file(r"result.tif", "min", compress="lzw")
         img2 = Image("result.tif")
         self.assertEqual(img2.arr.dtype, "uint8")
         self.assertEqual(img2.dataset.profile["compress"], "lzw")
