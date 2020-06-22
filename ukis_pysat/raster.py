@@ -28,48 +28,41 @@ class Image:
 
     da_arr = None
 
-    def __init__(self, path=None, dataset=None, arr=None, dimorder="first", crs=None, transform=None, driver="GTiff"):
+    def __init__(self, data, dimorder="first", crs=None, transform=None):
         """
-        :param path: str, path to raster (default: None)
-        :param dataset: rasterio.io.DatasetReader (default: None)
-        :param arr: np.ndarray of shape (bands, rows, columns) (default: None)
-        :param dimorder: order of channels or bands 'first' or 'last' (default: 'first')
-        :param crs: coordinate reference system used when creating form array (default: None)
-        :param transform: transformation mapping the pixel space to geographic space used when creating form array (default:None) 
-        :param driver: short format driver name used used when creating form array (defaut: 'GTiff')
+        :param data: rasterio.io.DatasetReader or path to raster or np.ndarray of shape (bands, rows, columns)
+        :param dimorder: Order of channels or bands 'first' or 'last' (default: 'first')
+        :param crs: Coordinate reference system used when creating form array. If 'data' is np.ndarray this is reqired (default: None) 
+        :param transform: Affine transformation mapping the pixel space to geographic space. If 'data' is np.ndarray this is reqired (default:None) 
         """
-
-        if path and not dataset:  # only here for backwards compatibility
-            dataset = path
         if dimorder in ("first", "last"):
             self.dimorder = dimorder
         else:
             raise TypeError("dimorder for bands or channels must be either 'first' or 'last'.")
-        if dataset and isinstance(arr, np.ndarray):
-            raise TypeError("dataset and array are mutually exclusive.")
-        if dataset:
-            try:
-                self.dataset = rasterio.open(dataset)
+        try:
+            self.dataset = rasterio.open(data)
+            self.crs = self.dataset.crs
+            self.transform = self.dataset.transform
+            self.__arr = self.dataset.read()
+        except (TypeError, AttributeError):
+            if isinstance(data, rasterio.io.DatasetReader):
+                self.dataset = data
                 self.crs = self.dataset.crs
                 self.transform = self.dataset.transform
                 self.__arr = self.dataset.read()
-            except (TypeError, AttributeError):
-                if dataset and isinstance(dataset, rasterio.io.DatasetReader):
-                    self.dataset = dataset
-                    self.crs = self.dataset.crs
-                    self.transform = self.dataset.transform
-                    self.__arr = self.dataset.read()
-                else:
-                    raise TypeError("dataset must be of type rasterio.io.DatasetReader")
-        elif isinstance(arr, np.ndarray) and crs and transform:
-            dtype = arr.dtype
-            count = arr.shape[1]
-            meta = {"dtype": dtype, "count": count, "crs": crs, "driver": driver}
-            self._arr = arr
-            self.transform = transform
-            self.dataset = self.__update_dataset(meta)
-        else:
-            raise TypeError("arr, crs and transform must be provided")
+            elif isinstance(data, np.ndarray):
+                if crs is None:
+                    raise TypeError("if dataset is of type np.ndarray crs must not be None")
+                if transform is None:
+                    raise TypeError("if dataset is of type np.ndarray transform must not be None")
+                meta = {"dtype": data.dtype, "count": data.shape[0], "crs": crs, "driver": "GTiff"}
+                self.__arr = data
+                self.transform = transform
+                self.dataset = self.__update_dataset(meta).open()
+                self.crs = self.dataset.crs
+                self.transform = self.dataset.transform
+            else:
+                raise TypeError("dataset must be of type str, rasterio.io.DatasetReader or np.ndarray")
 
     @property
     def arr(self):
@@ -156,10 +149,10 @@ class Image:
 
         :return: closed dataset in memory
         """
+        arr = self.__arr
         meta.update(
             {"height": self.__arr.shape[-2], "width": self.__arr.shape[-1], "transform": self.transform,}
         )
-
         memfile = MemoryFile()
         ds = memfile.open(**meta)
         ds.write(self.__arr)

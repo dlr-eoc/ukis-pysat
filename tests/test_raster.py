@@ -15,39 +15,44 @@ TEST_FILE = os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif")
 
 class DataTest(unittest.TestCase):
     def setUp(self):
-        self.img = Image(dataset=TEST_FILE)
+        self.img = Image(TEST_FILE)
 
     def tearDown(self):
         self.img.close()
 
     def test_init(self):
-        img = Image(dataset=self.img.dataset)
-        self.assertTrue(np.array_equal(self.img.arr, img.arr))
-        img.close()
-
-    def test_init_with_path(self):
-        img = Image(path=self.img.dataset)
+        img = Image(self.img.dataset)
         self.assertTrue(np.array_equal(self.img.arr, img.arr))
         img.close()
 
     def test_init_fail_invalid_path(self):
         with self.assertRaises(TypeError):
-            Image(dataset=1)
+            Image(1)
 
     def test_init_fail_invalid_dataset(self):
         with self.assertRaises(TypeError,):
-            Image(dataset=1)
+            Image(1)
 
-    def test_init_fail_missing_datset(self):
+    def test_init_with_arry_fail_missing_crs_and_transform(self):
         with self.assertRaises(TypeError):
-            Image(arr=self.img.arr)
+            Image(data=self.img.arr)
+
+    def test_init_with_arry_fail_missing_transform(self):
+        with self.assertRaises(TypeError):
+            Image(data=self.img.arr, crs=self.img.crs)
+
+    def test_init_with_array(self):
+        img = Image(self.img.arr, crs=self.img.crs, transform=self.img.transform)
+        self.assertTrue(np.array_equal(self.img.arr, img.arr))
+        img.close()
+
+    def test_init_with_arry_fail_missing_crs(self):
+        with self.assertRaises(TypeError):
+            Image(data=self.img.arr, crs=self.img.transform)
 
     def test_dimorder_error(self):
         with self.assertRaises(TypeError):
-            img_first = Image(dataset=TEST_FILE, dimorder="middle")
-
-    def test_init_with_array(self):
-        self.fail("Intit with array needs some testing.")
+            img_first = Image(TEST_FILE, dimorder="middle")
 
     def test_arr_first(self):
         img_first = Image(TEST_FILE, dimorder="first")
@@ -169,8 +174,8 @@ class DataTest(unittest.TestCase):
         ]
 
         for i in range(len(tests)):
-            img_dn = Image(dataset=tests[i]["dn_file"])
-            img_toa = Image(dataset=tests[i]["toa_file"])
+            img_dn = Image(tests[i]["dn_file"])
+            img_toa = Image(tests[i]["toa_file"])
             img_dn.dn2toa(
                 platform=tests[i]["platform"], mtl_file=tests[i]["mtl_file"], wavelengths=tests[i]["wavelengths"]
             )
@@ -226,6 +231,14 @@ class DataTest(unittest.TestCase):
         self.assertEqual(img2.dataset.profile["compress"], "lzw")
 
         img2.close()
+        os.remove(r"result.tif")
+
+        img3 = Image(self.img.arr, crs=self.img.crs, transform=self.img.transform)
+        img3.write_to_file(r"result.tif", np.uint16)
+        img3.close()
+        img4 = Image("result.tif")
+        self.assertTrue(np.array_equal(img4.arr, self.img.arr))
+        img4.close()
         os.remove(r"result.tif")
 
 
