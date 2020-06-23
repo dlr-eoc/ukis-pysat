@@ -13,7 +13,7 @@ Changed
 ~~~~~~~
 something was changed
 
-[master]  (2020-06-16)
+[master]  (2020-**-**)
 ----------------------
 
 Added
@@ -23,6 +23,10 @@ Added
 Fixed
 *****
 - ``file.get_ts_from_sentinel_filename()``: Return datetime.datetime objects instead of timestamp strings #42
+
+Changed
+*******
+- ``raster.Image()``: update of init signature to be less confusing #41
 
 [0.4.0]  (2020-06-05)
 ----------------------
