@@ -33,8 +33,8 @@ class Image:
         """
         :param data: rasterio.io.DatasetReader or path to raster or np.ndarray of shape (bands, rows, columns)
         :param dimorder: Order of channels or bands 'first' or 'last' (default: 'first')
-        :param crs: Coordinate reference system used when creating form array. If 'data' is np.ndarray this is reqired (default: None) 
-        :param transform: Affine transformation mapping the pixel space to geographic space. If 'data' is np.ndarray this is reqired (default:None) 
+        :param crs: Coordinate reference system used when creating form array. If 'data' is np.ndarray this is required (default: None)
+        :param transform: Affine transformation mapping the pixel space to geographic space. If 'data' is np.ndarray this is required (default:None)
         """
         if dimorder in ("first", "last"):
             self.dimorder = dimorder
@@ -146,11 +146,10 @@ class Image:
     def __update_dataset(self, meta):
         """Update dataset without writing to file after it theoretically changed.
 
-        :param meta: The basic metadata of the dataset as returned from the meta property of rasterio Datasets 
-
+        :param meta: The basic metadata of the dataset as returned from the meta property of rasterio Datasets
         :return: closed dataset in memory
         """
-        arr = self.__arr
+
         meta.update(
             {"height": self.__arr.shape[-2], "width": self.__arr.shape[-1], "transform": self.transform,}
         )
