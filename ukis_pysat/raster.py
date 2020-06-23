@@ -1,7 +1,9 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import math
 from itertools import product
+
+from ukis_pysat.members import Platform
 
 try:
     import numpy as np
@@ -22,41 +24,46 @@ except ImportError as e:
     )
     raise ImportError(str(e) + "\n\n" + msg)
 
-from ukis_pysat.members import Platform
-
 
 class Image:
-    def __init__(self, path=None, dataset=None, arr=None, dimorder="first"):
+
+    da_arr = None
+
+    def __init__(self, data, dimorder="first", crs=None, transform=None):
         """
-        :param path: str, path to raster (default: None)
-        :param dataset: rasterio.io.DatasetReader (default: None)
-        :param arr: np.ndarray (default: None)
-        :param dimorder: dimensions order of arr. return channels or bands as 'first' or 'last' dimension. should match
-            the dimensions order of the input array when initializing an image from an array (default: 'first)
+        :param data: rasterio.io.DatasetReader or path to raster or np.ndarray of shape (bands, rows, columns)
+        :param dimorder: Order of channels or bands 'first' or 'last' (default: 'first')
+        :param crs: Coordinate reference system used when creating form array. If 'data' is np.ndarray this is required (default: None)
+        :param transform: Affine transformation mapping the pixel space to geographic space. If 'data' is np.ndarray this is required (default:None)
         """
-        if path:
-            if isinstance(path, str):
-                self.dataset = rasterio.open(path)
-                self.__arr = self.dataset.read()
-            else:
-                raise TypeError(f"path must be of type str")
+        if dimorder in ("first", "last"):
+            self.dimorder = dimorder
         else:
-            if isinstance(dataset, rasterio.io.DatasetReader) and isinstance(arr, np.ndarray):
-                self.dataset = dataset
-                if dimorder == "first":
-                    self.__arr = arr
-                elif dimorder == "last":
-                    self.__arr = reshape_as_raster(arr)
-                else:
-                    raise AttributeError("dimorder for bands or channels must be either 'first' or 'last'.")
+            raise TypeError("dimorder for bands or channels must be either 'first' or 'last'.")
+        try:
+            self.dataset = rasterio.open(data)
+            self.crs = self.dataset.crs
+            self.transform = self.dataset.transform
+            self.__arr = self.dataset.read()
+        except (TypeError, AttributeError):
+            if isinstance(data, rasterio.io.DatasetReader):
+                self.dataset = data
+                self.crs = self.dataset.crs
+                self.transform = self.dataset.transform
+                self.__arr = self.dataset.read()
+            elif isinstance(data, np.ndarray):
+                if crs is None:
+                    raise TypeError("if dataset is of type np.ndarray crs must not be None")
+                if transform is None:
+                    raise TypeError("if dataset is of type np.ndarray transform must not be None")
+                meta = {"dtype": data.dtype, "count": data.shape[0], "crs": crs, "driver": "GTiff"}
+                self.__arr = data
+                self.transform = transform
+                self.dataset = self.__update_dataset(meta).open()
+                self.crs = self.dataset.crs
+                self.transform = self.dataset.transform
             else:
-                raise TypeError(
-                    f"dataset must be of type rasterio.io.DatasetReader and arr must be of type " f"numpy.ndarray"
-                )
-        self.dimorder = dimorder
-        self.transform = self.dataset.transform
-        self.crs = self.dataset.crs
-        self.da_arr = None
+                raise TypeError("dataset must be of type str, rasterio.io.DatasetReader or np.ndarray")
 
     @property
     def arr(self):
@@ -77,16 +84,18 @@ class Image:
         valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
         return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.transform))
 
-    def mask_image(self, bbox, crop=True, pad=False, **kwargs):
+    def mask_image(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
         """Mask the area outside of the input shapes with no data.
 
         :param bbox: bounding box of type tuple or Shapely Polygon
         :param crop: bool, see rasterio.mask. Optional, (default: True)
         :param pad: pads image, should only be used when bbox.bounds extent img.bounds, optional (default: False)
+        :param mode: str, how to pad, see rasterio.pad. Optional (default: 'constant') 
+        :param constant_values: nodata value, padding should be filled with, optional (default: 0)
         """
         # TODO https://github.com/mapbox/rasterio/issues/995
         if pad:
-            self.dataset = self._pad_to_bbox(bbox, **kwargs).open()
+            self.dataset = self._pad_to_bbox(bbox, mode, constant_values).open()
 
         if isinstance(bbox, polygon.Polygon):
             self.__arr, self.transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
@@ -96,7 +105,7 @@ class Image:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
         # update for further processing
-        self.dataset = self.__update_dataset().open()
+        self.dataset = self.__update_dataset(self.dataset.meta).open()
 
     def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
         """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
@@ -132,20 +141,21 @@ class Image:
 
         self.__arr = destination
 
-        return self.__update_dataset()
+        return self.__update_dataset(self.dataset.meta)
 
-    def __update_dataset(self):
+    def __update_dataset(self, meta):
         """Update dataset without writing to file after it theoretically changed.
 
+        :param meta: The basic metadata of the dataset as returned from the meta property of rasterio Datasets
         :return: closed dataset in memory
         """
-        mem_profile = self.dataset.meta
-        mem_profile.update(
+
+        meta.update(
             {"height": self.__arr.shape[-2], "width": self.__arr.shape[-1], "transform": self.transform,}
         )
 
         memfile = MemoryFile()
-        ds = memfile.open(**mem_profile)
+        ds = memfile.open(**meta)
         ds.write(self.__arr)
 
         return memfile
@@ -193,7 +203,7 @@ class Image:
         self.__arr = destination
         self.transform = transform
         self.crs = dst_crs
-        self.dataset = self.__update_dataset().open()
+        self.dataset = self.__update_dataset(self.dataset.meta).open()
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
@@ -373,7 +383,7 @@ class Image:
         :param nodata: nodata value, e.g. 255 (default: None, means nodata value of dataset will be used)
         :param compress: compression, e.g. 'lzw' (default: None)
         """
-        if dtype == 'min':
+        if dtype == "min":
             dtype = get_minimum_dtype(self.__arr)
 
         profile = self.dataset.meta
@@ -400,7 +410,3 @@ class Image:
     def close(self):
         """closes Image"""
         self.dataset.close()
-
-
-if __name__ == "__main__":
-    pass
