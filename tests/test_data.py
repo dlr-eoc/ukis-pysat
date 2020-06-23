@@ -2,8 +2,8 @@ import os
 import traceback
 import unittest
 
-from ukis_pysat.members import Datahub, Platform
 from ukis_pysat.data import Source
+from ukis_pysat.members import Datahub, Platform
 
 # os.environ["EARTHEXPLORER_USER"] = "Tim"
 # os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
@@ -121,6 +121,7 @@ class DownloadTest(unittest.TestCase):
         with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
             src.prep_aoi(1)
 
+    @unittest.skip("until API is reachable again")
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_query_metadata(self):
         for i in range(len(queries)):
@@ -144,9 +145,12 @@ class DownloadTest(unittest.TestCase):
     def test_download_image(self):
         src = Source(datahub=Datahub.File, datadir=target_dir)
         with self.assertRaises(Exception, msg="download_image not supported for Datahub.File."):
-            src.download_image(platform=Datahub.File, product_uuid="1", target_dir=target_dir,)
+            src.download_image(
+                platform=Datahub.File, product_uuid="1", target_dir=target_dir,
+            )
         # TODO download tests
 
+    @unittest.skip("until API is reachable again")
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_quicklook(self):
         for i in range(len(queries)):
@@ -171,7 +175,9 @@ class DownloadTest(unittest.TestCase):
 
         src = Source(datahub=Datahub.File, datadir=target_dir)
         with self.assertRaises(NotImplementedError, msg=f"download_quicklook not supported for Datahub.File."):
-            src.download_quicklook(platform=Datahub.File, product_uuid="1", target_dir=target_dir,)
+            src.download_quicklook(
+                platform=Datahub.File, product_uuid="1", target_dir=target_dir,
+            )
 
 
 if __name__ == "__main__":
