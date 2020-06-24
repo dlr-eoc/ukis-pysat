@@ -121,7 +121,7 @@ class DownloadTest(unittest.TestCase):
         with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
             src.prep_aoi(1)
 
-    @unittest.skip("until API is reachable again")
+    # @unittest.skip("until API is reachable again")
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_query_metadata(self):
         for i in range(len(queries)):
@@ -150,7 +150,7 @@ class DownloadTest(unittest.TestCase):
             )
         # TODO download tests
 
-    @unittest.skip("until API is reachable again")
+    # @unittest.skip("until API is reachable again")
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_quicklook(self):
         for i in range(len(queries)):
