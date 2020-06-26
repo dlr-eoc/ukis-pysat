@@ -60,10 +60,8 @@ class Image:
                 raise TypeError("if dataset is of type np.ndarray transform must not be None")
             if dimorder == "first":
                 self.__arr = data
-            elif dimorder == "last":
-                self.__arr = reshape_as_raster(data)
             else:
-                raise AttributeError("dimorder for bands or channels must be either 'first' or 'last'.")
+                self.__arr = reshape_as_raster(data)
             meta = {"dtype": self.__arr.dtype, "count": self.__arr.shape[0], "crs": crs, "driver": "GTiff"}
             self.transform = transform
             self.dataset = self.__update_dataset(meta).open()
@@ -77,10 +75,8 @@ class Image:
         """array property"""
         if self.dimorder == "first":
             return self.__arr
-        elif self.dimorder == "last":
-            return reshape_as_image(self.__arr)
         else:
-            raise AttributeError("dimorder for bands or channels must be either 'first' or 'last'.")
+            return reshape_as_image(self.__arr)
 
     def get_valid_data_bbox(self, nodata=0):
         """bounding box covering the input array's valid data pixels.
