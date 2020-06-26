@@ -95,7 +95,9 @@ class Image:
         """
         # TODO https://github.com/mapbox/rasterio/issues/995
         if pad:
-            self.dataset = self._pad_to_bbox(bbox, mode, constant_values).open()
+            self.dataset.close()
+            # here we __update_dataset()
+            self.dataset = self._pad_to_bbox(bbox, mode, constant_values).open(**self.dataset.meta)
 
         if isinstance(bbox, polygon.Polygon):
             self.__arr, self.transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
@@ -105,7 +107,9 @@ class Image:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
         # update for further processing
-        self.dataset = self.__update_dataset(self.dataset.meta).open()
+        self.dataset.close()  # meta still available when DataSetReader is closed
+        # passing meta to open, because driver gets lost if it's not GTiff
+        self.dataset = self.__update_dataset(self.dataset.meta).open(**self.dataset.meta)
 
     def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
         """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
@@ -147,7 +151,7 @@ class Image:
         """Update dataset without writing to file after it theoretically changed.
 
         :param meta: The basic metadata of the dataset as returned from the meta property of rasterio Datasets
-        :return: closed dataset in memory
+        :return: file in memory
         """
 
         meta.update(
@@ -155,8 +159,8 @@ class Image:
         )
 
         memfile = MemoryFile()
-        ds = memfile.open(**meta)
-        ds.write(self.__arr)
+        with memfile.open(**meta) as ds:
+            ds.write(self.__arr)
 
         return memfile
 
@@ -203,7 +207,10 @@ class Image:
         self.__arr = destination
         self.transform = transform
         self.crs = dst_crs
-        self.dataset = self.__update_dataset(self.dataset.meta).open()
+
+        self.dataset.close()
+        # passing meta to open, because driver gets lost if it's not GTiff
+        self.dataset = self.__update_dataset(self.dataset.meta).open(**self.dataset.meta)
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:

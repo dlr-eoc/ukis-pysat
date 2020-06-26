@@ -23,6 +23,7 @@ Added
 Fixed
 *****
 - ``file.get_ts_from_sentinel_filename()``: Return datetime.datetime objects instead of timestamp strings #42
+- ``raster.Image()``: in-memory dataset could not be updated if not GTiff #48
 
 Changed
 *******
