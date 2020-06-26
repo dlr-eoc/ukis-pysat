@@ -27,7 +27,8 @@ Fixed
 
 Changed
 *******
-- ``raster.Image()``: update of init signature to be less confusing #41
+- ``raster.Image()``: update of init signature to be less confusing #41 #50
+
 
 [0.4.0]  (2020-06-05)
 ----------------------
