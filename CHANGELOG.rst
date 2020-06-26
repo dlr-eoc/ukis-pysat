@@ -27,9 +27,8 @@ Fixed
 
 Changed
 *******
-- ``raster.Image()``: update of init signature to be less confusing #41
-- ``raster.Image()``: update of init signature to consider array dimorder when creating Image from array #50
-- ``test_raster.test_arr()``: fixed incorrect validation dimorder in array #50
+- ``raster.Image()``: update of init signature to be less confusing #41 #50
+
 
 [0.4.0]  (2020-06-05)
 ----------------------
