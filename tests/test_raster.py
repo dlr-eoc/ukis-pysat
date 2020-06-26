@@ -96,7 +96,7 @@ class DataTest(unittest.TestCase):
         self.assertEqual(img_first.arr.shape, (1, 385, 502))
         img_first.close()
 
-        img_last = Image(np.ones((1, 385, 502)), dimorder="last", crs=self.img.crs, transform=self.img.transform)
+        img_last = Image(np.ones((385, 502, 1)), dimorder="last", crs=self.img.crs, transform=self.img.transform)
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
         img_last.close()
 

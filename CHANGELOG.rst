@@ -24,6 +24,8 @@ Fixed
 *****
 - ``file.get_ts_from_sentinel_filename()``: Return datetime.datetime objects instead of timestamp strings #42
 - ``raster.Image()``: in-memory dataset could not be updated if not GTiff #48
+- ``raster.Image()``: fixed init signature to consider array dimorder when creating Image from array #50
+- ``test_raster.test_arr()``: fixed incorrect validation dimorder in array #50
 
 Changed
 *******

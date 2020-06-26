@@ -40,30 +40,37 @@ class Image:
             self.dimorder = dimorder
         else:
             raise TypeError("dimorder for bands or channels must be either 'first' or 'last'.")
-        try:
+
+        if isinstance(data, rasterio.io.DatasetReader):
+            self.dataset = data
+            self.crs = self.dataset.crs
+            self.transform = self.dataset.transform
+            self.__arr = self.dataset.read()
+
+        elif isinstance(data, str):
             self.dataset = rasterio.open(data)
             self.crs = self.dataset.crs
             self.transform = self.dataset.transform
             self.__arr = self.dataset.read()
-        except (TypeError, AttributeError):
-            if isinstance(data, rasterio.io.DatasetReader):
-                self.dataset = data
-                self.crs = self.dataset.crs
-                self.transform = self.dataset.transform
-                self.__arr = self.dataset.read()
-            elif isinstance(data, np.ndarray):
-                if crs is None:
-                    raise TypeError("if dataset is of type np.ndarray crs must not be None")
-                if transform is None:
-                    raise TypeError("if dataset is of type np.ndarray transform must not be None")
-                meta = {"dtype": data.dtype, "count": data.shape[0], "crs": crs, "driver": "GTiff"}
+
+        elif isinstance(data, np.ndarray):
+            if crs is None:
+                raise TypeError("if dataset is of type np.ndarray crs must not be None")
+            if transform is None:
+                raise TypeError("if dataset is of type np.ndarray transform must not be None")
+            if dimorder == "first":
                 self.__arr = data
-                self.transform = transform
-                self.dataset = self.__update_dataset(meta).open()
-                self.crs = self.dataset.crs
-                self.transform = self.dataset.transform
+            elif dimorder == "last":
+                self.__arr = reshape_as_raster(data)
             else:
-                raise TypeError("dataset must be of type str, rasterio.io.DatasetReader or np.ndarray")
+                raise AttributeError("dimorder for bands or channels must be either 'first' or 'last'.")
+            meta = {"dtype": self.__arr.dtype, "count": self.__arr.shape[0], "crs": crs, "driver": "GTiff"}
+            self.transform = transform
+            self.dataset = self.__update_dataset(meta).open()
+            self.crs = self.dataset.crs
+            self.transform = self.dataset.transform
+        else:
+            raise TypeError("dataset must be of type rasterio.io.DatasetReader, str or np.ndarray")
 
     @property
     def arr(self):
@@ -90,7 +97,7 @@ class Image:
         :param bbox: bounding box of type tuple or Shapely Polygon
         :param crop: bool, see rasterio.mask. Optional, (default: True)
         :param pad: pads image, should only be used when bbox.bounds extent img.bounds, optional (default: False)
-        :param mode: str, how to pad, see rasterio.pad. Optional (default: 'constant') 
+        :param mode: str, how to pad, see rasterio.pad. Optional (default: 'constant')
         :param constant_values: nodata value, padding should be filled with, optional (default: 0)
         """
         # TODO https://github.com/mapbox/rasterio/issues/995
