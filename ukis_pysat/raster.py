@@ -43,14 +43,10 @@ class Image:
 
         if isinstance(data, rasterio.io.DatasetReader):
             self.dataset = data
-            self.crs = self.dataset.crs
-            self.transform = self.dataset.transform
             self.__arr = self.dataset.read()
 
         elif isinstance(data, str):
             self.dataset = rasterio.open(data)
-            self.crs = self.dataset.crs
-            self.transform = self.dataset.transform
             self.__arr = self.dataset.read()
 
         elif isinstance(data, np.ndarray):
@@ -63,10 +59,7 @@ class Image:
             else:
                 self.__arr = reshape_as_raster(data)
             meta = {"dtype": self.__arr.dtype, "count": self.__arr.shape[0], "crs": crs, "driver": "GTiff"}
-            self.transform = transform
-            self.dataset = self.__update_dataset(meta).open()
-            self.crs = self.dataset.crs
-            self.transform = self.dataset.transform
+            self.dataset = self.__update_dataset(meta, crs, transform).open()
         else:
             raise TypeError("dataset must be of type rasterio.io.DatasetReader, str or np.ndarray")
 
@@ -85,7 +78,7 @@ class Image:
         :return: tuple with valid data bounds
         """
         valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
-        return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.transform))
+        return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.dataset.transform))
 
     def mask_image(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
         """Mask the area outside of the input shapes with no data.
@@ -103,16 +96,16 @@ class Image:
             self.dataset = self._pad_to_bbox(bbox, mode, constant_values).open(**self.dataset.meta)
 
         if isinstance(bbox, polygon.Polygon):
-            self.__arr, self.transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
+            self.__arr, transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
         elif isinstance(bbox, tuple):
-            self.__arr, self.transform = rasterio.mask.mask(self.dataset, [box(*bbox)], crop=crop)
+            self.__arr, transform = rasterio.mask.mask(self.dataset, [box(*bbox)], crop=crop)
         else:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
         # update for further processing
         self.dataset.close()  # meta still available when DataSetReader is closed
         # passing meta to open, because driver gets lost if it's not GTiff
-        self.dataset = self.__update_dataset(self.dataset.meta).open(**self.dataset.meta)
+        self.dataset = self.__update_dataset(self.dataset.meta, self.dataset.crs, transform).open(**self.dataset.meta)
 
     def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
         """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
@@ -134,7 +127,7 @@ class Image:
         max_diff_ll = np.max(np.subtract(tuple(self.dataset.bounds[:2]), bbox[:2]))
         max_diff = max(max_diff_ll, max_diff_ur)  # buffer in units
 
-        pad_width = math.ceil(max_diff / self.transform.to_gdal()[1])  # units / pixel_size
+        pad_width = math.ceil(max_diff / self.dataset.transform.to_gdal()[1])  # units / pixel_size
 
         destination = np.zeros(
             (self.dataset.count, self.__arr.shape[1] + 2 * pad_width, self.__arr.shape[2] + 2 * pad_width,),
@@ -142,15 +135,15 @@ class Image:
         )
 
         for i in range(0, self.dataset.count):
-            destination[i], self.transform = rasterio.pad(
-                self.__arr[0], self.transform, pad_width, mode, constant_values=constant_values,
+            destination[i], transform = rasterio.pad(
+                self.__arr[0], self.dataset.transform, pad_width, mode, constant_values=constant_values,
             )
 
         self.__arr = destination
 
-        return self.__update_dataset(self.dataset.meta)
+        return self.__update_dataset(self.dataset.meta, self.dataset.crs, transform)
 
-    def __update_dataset(self, meta):
+    def __update_dataset(self, meta, crs, transform):
         """Update dataset without writing to file after it theoretically changed.
 
         :param meta: The basic metadata of the dataset as returned from the meta property of rasterio Datasets
@@ -158,7 +151,14 @@ class Image:
         """
 
         meta.update(
-            {"height": self.__arr.shape[-2], "width": self.__arr.shape[-1], "transform": self.transform,}
+            {
+                "height": self.__arr.shape[-2],
+                "width": self.__arr.shape[-1],
+                "crs": crs,
+                "transform": transform,
+                "dtype": self.__arr.dtype,
+                "driver": "GTiff",
+            }
         )
 
         memfile = MemoryFile()
@@ -208,12 +208,10 @@ class Image:
 
         # update for further processing
         self.__arr = destination
-        self.transform = transform
-        self.crs = dst_crs
 
         self.dataset.close()
         # passing meta to open, because driver gets lost if it's not GTiff
-        self.dataset = self.__update_dataset(self.dataset.meta).open(**self.dataset.meta)
+        self.dataset = self.__update_dataset(self.dataset.meta, dst_crs, transform).open(**self.dataset.meta)
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
@@ -403,8 +401,8 @@ class Image:
                 "height": self.__arr.shape[-2],
                 "width": self.__arr.shape[-1],
                 "dtype": dtype,
-                "transform": self.transform,
-                "crs": self.crs,
+                "transform": self.dataset.transform,
+                "crs": self.dataset.crs,
             }
         )
 
