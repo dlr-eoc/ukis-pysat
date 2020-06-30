@@ -58,8 +58,7 @@ class Image:
                 self.__arr = data
             else:
                 self.__arr = reshape_as_raster(data)
-            meta = {"dtype": self.__arr.dtype, "count": self.__arr.shape[0], "crs": crs, "driver": "GTiff"}
-            self.dataset = self.__update_dataset(meta, crs, transform).open()
+            self.dataset = self.__update_dataset(crs, transform)
         else:
             raise TypeError("dataset must be of type rasterio.io.DatasetReader, str or np.ndarray")
 
@@ -93,7 +92,7 @@ class Image:
         if pad:
             self.dataset.close()
             # here we __update_dataset()
-            self.dataset = self._pad_to_bbox(bbox, mode, constant_values).open(**self.dataset.meta)
+            self.dataset = self._pad_to_bbox(bbox, mode, constant_values)
 
         if isinstance(bbox, polygon.Polygon):
             self.__arr, transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
@@ -105,7 +104,7 @@ class Image:
         # update for further processing
         self.dataset.close()  # meta still available when DataSetReader is closed
         # passing meta to open, because driver gets lost if it's not GTiff
-        self.dataset = self.__update_dataset(self.dataset.meta, self.dataset.crs, transform).open()
+        self.dataset = self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
 
     def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
         """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
@@ -141,33 +140,35 @@ class Image:
 
         self.__arr = destination
 
-        return self.__update_dataset(self.dataset.meta, self.dataset.crs, transform)
+        return self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
 
-    def __update_dataset(self, meta, crs, transform):
+    def __update_dataset(self, crs, transform, nodata=None):
         """Update dataset without writing to file after it theoretically changed.
 
-        :param meta: The basic metadata of the dataset as returned from the meta property of rasterio Datasets
-        :return: file in memory
+        :param crs: crs of the dataset
+        :param transform: transform of the dataset
+        :param nodata: nodata value, optional
+        :return: file in memory, open as dataset
         """
 
-        meta.update(
-            {
-                "height": self.__arr.shape[-2],
-                "width": self.__arr.shape[-1],
-                "crs": crs,
-                "transform": transform,
-                "dtype": self.__arr.dtype,
-                "driver": "GTiff",
-            }
-        )
+        meta = {
+            "driver": "GTiff",
+            "dtype": self.__arr.dtype,
+            "nodata": nodata,
+            "height": self.__arr.shape[-2],
+            "width": self.__arr.shape[-1],
+            "count": self.__arr.shape[0],
+            "crs": crs,
+            "transform": transform,
+        }
 
         memfile = MemoryFile()
         with memfile.open(**meta) as ds:
             ds.write(self.__arr)
 
-        return memfile
+        return memfile.open()
 
-    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None):
+    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None, nodata=None):
         """Reproject a source raster to a destination raster.
 
         :param dst_crs: CRS or dict, Target coordinate reference system.
@@ -176,6 +177,7 @@ class Image:
         :param num_threads: int, number of workers, optional (default: 4)
         :param resolution: tuple (x resolution, y resolution) or float, optional.
             Target resolution, in units of target coordinate reference system.
+        :param nodata: nodata value of source, int or float, optional.
         """
         # output dimensions and transform for reprojection.
         if resolution:
@@ -194,23 +196,21 @@ class Image:
 
         destination = np.zeros((self.dataset.count, height, width), self.__arr.dtype)
 
-        for i in range(0, self.dataset.count):
-            reproject(
-                source=rasterio.band(self.dataset, i + 1),  # index starting at 1
-                destination=destination[i],
-                src_transform=self.dataset.transform,
-                src_crs=self.dataset.crs,
-                dst_transform=transform,
-                dst_crs=dst_crs,
-                resampling=resampling_method,
-                num_threads=num_threads,
-            )
-
-        # update for further processing
-        self.__arr = destination
+        self.__arr, transform = reproject(
+            source=self.__arr,
+            destination=destination,
+            src_transform=self.dataset.transform,
+            src_crs=self.dataset.crs,
+            src_nodata=nodata,
+            dst_transform=transform,
+            dst_crs=dst_crs,
+            dst_nodata=nodata,
+            resampling=resampling_method,
+            num_threads=num_threads,
+        )
 
         self.dataset.close()
-        self.dataset = self.__update_dataset(self.dataset.meta, dst_crs, transform).open()
+        self.dataset = self.__update_dataset(dst_crs, transform, nodata=nodata)
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
@@ -281,7 +281,7 @@ class Image:
                 f"Sentinel-2]. "
             )
 
-        self.dataset = self.__update_dataset(self.dataset.meta, self.dataset.crs, self.dataset.transform).open()
+        self.dataset = self.__update_dataset(self.dataset.crs, self.dataset.transform, nodata=self.dataset.nodata)
 
     @staticmethod
     def _lookup_bands(platform, wavelengths):
