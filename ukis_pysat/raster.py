@@ -105,7 +105,7 @@ class Image:
         # update for further processing
         self.dataset.close()  # meta still available when DataSetReader is closed
         # passing meta to open, because driver gets lost if it's not GTiff
-        self.dataset = self.__update_dataset(self.dataset.meta, self.dataset.crs, transform).open(**self.dataset.meta)
+        self.dataset = self.__update_dataset(self.dataset.meta, self.dataset.crs, transform).open()
 
     def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
         """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
@@ -210,8 +210,7 @@ class Image:
         self.__arr = destination
 
         self.dataset.close()
-        # passing meta to open, because driver gets lost if it's not GTiff
-        self.dataset = self.__update_dataset(self.dataset.meta, dst_crs, transform).open(**self.dataset.meta)
+        self.dataset = self.__update_dataset(self.dataset.meta, dst_crs, transform).open()
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
@@ -281,6 +280,8 @@ class Image:
                 f"Cannot convert dn2toa. Platform {platform} not supported [Landsat-5, Landsat-7, Landsat-8, "
                 f"Sentinel-2]. "
             )
+
+        self.dataset = self.__update_dataset(self.dataset.meta, self.dataset.crs, self.dataset.transform).open()
 
     @staticmethod
     def _lookup_bands(platform, wavelengths):
