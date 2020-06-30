@@ -23,11 +23,12 @@ Added
 Fixed
 *****
 - ``file.get_ts_from_sentinel_filename()``: Return datetime.datetime objects instead of timestamp strings #42
-- ``raster.Image()``: in-memory dataset could not be updated if not GTiff #48
+- ``raster.Image()``: in-memory dataset could not be updated if not GTiff and other improvements #48 #52
 
 Changed
 *******
 - ``raster.Image()``: update of init signature to be less confusing #41 #50
+- ``raster.Image()``: in-memory dataset now always with "GTiff" driver #53
 
 
 [0.4.0]  (2020-06-05)
