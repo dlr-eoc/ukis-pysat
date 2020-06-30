@@ -92,11 +92,15 @@ class DataTest(unittest.TestCase):
         )
         img_last.close()
 
-        img_first = Image(np.ones((1, 385, 502)), dimorder="first", crs=self.img.dataset.crs, transform=self.img.dataset.transform)
+        img_first = Image(
+            np.ones((1, 385, 502)), dimorder="first", crs=self.img.dataset.crs, transform=self.img.dataset.transform
+        )
         self.assertEqual(img_first.arr.shape, (1, 385, 502))
         img_first.close()
 
-        img_last = Image(np.ones((385, 502, 1)), dimorder="last", crs=self.img.dataset.crs, transform=self.img.dataset.transform)
+        img_last = Image(
+            np.ones((385, 502, 1)), dimorder="last", crs=self.img.dataset.crs, transform=self.img.dataset.transform
+        )
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
         img_last.close()
 
