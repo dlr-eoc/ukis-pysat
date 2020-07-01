@@ -40,16 +40,16 @@ class DataTest(unittest.TestCase):
 
     def test_init_with_arry_fail_missing_transform(self):
         with self.assertRaises(TypeError):
-            Image(data=self.img.arr, crs=self.img.crs)
+            Image(data=self.img.arr, crs=self.img.dataset.crs)
 
     def test_init_with_array(self):
-        img = Image(self.img.arr, crs=self.img.crs, transform=self.img.transform)
+        img = Image(self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform)
         self.assertTrue(np.array_equal(self.img.arr, img.arr))
         img.close()
 
     def test_init_with_arry_fail_missing_crs(self):
         with self.assertRaises(TypeError):
-            Image(data=self.img.arr, crs=self.img.transform)
+            Image(data=self.img.arr, crs=self.img.dataset.transform)
 
     def test_dimorder_error(self):
         with self.assertRaises(TypeError):
@@ -57,10 +57,10 @@ class DataTest(unittest.TestCase):
 
     def test_arr(self):
         img_first = Image(TEST_FILE, dimorder="first")
-        img_first.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        img_first.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750, ))
         self.assertEqual(img_first.arr.shape, (1, 385, 502))
         self.assertEqual(
-            str(img_first.transform),
+            str(img_first.dataset.transform),
             str(
                 from_bounds(
                     11.9027457562112939,
@@ -75,10 +75,10 @@ class DataTest(unittest.TestCase):
         img_first.close()
 
         img_last = Image(TEST_FILE, dimorder="last")
-        img_last.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        img_last.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750, ))
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
         self.assertEqual(
-            str(img_last.transform),
+            str(img_last.dataset.transform),
             str(
                 from_bounds(
                     11.9027457562112939,
@@ -92,11 +92,15 @@ class DataTest(unittest.TestCase):
         )
         img_last.close()
 
-        img_first = Image(np.ones((1, 385, 502)), dimorder="first", crs=self.img.crs, transform=self.img.transform)
+        img_first = Image(
+            np.ones((1, 385, 502)), dimorder="first", crs=self.img.dataset.crs, transform=self.img.dataset.transform
+        )
         self.assertEqual(img_first.arr.shape, (1, 385, 502))
         img_first.close()
 
-        img_last = Image(np.ones((385, 502, 1)), dimorder="last", crs=self.img.crs, transform=self.img.transform)
+        img_last = Image(
+            np.ones((385, 502, 1)), dimorder="last", crs=self.img.dataset.crs, transform=self.img.dataset.transform
+        )
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
         img_last.close()
 
@@ -110,9 +114,9 @@ class DataTest(unittest.TestCase):
 
     def test_mask_image(self):
         with self.assertRaises(TypeError, msg="bbox must be of type tuple or Shapely Polygon"):
-            self.img.mask_image([1, 2, 3])
+            self.img.mask([1, 2, 3])
 
-        self.img.mask_image(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        self.img.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750, ))
         self.assertEqual(
             self.img.dataset.bounds,
             BoundingBox(
@@ -120,7 +124,7 @@ class DataTest(unittest.TestCase):
             ),
         )
 
-        self.img.mask_image((11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        self.img.mask((11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(
             self.img.dataset.bounds,
             BoundingBox(
@@ -128,7 +132,7 @@ class DataTest(unittest.TestCase):
             ),
         )
 
-        self.img.mask_image(
+        self.img.mask(
             box(11.8919236802142620, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,), pad=True,
         )
         self.assertEqual(
@@ -139,13 +143,14 @@ class DataTest(unittest.TestCase):
         )
 
     def test_warp(self):
-        self.assertEqual(self.img.crs, "EPSG:4326")
+        self.assertEqual(self.img.dataset.crs, "EPSG:4326")
 
         self.img.warp("EPSG:3857")
-        self.assertEqual(self.img.crs, "EPSG:3857")
+        self.assertEqual(self.img.dataset.crs, "EPSG:3857")
+        self.assertEqual(self.img.dataset.meta["crs"], "EPSG:3857")
 
         self.img.warp("EPSG:4326", resolution=1.0)
-        self.assertEqual(1.0, self.img.transform.to_gdal()[1])
+        self.assertEqual(1.0, self.img.dataset.transform.to_gdal()[1])
 
     def test_dn2toa(self):
         target_dir = os.path.join(os.path.dirname(__file__), "testfiles", "satellite_data")
@@ -242,7 +247,7 @@ class DataTest(unittest.TestCase):
         img2.close()
         os.remove(r"result.tif")
 
-        img3 = Image(self.img.arr, crs=self.img.crs, transform=self.img.transform)
+        img3 = Image(self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform)
         img3.write_to_file(r"result.tif", np.uint16)
         img3.close()
         img4 = Image("result.tif")

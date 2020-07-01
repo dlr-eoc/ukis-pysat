@@ -43,14 +43,10 @@ class Image:
 
         if isinstance(data, rasterio.io.DatasetReader):
             self.dataset = data
-            self.crs = self.dataset.crs
-            self.transform = self.dataset.transform
             self.__arr = self.dataset.read()
 
         elif isinstance(data, str):
             self.dataset = rasterio.open(data)
-            self.crs = self.dataset.crs
-            self.transform = self.dataset.transform
             self.__arr = self.dataset.read()
 
         elif isinstance(data, np.ndarray):
@@ -62,11 +58,7 @@ class Image:
                 self.__arr = data
             else:
                 self.__arr = reshape_as_raster(data)
-            meta = {"dtype": self.__arr.dtype, "count": self.__arr.shape[0], "crs": crs, "driver": "GTiff"}
-            self.transform = transform
-            self.dataset = self.__update_dataset(meta).open()
-            self.crs = self.dataset.crs
-            self.transform = self.dataset.transform
+            self.dataset = self.__update_dataset(crs, transform)
         else:
             raise TypeError("dataset must be of type rasterio.io.DatasetReader, str or np.ndarray")
 
@@ -85,9 +77,15 @@ class Image:
         :return: tuple with valid data bounds
         """
         valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
-        return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.transform))
+        return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.dataset.transform))
 
     def mask_image(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
+        from warnings import warn
+
+        warn("`mask_image()` was renamed to `mask()` and will be removed with version 0.6.0", DeprecationWarning)
+        return self.mask(bbox, crop=crop, pad=pad, mode=mode, constant_values=constant_values)
+
+    def mask(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
         """Mask the area outside of the input shapes with no data.
 
         :param bbox: bounding box of type tuple or Shapely Polygon
@@ -100,19 +98,19 @@ class Image:
         if pad:
             self.dataset.close()
             # here we __update_dataset()
-            self.dataset = self._pad_to_bbox(bbox, mode, constant_values).open(**self.dataset.meta)
+            self.dataset = self._pad_to_bbox(bbox, mode, constant_values)
 
         if isinstance(bbox, polygon.Polygon):
-            self.__arr, self.transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
+            self.__arr, transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
         elif isinstance(bbox, tuple):
-            self.__arr, self.transform = rasterio.mask.mask(self.dataset, [box(*bbox)], crop=crop)
+            self.__arr, transform = rasterio.mask.mask(self.dataset, [box(*bbox)], crop=crop)
         else:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
         # update for further processing
         self.dataset.close()  # meta still available when DataSetReader is closed
         # passing meta to open, because driver gets lost if it's not GTiff
-        self.dataset = self.__update_dataset(self.dataset.meta).open(**self.dataset.meta)
+        self.dataset = self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
 
     def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
         """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
@@ -134,7 +132,7 @@ class Image:
         max_diff_ll = np.max(np.subtract(tuple(self.dataset.bounds[:2]), bbox[:2]))
         max_diff = max(max_diff_ll, max_diff_ur)  # buffer in units
 
-        pad_width = math.ceil(max_diff / self.transform.to_gdal()[1])  # units / pixel_size
+        pad_width = math.ceil(max_diff / self.dataset.transform.to_gdal()[1])  # units / pixel_size
 
         destination = np.zeros(
             (self.dataset.count, self.__arr.shape[1] + 2 * pad_width, self.__arr.shape[2] + 2 * pad_width,),
@@ -142,32 +140,42 @@ class Image:
         )
 
         for i in range(0, self.dataset.count):
-            destination[i], self.transform = rasterio.pad(
-                self.__arr[0], self.transform, pad_width, mode, constant_values=constant_values,
+            destination[i], transform = rasterio.pad(
+                self.__arr[0], self.dataset.transform, pad_width, mode, constant_values=constant_values,
             )
 
         self.__arr = destination
 
-        return self.__update_dataset(self.dataset.meta)
+        self.dataset.close()
+        return self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
 
-    def __update_dataset(self, meta):
+    def __update_dataset(self, crs, transform, nodata=None):
         """Update dataset without writing to file after it theoretically changed.
 
-        :param meta: The basic metadata of the dataset as returned from the meta property of rasterio Datasets
-        :return: file in memory
+        :param crs: crs of the dataset
+        :param transform: transform of the dataset
+        :param nodata: nodata value, optional
+        :return: file in memory, open as dataset
         """
 
-        meta.update(
-            {"height": self.__arr.shape[-2], "width": self.__arr.shape[-1], "transform": self.transform,}
-        )
+        meta = {
+            "driver": "GTiff",
+            "dtype": self.__arr.dtype,
+            "nodata": nodata,
+            "height": self.__arr.shape[-2],
+            "width": self.__arr.shape[-1],
+            "count": self.__arr.shape[0],
+            "crs": crs,
+            "transform": transform,
+        }
 
         memfile = MemoryFile()
         with memfile.open(**meta) as ds:
             ds.write(self.__arr)
 
-        return memfile
+        return memfile.open()
 
-    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None):
+    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None, nodata=None):
         """Reproject a source raster to a destination raster.
 
         :param dst_crs: CRS or dict, Target coordinate reference system.
@@ -176,6 +184,7 @@ class Image:
         :param num_threads: int, number of workers, optional (default: 4)
         :param resolution: tuple (x resolution, y resolution) or float, optional.
             Target resolution, in units of target coordinate reference system.
+        :param nodata: nodata value of source, int or float, optional.
         """
         # output dimensions and transform for reprojection.
         if resolution:
@@ -194,26 +203,21 @@ class Image:
 
         destination = np.zeros((self.dataset.count, height, width), self.__arr.dtype)
 
-        for i in range(0, self.dataset.count):
-            reproject(
-                source=rasterio.band(self.dataset, i + 1),  # index starting at 1
-                destination=destination[i],
-                src_transform=self.dataset.transform,
-                src_crs=self.dataset.crs,
-                dst_transform=transform,
-                dst_crs=dst_crs,
-                resampling=resampling_method,
-                num_threads=num_threads,
-            )
-
-        # update for further processing
-        self.__arr = destination
-        self.transform = transform
-        self.crs = dst_crs
+        self.__arr, transform = reproject(
+            source=self.__arr,
+            destination=destination,
+            src_transform=self.dataset.transform,
+            src_crs=self.dataset.crs,
+            src_nodata=nodata,
+            dst_transform=transform,
+            dst_crs=dst_crs,
+            dst_nodata=nodata,
+            resampling=resampling_method,
+            num_threads=num_threads,
+        )
 
         self.dataset.close()
-        # passing meta to open, because driver gets lost if it's not GTiff
-        self.dataset = self.__update_dataset(self.dataset.meta).open(**self.dataset.meta)
+        self.dataset = self.__update_dataset(dst_crs, transform, nodata=nodata)
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
@@ -283,6 +287,9 @@ class Image:
                 f"Cannot convert dn2toa. Platform {platform} not supported [Landsat-5, Landsat-7, Landsat-8, "
                 f"Sentinel-2]. "
             )
+
+        self.dataset.close()
+        self.dataset = self.__update_dataset(self.dataset.crs, self.dataset.transform, nodata=self.dataset.nodata)
 
     @staticmethod
     def _lookup_bands(platform, wavelengths):
@@ -403,8 +410,8 @@ class Image:
                 "height": self.__arr.shape[-2],
                 "width": self.__arr.shape[-1],
                 "dtype": dtype,
-                "transform": self.transform,
-                "crs": self.crs,
+                "transform": self.dataset.transform,
+                "crs": self.dataset.crs,
             }
         )
 
