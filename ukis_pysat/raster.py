@@ -80,6 +80,12 @@ class Image:
         return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.dataset.transform))
 
     def mask_image(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
+        from warnings import warn
+
+        warn("`mask_image()` was renamed to `mask()` and will be removed with version 0.6.0", DeprecationWarning)
+        return self.mask(bbox, crop=crop, pad=pad, mode=mode, constant_values=constant_values)
+
+    def mask(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
         """Mask the area outside of the input shapes with no data.
 
         :param bbox: bounding box of type tuple or Shapely Polygon
@@ -140,6 +146,7 @@ class Image:
 
         self.__arr = destination
 
+        self.dataset.close()
         return self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
 
     def __update_dataset(self, crs, transform, nodata=None):
@@ -281,6 +288,7 @@ class Image:
                 f"Sentinel-2]. "
             )
 
+        self.dataset.close()
         self.dataset = self.__update_dataset(self.dataset.crs, self.dataset.transform, nodata=self.dataset.nodata)
 
     @staticmethod

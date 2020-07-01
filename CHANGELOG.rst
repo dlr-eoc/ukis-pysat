@@ -27,6 +27,7 @@ Fixed
 
 Changed
 *******
+- ``raster.Image()``: renamed `mask_image()` to `mask()`
 - ``raster.Image()``: update of init signature to be less confusing #41 #50
 - ``raster.Image()``: in-memory dataset now always with "GTiff" driver #53
 
