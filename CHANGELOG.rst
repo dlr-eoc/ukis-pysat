@@ -16,6 +16,9 @@ something was changed
 [master]  (2020-**-**)
 ----------------------
 
+[0.5.0]  (2020-07-03)
+----------------------
+
 Added
 *****
 - `raster.Image()``: optional nodata value for writing #32
