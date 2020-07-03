@@ -79,12 +79,6 @@ class Image:
         valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
         return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.dataset.transform))
 
-    def mask_image(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
-        from warnings import warn
-
-        warn("`mask_image()` was renamed to `mask()` and will be removed with version 0.6.0", DeprecationWarning)
-        return self.mask(bbox, crop=crop, pad=pad, mode=mode, constant_values=constant_values)
-
     def mask(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
         """Mask the area outside of the input shapes with no data.
 
@@ -227,7 +221,6 @@ class Image:
         :param mtl_file: path to Landsat MTL file that holds the band specific rescale factors (str).
         :param wavelengths: like ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"] for Landsat-5 (list of str).
         """
-        # TODO rio-toa does not seem to be maintained anymore
         if platform in [
             Platform.Landsat5,
             Platform.Landsat7,
@@ -340,8 +333,6 @@ class Image:
     def get_tiles(self, width=256, height=256, overlap=0):
         """Calculates rasterio.windows.Window, idea from https://stackoverflow.com/a/54525931
 
-        TODO boundless with 'reflect' padding
-
         :param width: int, optional (default: 256). Tile size in pixels.
         :param height: int, optional (default: 256). Tile size in pixels.
         :param overlap: int, optional (default: 0). Overlap in pixels.
@@ -360,10 +351,6 @@ class Image:
             ).intersection(
                 bounding_window
             )  # clip off window parts not in original array
-
-    def smooth_tiles(self, window_tile):
-        # TODO using tukey --> https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.tukey.html
-        pass
 
     def get_subset(self, tile, band=0):
         """Get slice of array.
