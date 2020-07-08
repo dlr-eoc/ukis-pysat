@@ -127,11 +127,9 @@ class Source:
                         m_cloud_cover = 0
                     if (
                         m_platform == platform.value
-                        and m_date >= start_date
-                        and m_date < end_date
+                        and start_date <= m_date < end_date
                         and m_geom.intersects(geom)
-                        and m_cloud_cover >= min_cloud_cover
-                        and m_cloud_cover < max_cloud_cover
+                        and min_cloud_cover <= m_cloud_cover < max_cloud_cover
                     ):
                         meta_src.append(m)
 
@@ -515,7 +513,3 @@ class MetadataCollection:
 class _GeoInterface(object):
     def __init__(self, d):
         self.__geo_interface__ = d
-
-
-if __name__ == "__main__":
-    pass
