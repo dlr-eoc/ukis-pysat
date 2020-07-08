@@ -15,6 +15,9 @@ something was changed
 
 [master]  (2020-**-**)
 ----------------------
+Added
+*****
+- `raster.Image()``: With Statement Context Manager for Image #45
 
 [0.5.0]  (2020-07-03)
 ----------------------
