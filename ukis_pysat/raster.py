@@ -62,6 +62,9 @@ class Image:
         else:
             raise TypeError("dataset must be of type rasterio.io.DatasetReader, str or np.ndarray")
 
+    def __enter__(self):
+        return self
+
     @property
     def arr(self):
         """array property"""
@@ -414,3 +417,6 @@ class Image:
     def close(self):
         """closes Image"""
         self.dataset.close()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()

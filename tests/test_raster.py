@@ -26,6 +26,10 @@ class DataTest(unittest.TestCase):
         self.assertTrue(np.array_equal(self.img.arr, img.arr))
         img.close()
 
+    def test_context(self):
+        with Image(TEST_FILE) as raster_file:
+            self.assertTrue(np.array_equal(self.img.arr, raster_file.arr))
+
     def test_init_fail_invalid_path(self):
         with self.assertRaises(TypeError):
             Image(1)
