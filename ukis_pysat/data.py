@@ -376,9 +376,9 @@ class Metadata:
     acquisitiondate = field(type_hint=datetime.date, check_type=True, default=None, doc="Acquisitiondate")
     ingestiondate = field(type_hint=datetime.date, check_type=True, default=None, doc="Ingestiondate")
     processingdate = field(type_hint=datetime.date, check_type=True, default=None, doc="Processingdate")
-    processingsteps: str = field(check_type=True, default="", doc="Processingsteps")
+    processingsteps: list = field(check_type=True, default=None, doc="Processingsteps")
     processingversion: str = field(check_type=True, default="", doc="Processing version")
-    bandlist: str = field(check_type=True, default="", doc="Bandlist")
+    bandlist: list = field(check_type=True, default=None, doc="Bandlist")
     cloudcoverpercentage: float = field(check_type=True, default=None, doc="Cloudcover [percent]")
     format: str = field(check_type=True, default="", doc="File format")
     size: str = field(check_type=True, default="", doc="File size [MB]")
@@ -488,17 +488,34 @@ class MetadataCollection:
         except ImportError:
             raise ImportError("to_pandas requires optional dependency Pandas.")
 
+        pd.set_option('display.max_colwidth', -1)
         d = [item.to_dict() for item in self.items]
         return pd.DataFrame(d)
 
-    def filter(self, filter_dict):
+    def filter(self, filter_dict, type="exact"):
         """Filters MetadataCollection based on filter_dict.
 
         :param filter_dict: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
         :returns: self
         """
         k = list(filter_dict.keys())[0]
-        self.items = [item for item in self.items if filter_dict[k] == item.to_geojson()["properties"][k]]
+
+        if isinstance(filter_dict[k], list) is False:
+            # make sure that filter value is a list
+            filter_dict[k] = [filter_dict[k]]
+
+        if type == "exact":
+            # apply exact filter matching
+            self.items = [
+                item for item in self.items for filter in filter_dict[k] if filter == item.to_geojson()["properties"][k]
+            ]
+        elif type == "fuzzy":
+            # apply fuzzy filter matching
+            self.items = [
+                item for item in self.items for filter in filter_dict[k] if filter in item.to_geojson()["properties"][k]
+            ]
+        else:
+            raise NotImplementedError(f"{type} is not supported [exact, fuzzy]")
         return self
 
     def save(self, target_dir):

@@ -19,6 +19,12 @@ Added
 *****
 - `raster.Image()``: With Statement Context Manager for Image #45
 
+Changed
+*******
+- `data.Metadata()``: Corrected field types #58
+- `data.MetadataCollection()``: Improved plotting of MetadataCollection to_pandas method #56
+- `data.MetadataCollection()``: Made filter method more flexible with list and fuzzy filter options #55
+
 [0.5.0]  (2020-07-03)
 ----------------------
 
