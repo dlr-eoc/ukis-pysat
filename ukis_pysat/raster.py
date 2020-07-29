@@ -6,6 +6,7 @@ from itertools import product
 from ukis_pysat.members import Platform
 
 try:
+    import datetime
     import numpy as np
     import rasterio
     import rasterio.mask
@@ -382,26 +383,9 @@ class Image:
         self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
-    def mosaic_from_vrt(self, tiles):
-        vrt_datasets = []
-
-        for tile in tiles:
-            vrt_datasets.append(self._create_vrt_file(tile, crs=self.dataset.crs, transform=self.dataset.transform))
-
-        return merge(vrt_datasets)
-
     @staticmethod
-    def _create_vrt_file(tile, crs=None, transform=None, resampling=rasterio.enums.Resampling.nearest):
-        vrt_options = {
-            'resampling': resampling,
-            'crs': crs,
-            'transform': transform
-        }
-
-        with rasterio.vrt.WarpedVRT(tile.dataset, **vrt_options) as vrt:
-            target = tile.__update_dataset(crs=vrt.crs, transform=vrt.transform)
-
-            return target
+    def build_mosaic(tiles):
+        return merge(tiles)
 
     def write_to_file(self, path_to_file, dtype, driver="GTiff", nodata=None, compress=None):
         """
