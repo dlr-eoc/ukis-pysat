@@ -384,6 +384,10 @@ class Image:
 
     @staticmethod
     def build_mosaic(tiles):
+        """ builds a mosaic from a list of rasterio datasets
+        :param tiles: list of rasterio datasets
+        :return: tuple of merged numpy array and transform
+        """
         return merge(tiles)
 
     def write_to_file(self, path_to_file, dtype, driver="GTiff", nodata=None, compress=None):
