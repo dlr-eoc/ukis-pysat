@@ -4,6 +4,7 @@ import unittest
 
 import dask.array
 import numpy as np
+import rasterio.shutil
 from rasterio import windows
 from rasterio.coords import BoundingBox
 from rasterio.transform import from_bounds
@@ -12,7 +13,7 @@ from ukis_pysat.members import Platform
 from ukis_pysat.raster import Image
 
 TEST_FILE = os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif")
-
+TEST_VRT_TIFFS = [os.path.join(os.path.dirname(__file__), "testfiles", "vrt", "vrt1.tif"), os.path.join(os.path.dirname(__file__), "testfiles", "vrt", "vrt2.tif")]
 
 class DataTest(unittest.TestCase):
     def setUp(self):
@@ -259,6 +260,20 @@ class DataTest(unittest.TestCase):
         img4.close()
         os.remove(r"result.tif")
 
+    def test_mosaic(self):
+        src = Image(os.path.join(os.path.dirname(__file__), "testfiles", "vrt", "source.tif"))
+        array, transform = src.build_mosaic([Image(item).dataset for item in TEST_VRT_TIFFS])
+        src.close()
+
+        target = Image(array, crs=src.dataset.crs, transform=transform)
+        target.write_to_file(os.path.join(os.path.dirname(__file__), "testfiles", "vrt", "result.tif"), dtype='int16')
+
+        mosaic = Image(os.path.join(os.path.dirname(__file__), "testfiles", "vrt", "mosaic.tif"))
+        self.assertTrue(np.array_equal(mosaic.arr, target.arr))
+
+        mosaic.close()
+        target.close()
+        os.remove(os.path.join(os.path.dirname(__file__), "testfiles", "vrt", "result.tif"))
 
 if __name__ == "__main__":
     unittest.main()

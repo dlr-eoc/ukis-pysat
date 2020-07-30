@@ -6,7 +6,6 @@ from itertools import product
 from ukis_pysat.members import Platform
 
 try:
-    import datetime
     import numpy as np
     import rasterio
     import rasterio.mask
