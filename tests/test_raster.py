@@ -112,7 +112,7 @@ class DataTest(unittest.TestCase):
         img = Image(TEST_FILE, dimorder="first")
         img.arr = img.arr + 1
 
-        self.assertEqual(np.sum(img.arr), np.sum(np.ones(shape=img.arr.shape)))
+        self.assertTrue(np.array_equal(img.arr, np.ones(shape=img.arr.shape)))
 
     def test_set_array_error(self):
         with self.assertRaises(TypeError):
