@@ -61,7 +61,7 @@ class DataTest(unittest.TestCase):
 
     def test_arr(self):
         img_first = Image(TEST_FILE, dimorder="first")
-        img_first.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750, ))
+        img_first.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(img_first.arr.shape, (1, 385, 502))
         self.assertEqual(
             str(img_first.dataset.transform),
@@ -79,7 +79,7 @@ class DataTest(unittest.TestCase):
         img_first.close()
 
         img_last = Image(TEST_FILE, dimorder="last")
-        img_last.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750, ))
+        img_last.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
         self.assertEqual(
             str(img_last.dataset.transform),
@@ -108,6 +108,17 @@ class DataTest(unittest.TestCase):
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
         img_last.close()
 
+    def test_set_array(self):
+        img = Image(TEST_FILE, dimorder="first")
+        img.arr = img.arr + 1
+
+        self.assertEqual(np.sum(img.arr), np.sum(np.ones(shape=img.arr.shape)))
+
+    def test_set_array_error(self):
+        with self.assertRaises(TypeError):
+            img = Image(TEST_FILE, dimorder="first")
+            img.arr = "error"
+
     def test_get_valid_data_bbox(self):
         self.assertEqual(
             self.img.get_valid_data_bbox(), (11.896863892, 51.515176657, 11.896863892, 51.515176657),
@@ -120,7 +131,7 @@ class DataTest(unittest.TestCase):
         with self.assertRaises(TypeError, msg="bbox must be of type tuple or Shapely Polygon"):
             self.img.mask([1, 2, 3])
 
-        self.img.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750, ))
+        self.img.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(
             self.img.dataset.bounds,
             BoundingBox(
