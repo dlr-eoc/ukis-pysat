@@ -109,15 +109,23 @@ class DataTest(unittest.TestCase):
         img_last.close()
 
     def test_set_array(self):
-        img = Image(TEST_FILE, dimorder="first")
+        img = Image(TEST_FILE, dimorder="last")
         img.arr = img.arr + 1
 
         self.assertTrue(np.array_equal(img.arr, np.ones(shape=img.arr.shape)))
 
     def test_set_array_error(self):
+        img_first = Image(TEST_FILE, dimorder="first")
+
         with self.assertRaises(TypeError):
-            img = Image(TEST_FILE, dimorder="first")
-            img.arr = "error"
+            img_first.arr = "error"
+
+        with self.assertRaises(ValueError):
+            img_first.arr = np.ones(shape=(764, 679, 1))
+
+        with self.assertRaises(ValueError):
+            img_last = Image(TEST_FILE, dimorder="last")
+            img_last.arr = np.ones(shape=(1, 764, 679))
 
     def test_get_valid_data_bbox(self):
         self.assertEqual(

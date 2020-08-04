@@ -74,13 +74,22 @@ class Image:
             return reshape_as_image(self.__arr)
 
     @arr.setter
-    def arr(self, value):
+    def arr(self, arr_altered):
         """array setter"""
+        if not isinstance(arr_altered, np.ndarray):
+            raise TypeError("altered array must be of type np.ndarray")
 
-        if not isinstance(value, int) and not isinstance(value, np.ndarray):
-            raise TypeError("value must be of type int or np.ndarray")
+        if self.dimorder == "last":
+            arr_altered = reshape_as_raster(arr_altered)
 
-        self.__arr = value
+        if not arr_altered.shape[-2:] == self.__arr.shape[-2:]:
+            raise ValueError(
+                "Shape mismatch. Shape of source array: {}, shape of altered array {}".format(
+                    self.__arr.shape, arr_altered.shape
+                )
+            )
+
+        self.__arr = arr_altered
 
     def get_valid_data_bbox(self, nodata=0):
         """bounding box covering the input array's valid data pixels.
