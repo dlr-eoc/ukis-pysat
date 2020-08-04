@@ -73,6 +73,15 @@ class Image:
         else:
             return reshape_as_image(self.__arr)
 
+    @arr.setter
+    def arr(self, value):
+        """array setter"""
+
+        if not isinstance(value, int) and not isinstance(value, np.ndarray):
+            raise TypeError("value must be of type int or np.ndarray")
+
+        self.__arr = value
+
     def get_valid_data_bbox(self, nodata=0):
         """bounding box covering the input array's valid data pixels.
 
