@@ -27,7 +27,7 @@ except ImportError as e:
     )
     raise ImportError(str(e) + "\n\n" + msg)
 
-from ukis_pysat.file import env_get, pack
+from ukis_pysat.file import env_get
 from ukis_pysat.members import Datahub, Platform
 
 
@@ -254,8 +254,8 @@ class Source:
             product.download(out_dir=target_dir, progressbar=False)
 
             # compress download directory and remove original files
-            pack(
-                os.path.join(target_dir, product_srcid), root_dir=os.path.join(target_dir, product_srcid),
+            shutil.make_archive(
+                os.path.join(target_dir, product_srcid), "zip", root_dir=os.path.join(target_dir, product_srcid),
             )
             shutil.rmtree(os.path.join(target_dir, product_srcid))
 
