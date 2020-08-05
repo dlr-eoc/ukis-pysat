@@ -75,7 +75,9 @@ class Image:
 
     @arr.setter
     def arr(self, arr_altered):
-        """array setter"""
+        """Alters the array.
+        :param arr_altered: altered array of same dimension order (first or last) and same shape (xy) as original array
+        """
         if not isinstance(arr_altered, np.ndarray):
             raise TypeError("altered array must be of type np.ndarray")
 

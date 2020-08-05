@@ -17,20 +17,21 @@ something was changed
 ----------------------
 Added
 *****
-- `raster.Image()``: With Statement Context Manager for Image #45
+- ``raster.Image()``: With Statement Context Manager for Image #45
+- ``raster.Image()``: Alter image array #67
 
 Changed
 *******
-- `data.Metadata()``: Corrected field types #58
-- `data.MetadataCollection()``: Improved plotting of MetadataCollection to_pandas method #56
-- `data.MetadataCollection()``: Made filter method more flexible with list and fuzzy filter options #55
+- ``data.Metadata()``: Corrected field types #58
+- ``data.MetadataCollection()``: Improved plotting of MetadataCollection to_pandas method #56
+- ``data.MetadataCollection()``: Made filter method more flexible with list and fuzzy filter options #55
 
 [0.5.0]  (2020-07-03)
 ----------------------
 
 Added
 *****
-- `raster.Image()``: optional nodata value for writing #32
+- ``raster.Image()``: optional nodata value for writing #32
 
 Fixed
 *****
@@ -51,7 +52,7 @@ Added
 *****
 - ``raster.Image()``: expanded test_arr to test AttributeError #31
 - ``raster.Image()``: optional dimorder for arr and according test #31
-- `dn2toa` tests and testfiles #17
+- ``dn2toa()`` tests and testfiles #17
 - ``data.source()``: accept WKT string as AOI #26
 - ``data.source()``: check if an AOI string is a file or a WKT string #26
 

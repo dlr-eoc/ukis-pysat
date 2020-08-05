@@ -44,9 +44,23 @@ The UKIS-pysat package provides generic classes and functions to query, access a
 
   # get sentinel scene from directory
   with get_sentinel_scene_from_dir(target_dir) as (full_path, ident):
+      # initialize an image object
+      # keep the dimension order in mind (order of channels or bands)
       img = Image(os.path_testfiles.join(full_path, 'pre_nrcs.tif'))
 
+      # scale the image array, having one band
+      img.arr = img.arr * 0.3
 
+Dimension order
+---------------
+The dimension order can be set upon initialization and you have to choose between *first* (bands, rows, columns), being raster shape needed for rasterio, or *last* (rows, columns, bands), being image shape used by most image processing libraries. Default is *first*.
+Compare with the `documentation of rasterio <https://rasterio.readthedocs.io/en/latest/api/rasterio.plot.html#rasterio.plot.reshape_as_image>`__. UKIS-pysat uses rasterio internally and the dimension order is always reshaped to *first* (bands, rows, columns) if the dimension order has been set as *last*.
+If the image was initialized with dimension order *last*, the result will be reshaped to *last* (rows, columns, bands) when calling ``img.arr``.
+
+Altering the array replaces all bands. If it is intended to alter a particular band, the remaining bands should be copied.
+
+Environment variables
+---------------------
 To use ``ukis_pysat.data`` and to download from the respective Datahub you need to set the credentials as environment variables.
 
 For EarthExplorer that's:
