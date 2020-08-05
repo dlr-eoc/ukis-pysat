@@ -13,19 +13,6 @@ class FileTest(unittest.TestCase):
         with self.assertRaises(KeyError, msg=f"No environment variable Key found"):
             psf.env_get("Key")
 
-    def test_zip(self):
-        psf.unpack(os.path.join(path_testfiles, "S1M_hello_from_inside.zip"), extract_dir="testfiles")
-        self.assertTrue(os.path.exists(os.path.join("testfiles", "S1M_hello_from_inside")))
-        shutil.rmtree(os.path.join("testfiles", "S1M_hello_from_inside"), ignore_errors=True)
-
-        psf.unpack(os.path.join(path_testfiles, "S1M_hello_from_inside.zip"))
-        self.assertTrue(os.path.exists("S1M_hello_from_inside"))
-        shutil.rmtree("S1M_hello_from_inside", ignore_errors=True)
-
-        psf.pack("S1M_hello_from_inside", "testfiles")
-        self.assertTrue(os.path.exists("S1M_hello_from_inside.zip"))
-        os.remove("S1M_hello_from_inside.zip")
-
     def test_get_sentinel_scene_from_dir(self):
         with psf.get_sentinel_scene_from_dir(path_testfiles) as (full_path, ident):
             self.assertEqual("S1M_hello_from_inside", ident)

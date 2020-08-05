@@ -26,6 +26,11 @@ Changed
 - ``data.MetadataCollection()``: Improved plotting of MetadataCollection to_pandas method #56
 - ``data.MetadataCollection()``: Made filter method more flexible with list and fuzzy filter options #55
 
+Removed
+*******
+``file``: removed `pack()` and `unpack()` #57
+
+
 [0.5.0]  (2020-07-03)
 ----------------------
 

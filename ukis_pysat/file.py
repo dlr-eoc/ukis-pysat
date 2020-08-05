@@ -18,30 +18,6 @@ def env_get(key):
         raise KeyError(f"No environment variable {key} found")
 
 
-def unpack(filename, extract_dir=None):
-    """Unpack an archive, does not add anything to shutil, but makes aware it exists.
-
-    :param filename: full path of the archive
-    :param extract_dir: name of the target directory where the archive is unpacked. If not provided, the current working directory is used.
-    """
-    if extract_dir:
-        shutil.unpack_archive(filename, extract_dir)
-    else:
-        shutil.unpack_archive(filename)
-
-
-def pack(base_name, root_dir, fformat="zip"):
-    """Create an archive file (such as zip or tar) and return its name. Does not add anything to shutil,
-    but makes aware it exists.
-
-    :param base_name: name of the file to create, including the path, minus any format-specific extension
-    :param root_dir: directory that will be the root directory of the archive
-    :param fformat: archive format: "zip", "tar", "gztar"
-    :return: name of archive file
-    """
-    return shutil.make_archive(base_name, format=fformat, root_dir=root_dir)
-
-
 @contextlib.contextmanager
 def get_sentinel_scene_from_dir(indir):
     """Scan directory for s1 scenes, unzips them if necessary. Tested with Sentinel-1, -2 & -3.
