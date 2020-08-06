@@ -151,6 +151,10 @@ class Image:
 
         pad_width = math.ceil(max_diff / self.dataset.transform.to_gdal()[1])  # units / pixel_size
 
+        if pad_width < 0:
+            # make sure that pad_width is not negative
+            pad_width = 0
+
         destination = np.zeros(
             (self.dataset.count, self.__arr.shape[1] + 2 * pad_width, self.__arr.shape[2] + 2 * pad_width,),
             self.__arr.dtype,
@@ -158,7 +162,7 @@ class Image:
 
         for i in range(0, self.dataset.count):
             destination[i], transform = rasterio.pad(
-                self.__arr[0], self.dataset.transform, pad_width, mode, constant_values=constant_values,
+                self.__arr[i], self.dataset.transform, pad_width, mode, constant_values=constant_values,
             )
 
         self.__arr = destination

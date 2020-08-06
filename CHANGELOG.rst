@@ -20,6 +20,11 @@ Added
 - ``raster.Image()``: With Statement Context Manager for Image #45
 - ``raster.Image()``: Alter image array #67
 
+Fixed
+*****
+- ``data.Source()``: Fixed query metadata return for new EarthExplorer API #71
+- ``raster.Image()``: Consider all image bands in _pad_to_bbox #59
+
 Changed
 *******
 - ``data.Metadata()``: Corrected field types #58
