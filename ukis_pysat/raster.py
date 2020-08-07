@@ -423,7 +423,7 @@ class Image:
         :param nodata: nodata value, e.g. 255 (default: None, means nodata value of dataset will be used)
         :param compress: compression, e.g. 'lzw' (default: None)
         """
-        if dtype == "min":
+        if type(dtype) == str and dtype == "min":
             dtype = get_minimum_dtype(self.__arr)
 
         profile = self.dataset.meta
