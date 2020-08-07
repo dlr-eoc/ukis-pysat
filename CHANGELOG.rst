@@ -20,11 +20,17 @@ Added
 - ``raster.Image()``: With Statement Context Manager for Image #45
 - ``raster.Image()``: Alter image array #67
 
+Fixed
+*****
+- ``data.Source()``: Fixed query metadata return for new EarthExplorer API #71
+- ``raster.Image()``: Consider all image bands in `pad()` #59
+
 Changed
 *******
 - ``data.Metadata()``: Corrected field types #58
 - ``data.MetadataCollection()``: Improved plotting of MetadataCollection to_pandas method #56
 - ``data.MetadataCollection()``: Made filter method more flexible with list and fuzzy filter options #55
+- ``raster.Image()``: Split `_pad_to_bbox()` into `pad()` and `_get_pad_width()`, updated `mask()` #59
 
 Removed
 *******

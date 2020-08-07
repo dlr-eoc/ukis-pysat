@@ -102,20 +102,27 @@ class Image:
         valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
         return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.dataset.transform))
 
-    def mask(self, bbox, crop=True, pad=False, mode="constant", constant_values=0):
-        """Mask the area outside of the input shapes with no data.
+    def mask(self, bbox, crop=True, pad=False, fill=False, mode="constant", constant_values=0):
+        """Mask raster to bbox.
 
         :param bbox: bounding box of type tuple or Shapely Polygon
         :param crop: bool, see rasterio.mask. Optional, (default: True)
-        :param pad: pads image, should only be used when bbox.bounds extent img.bounds, optional (default: False)
-        :param mode: str, how to pad, see rasterio.pad. Optional (default: 'constant')
+        :param fill: enforce raster to cover bbox. if raster extent is smaller than bbox it will be filled according to
+            mode and constant_values parameters. Optional (default: False)
+        :param mode: str, how to fill, see rasterio.pad. Optional (default: 'constant')
         :param constant_values: nodata value, padding should be filled with, optional (default: 0)
         """
-        # TODO https://github.com/mapbox/rasterio/issues/995
         if pad:
-            self.dataset.close()
-            # here we __update_dataset()
-            self.dataset = self._pad_to_bbox(bbox, mode, constant_values)
+            from warnings import warn
+            warn("`pad` was renamed to `fill` in `mask()` and will be removed with version 0.7.0", DeprecationWarning)
+            fill = pad
+
+        # TODO https://github.com/mapbox/rasterio/issues/995
+        if fill:
+            pad_width = self._get_pad_width(bbox)
+            if pad_width > 0:
+                # only pad raster if it is smaller than bbox
+                self.dataset = self.pad(pad_width, mode, constant_values)
 
         if isinstance(bbox, polygon.Polygon):
             self.__arr, transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
@@ -129,14 +136,12 @@ class Image:
         # passing meta to open, because driver gets lost if it's not GTiff
         self.dataset = self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
 
-    def _pad_to_bbox(self, bbox, mode="constant", constant_values=0):
-        """Buffers array with biggest difference to bbox and adjusts affine transform matrix. Can be used to fill
-        array with nodata values before masking in case bbox only partially overlaps dataset bounds.
+    def _get_pad_width(self, bbox):
+        """Calculates biggest difference from raster bounds to bbox. Can be used with pad() to fill array with
+        nodata values before masking in case bbox only partially overlaps dataset bounds.
 
-        :param bbox: bounding box of type tuple or Shapely Polygon
-        :param mode: str, how to pad, see rasterio.pad. Optional (default: 'constant')
-        :param constant_values: nodata value, padding should be filled with, optional (default: 0)
-        :return: closed, buffered dataset in memory
+        :param bbox: bounding box of type tuple or Shapely Polygon.
+        :return: pad width in pixels, int.
         """
         if isinstance(bbox, polygon.Polygon):
             bbox = bbox.bounds
@@ -149,8 +154,16 @@ class Image:
         max_diff_ll = np.max(np.subtract(tuple(self.dataset.bounds[:2]), bbox[:2]))
         max_diff = max(max_diff_ll, max_diff_ur)  # buffer in units
 
-        pad_width = math.ceil(max_diff / self.dataset.transform.to_gdal()[1])  # units / pixel_size
+        return math.ceil(max_diff / self.dataset.transform.to_gdal()[1])  # units / pixel_size
 
+    def pad(self, pad_width, mode="constant", constant_values=0):
+        """Pad raster in all directions.
+
+        :param pad_width: pad width in pixels, int.
+        :param mode: str, how to pad, see rasterio.pad. Optional (default: 'constant')
+        :param constant_values: nodata value, padding should be filled with, optional (default: 0)
+        :return: closed, buffered dataset in memory
+        """
         destination = np.zeros(
             (self.dataset.count, self.__arr.shape[1] + 2 * pad_width, self.__arr.shape[2] + 2 * pad_width,),
             self.__arr.dtype,
@@ -158,7 +171,7 @@ class Image:
 
         for i in range(0, self.dataset.count):
             destination[i], transform = rasterio.pad(
-                self.__arr[0], self.dataset.transform, pad_width, mode, constant_values=constant_values,
+                self.__arr[i], self.dataset.transform, pad_width, mode, constant_values=constant_values,
             )
 
         self.__arr = destination

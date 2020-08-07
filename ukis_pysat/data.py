@@ -116,7 +116,7 @@ class Source:
                 with open(meta_file) as f:
                     m = json.load(f)
                     try:
-                        self.construct_metadata(m)
+                        self.construct_metadata(meta_src=m, platform=platform)
                     except (json.decoder.JSONDecodeError, LookupError, TypeError) as e:
                         raise ValueError(f"{os.path.basename(meta_file)} not a valid metadata file. {e}.")
                     m_platform = m["properties"]["platformname"]
@@ -157,18 +157,19 @@ class Source:
             meta_src = self.api.to_geojson(meta_src)["features"]
 
         # construct MetadataCollection from list of Metadata objects
-        return MetadataCollection([self.construct_metadata(meta_src=m) for m in meta_src])
+        return MetadataCollection([self.construct_metadata(meta_src=m, platform=platform) for m in meta_src])
 
-    def construct_metadata(self, meta_src):
+    def construct_metadata(self, meta_src, platform):
         """Constructs a metadata object that is harmonized across the different satellite image sources.
 
         :param meta_src: Source metadata (GeoJSON-like mapping)
+        :param platform: Image platform (<enum 'Platform'>).
         :returns: Harmonized metadata (Metadata object)
         """
         if self.src == Datahub.File:
             meta = Metadata(
                 id=meta_src["properties"]["id"],
-                platformname=Platform(meta_src["properties"]["platformname"]),
+                platformname=platform,
                 producttype=meta_src["properties"]["producttype"],
                 orbitdirection=meta_src["properties"]["orbitdirection"],
                 orbitnumber=int(meta_src["properties"]["orbitnumber"]),
@@ -187,12 +188,7 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             meta = Metadata(
                 id=meta_src["displayId"],
-                platformname=Platform(
-                    meta_src["dataAccessUrl"][
-                        meta_src["dataAccessUrl"].find("dataset_name=")
-                        + len("dataset_name=") : meta_src["dataAccessUrl"].rfind("&ordered=")
-                    ]
-                ),
+                platformname=platform,
                 producttype="L1TP",
                 orbitdirection="DESCENDING",
                 orbitnumber=int(
@@ -203,7 +199,7 @@ class Source:
                 relativeorbitnumber=int(meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :]),
                 acquisitiondate=meta_src["acquisitionDate"],
                 ingestiondate=meta_src["modifiedDate"],
-                cloudcoverpercentage=float(round(meta_src["cloudCover"], 2)) if "cloudCover" in meta_src else None,
+                cloudcoverpercentage=round(float(meta_src["cloudCover"]), 2) if "cloudCover" in meta_src else None,
                 format="GeoTIFF",
                 srcid=meta_src["displayId"],
                 srcurl=meta_src["dataAccessUrl"],
@@ -214,14 +210,14 @@ class Source:
         else:
             meta = Metadata(
                 id=meta_src["properties"]["identifier"],
-                platformname=Platform(meta_src["properties"]["platformname"]),
+                platformname=platform,
                 producttype=meta_src["properties"]["producttype"],
                 orbitdirection=meta_src["properties"]["orbitdirection"],
                 orbitnumber=int(meta_src["properties"]["orbitnumber"]),
                 relativeorbitnumber=int(meta_src["properties"]["relativeorbitnumber"]),
                 acquisitiondate=meta_src["properties"]["beginposition"],
                 ingestiondate=meta_src["properties"]["ingestiondate"],
-                cloudcoverpercentage=float(round(meta_src["properties"]["cloudcoverpercentage"], 2))
+                cloudcoverpercentage=round(float(meta_src["properties"]["cloudcoverpercentage"]), 2)
                 if "cloudcoverpercentage" in meta_src["properties"]
                 else None,
                 format=meta_src["properties"]["format"],
