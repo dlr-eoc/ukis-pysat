@@ -114,7 +114,7 @@ class Image:
         """
         if pad:
             from warnings import warn
-            warn("`pad` was renamed to `fill` in `mask()` and will be removed with version 0.6.0", DeprecationWarning)
+            warn("`pad` was renamed to `fill` in `mask()` and will be removed with version 0.7.0", DeprecationWarning)
             fill = pad
 
         # TODO https://github.com/mapbox/rasterio/issues/995
