@@ -156,7 +156,7 @@ class DataTest(unittest.TestCase):
         )
 
         self.img.mask(
-            box(11.8919236802142620, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,), pad=True,
+            box(11.8919236802142620, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,), fill=True,
         )
         self.assertEqual(
             self.img.dataset.bounds,
