@@ -202,7 +202,7 @@ class Image:
         self.dataset = memfile.open()
         memfile.close()
 
-    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None, nodata=None):
+    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None, nodata=None, target_align=None):
         """Reproject a source raster to a destination raster.
 
         :param dst_crs: CRS or dict, Target coordinate reference system.
@@ -211,22 +211,28 @@ class Image:
         :param num_threads: int, number of workers, optional (default: 4)
         :param resolution: tuple (x resolution, y resolution) or float, optional.
             Target resolution, in units of target coordinate reference system.
+        :param target_align: raster to which to align resolution, extent and gridspacing, optional (Image).
         :param nodata: nodata value of source, int or float, optional.
         """
-        # output dimensions and transform for reprojection.
-        if resolution:
-            transform, width, height = calculate_default_transform(
-                self.dataset.crs,
-                dst_crs,
-                self.dataset.width,
-                self.dataset.height,
-                *self.dataset.bounds,
-                resolution=resolution,
-            )
+        if target_align:
+            transform = target_align.dataset.transform
+            width = target_align.dataset.width
+            height = target_align.dataset.height
+
         else:
-            transform, width, height = calculate_default_transform(
-                self.dataset.crs, dst_crs, self.dataset.width, self.dataset.height, *self.dataset.bounds,
-            )
+            if resolution:
+                transform, width, height = calculate_default_transform(
+                    self.dataset.crs,
+                    dst_crs,
+                    self.dataset.width,
+                    self.dataset.height,
+                    *self.dataset.bounds,
+                    resolution=resolution,
+                )
+            else:
+                transform, width, height = calculate_default_transform(
+                    self.dataset.crs, dst_crs, self.dataset.width, self.dataset.height, *self.dataset.bounds,
+                )
 
         destination = np.zeros((self.dataset.count, height, width), self.__arr.dtype)
 

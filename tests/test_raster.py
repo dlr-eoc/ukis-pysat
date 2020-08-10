@@ -175,6 +175,14 @@ class DataTest(unittest.TestCase):
         self.img.warp("EPSG:4326", resolution=1.0)
         self.assertEqual(1.0, self.img.dataset.transform.to_gdal()[1])
 
+        source_img = Image(TEST_FILE)
+        source_img.warp("EPSG:3857", resolution=10)
+        target_img = Image(TEST_FILE)
+        target_img.warp("EPSG:3857", resolution=25)
+        self.assertNotEqual(source_img.dataset.transform, target_img.dataset.transform)
+        source_img.warp("EPSG:3857", target_align=target_img)
+        self.assertEqual(source_img.dataset.transform, target_img.dataset.transform)
+
     def test_dn2toa(self):
         target_dir = os.path.join(os.path.dirname(__file__), "testfiles", "satellite_data")
         tests = [
