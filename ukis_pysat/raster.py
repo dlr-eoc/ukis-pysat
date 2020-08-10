@@ -58,7 +58,8 @@ class Image:
                 self.__arr = data
             else:
                 self.__arr = reshape_as_raster(data)
-            self.dataset = self.__update_dataset(crs, transform)
+            self.dataset = None
+            self.__update_dataset(crs, transform)
         else:
             raise TypeError("dataset must be of type rasterio.io.DatasetReader, str or np.ndarray")
 
@@ -114,6 +115,7 @@ class Image:
         """
         if pad:
             from warnings import warn
+
             warn("`pad` was renamed to `fill` in `mask()` and will be removed with version 0.7.0", DeprecationWarning)
             fill = pad
 
@@ -122,7 +124,7 @@ class Image:
             pad_width = self._get_pad_width(bbox)
             if pad_width > 0:
                 # only pad raster if it is smaller than bbox
-                self.dataset = self.pad(pad_width, mode, constant_values)
+                self.pad(pad_width, mode, constant_values)
 
         if isinstance(bbox, polygon.Polygon):
             self.__arr, transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
@@ -131,10 +133,7 @@ class Image:
         else:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
-        # update for further processing
-        self.dataset.close()  # meta still available when DataSetReader is closed
-        # passing meta to open, because driver gets lost if it's not GTiff
-        self.dataset = self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
+        self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
 
     def _get_pad_width(self, bbox):
         """Calculates biggest difference from raster bounds to bbox. Can be used with pad() to fill array with
@@ -175,9 +174,7 @@ class Image:
             )
 
         self.__arr = destination
-
-        self.dataset.close()
-        return self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
+        self.__update_dataset(self.dataset.crs, transform, nodata=self.dataset.nodata)
 
     def __update_dataset(self, crs, transform, nodata=None):
         """Update dataset without writing to file after it theoretically changed.
@@ -202,8 +199,8 @@ class Image:
         memfile = MemoryFile()
         with memfile.open(**meta) as ds:
             ds.write(self.__arr)
-
-        return memfile.open()
+        self.dataset = memfile.open()
+        memfile.close()
 
     def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None, nodata=None):
         """Reproject a source raster to a destination raster.
@@ -246,8 +243,7 @@ class Image:
             num_threads=num_threads,
         )
 
-        self.dataset.close()
-        self.dataset = self.__update_dataset(dst_crs, transform, nodata=nodata)
+        self.__update_dataset(dst_crs, transform, nodata=nodata)
 
     def dn2toa(self, platform, mtl_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
@@ -317,8 +313,7 @@ class Image:
                 f"Sentinel-2]. "
             )
 
-        self.dataset.close()
-        self.dataset = self.__update_dataset(self.dataset.crs, self.dataset.transform, nodata=self.dataset.nodata)
+        self.__update_dataset(self.dataset.crs, self.dataset.transform, nodata=self.dataset.nodata)
 
     @staticmethod
     def _lookup_bands(platform, wavelengths):

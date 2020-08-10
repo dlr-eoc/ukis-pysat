@@ -24,6 +24,7 @@ Fixed
 *****
 - ``data.Source()``: Fixed query metadata return for new EarthExplorer API #71
 - ``raster.Image()``: Consider all image bands in `pad()` #59
+- ``raster.Image()``: Memory leak caused by `__update_dataset()` #62
 
 Changed
 *******
