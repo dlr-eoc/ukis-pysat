@@ -19,11 +19,13 @@ Added
 *****
 - ``raster.Image()``: With Statement Context Manager for Image #45
 - ``raster.Image()``: Alter image array #67
+- ``raster.Image()``: Target align option for `warp()` #60
 
 Fixed
 *****
 - ``data.Source()``: Fixed query metadata return for new EarthExplorer API #71
 - ``raster.Image()``: Consider all image bands in `pad()` #59
+- ``raster.Image()``: Memory leak caused by `__update_dataset()` #62
 
 Changed
 *******
