@@ -39,7 +39,7 @@ extras_require = {
         "python-dateutil~=2.8.1",
         "shapely~=1.7.0",
     ],
-    "raster": ["numpy~=1.18.1", "rasterio~=1.1.0", "rio_toa==0.3.0", "shapely~=1.7.0",],
+    "raster": ["numpy~=1.18.1", "rasterio!=1.1.5", "rio_toa==0.3.0", "shapely~=1.7.0",],
 }
 extras_require["complete"] = list(set([v for req in extras_require.values() for v in req]))
 
