@@ -414,7 +414,7 @@ class Image:
         self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
-    def write_to_file(self, path_to_file, dtype, driver="GTiff", nodata=None, compress=None):
+    def write_to_file(self, path_to_file, dtype, driver="GTiff", nodata=None, compress=None, kwargs=None):
         """
         Write a dataset to file.
         :param path_to_file: str, path to new file
@@ -423,6 +423,8 @@ class Image:
         :param driver: str, optional (default: 'GTiff')
         :param nodata: nodata value, e.g. 255 (default: None, means nodata value of dataset will be used)
         :param compress: compression, e.g. 'lzw' (default: None)
+        :param kwargs: driver specific keyword arguments, e.g. {'nbits': 1, 'tiled': True} for GTiff (default: None)
+            for more keyword arguments see gdal driver specifications, e.g. https://gdal.org/drivers/raster/gtiff.html
         """
         if type(dtype) == str and dtype == "min":
             dtype = get_minimum_dtype(self.__arr)
@@ -444,6 +446,9 @@ class Image:
 
         if compress:
             profile.update({"compress": compress})
+
+        if kwargs:
+            profile.update(**kwargs)
 
         with rasterio.open(path_to_file, "w", **profile) as dst:
             dst.write(self.__arr.astype(dtype))

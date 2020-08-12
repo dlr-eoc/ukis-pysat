@@ -278,6 +278,14 @@ class DataTest(unittest.TestCase):
         img2.close()
         os.remove(r"result.tif")
 
+        self.img.write_to_file(r"result.tif", np.uint8, compress="packbits", kwargs={"tiled": True})
+        img2 = Image("result.tif")
+        self.assertEqual(img2.arr.dtype, "uint8")
+        self.assertEqual(img2.dataset.profile["tiled"], True)
+
+        img2.close()
+        os.remove(r"result.tif")
+
         img3 = Image(self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform)
         img3.write_to_file(r"result.tif", np.uint16)
         img3.close()

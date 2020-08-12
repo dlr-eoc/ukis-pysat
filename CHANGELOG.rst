@@ -20,6 +20,7 @@ Added
 - ``raster.Image()``: With Statement Context Manager for Image #45
 - ``raster.Image()``: Alter image array #67
 - ``raster.Image()``: Target align option for `warp()` #60
+- ``raster.Image()``: Pass driver specific kwargs to `write_to_file()` #74
 
 Fixed
 *****
