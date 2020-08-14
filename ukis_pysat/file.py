@@ -2,15 +2,16 @@
 
 import contextlib
 import os
-import re
-import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime, timezone
+from re import compile, Pattern
+
+from typing import List, Union, Dict, Iterator, Tuple, Any, Optional
 
 
-def env_get(key):
+def env_get(key: str) -> str:
     """get an environment variable or fail with a meaningful error message"""
     try:
         return os.environ[key]
@@ -19,7 +20,7 @@ def env_get(key):
 
 
 @contextlib.contextmanager
-def get_sentinel_scene_from_dir(indir):
+def get_sentinel_scene_from_dir(indir: str) -> Iterator[Tuple[str, str]]:
     """Scan directory for s1 scenes, unzips them if necessary. Tested with Sentinel-1, -2 & -3.
 
     :param indir: path to zipped S1 scene or directory with S1 scene
@@ -29,18 +30,18 @@ def get_sentinel_scene_from_dir(indir):
     ...     print(ident)
     S1M_hello_from_inside
     """
-    pattern = re.compile("^S[1-3]._+")
+    pattern: Pattern[str] = compile("^S[1-3]._+")
 
     for entry in os.listdir(indir):
-        full_path = os.path.join(indir, entry)
+        full_path: str = os.path.join(indir, entry)
 
-        ident = os.path.splitext(os.path.basename(full_path))[0]
+        ident: str = os.path.splitext(os.path.basename(full_path))[0]
         if not pattern.match(ident):
             continue
 
         if full_path.endswith(".zip"):
-            cwd = os.getcwd()
-            scene_zip = os.path.abspath(full_path)
+            cwd: str = os.getcwd()
+            scene_zip: str = os.path.abspath(full_path)
             with tempfile.TemporaryDirectory() as td:
                 os.chdir(td)
                 try:
@@ -54,7 +55,7 @@ def get_sentinel_scene_from_dir(indir):
             yield full_path, ident
 
 
-def get_polarization_from_s1_filename(filename, dual=False):
+def get_polarization_from_s1_filename(filename: str, dual: bool = False) -> Union[str, List[str]]:
     """Get polarization from the filename of a Sentinel-1 scene.
     https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/naming-conventions.
 
@@ -71,21 +72,21 @@ def get_polarization_from_s1_filename(filename, dual=False):
     >>> get_polarization_from_s1_filename("MMM_BB_TTTR_1SDV_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip", True)
     ['VV', 'VH']
     """
-    polarization_dict = {
+    polarization_dict: Dict[str, Union[str, List[str]]] = {
         "SSV": "VV",
         "SSH": "HH",
         "SDV": ["VV", "VH"],
         "SDH": ["HH", "HV"],
     }
 
-    polarization = polarization_dict[filename[13:16]]
+    polarization: Union[str, List[str]] = polarization_dict[filename[13:16]]
     if not dual and isinstance(polarization, list):
         return polarization[0]
     else:
         return polarization
 
 
-def get_ts_from_sentinel_filename(filename, start_date=True):
+def get_ts_from_sentinel_filename(filename: str, start_date: bool = True) -> datetime:
     """Get timestamp from the filename of a Sentinel scene, according to naming conventions.
     Currently works for S1, S2 & S3.
 
@@ -118,7 +119,7 @@ def get_ts_from_sentinel_filename(filename, start_date=True):
             return datetime.strptime(filename[32:47], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
 
 
-def get_footprint_from_manifest(xml_path):
+def get_footprint_from_manifest(xml_path: str) -> Any:
     """Return a shapely polygon with footprint of scene, tested for Sentinel-1.
 
     :param xml_path: path to manifest.safe
@@ -128,24 +129,25 @@ def get_footprint_from_manifest(xml_path):
     'POLYGON ((149.766922 -24.439564, 153.728622 -23.51771, 154.075058 -24.737713, 150.077042 -25.668921, 149.766922 -24.439564))'
     """
     try:
-        from shapely.geometry import Polygon
+        from shapely.geometry import Polygon  # type: ignore
     except ImportError:
         raise ImportError("get_footprint_from_manifest requires optional dependency Shapely.")
-    tree = ET.parse(xml_path)
-    root = tree.getroot()
+    tree: ET.ElementTree = ET.parse(xml_path)
+    root: ET.Element = tree.getroot()
     for elem in root.iter("metadataSection"):
         for child in elem.iter():
             if child.tag == "{http://www.opengis.net/gml}coordinates":
                 coords = child.text
-
-                vertices = []
+                assert coords is not None, "Footprint not found"
+                vertices: List = []
                 for i in coords.split(" "):
-                    i = i.split(",")
-                    vertices.append((float(i[1]), float(i[0])))
+                    c = i.split(",")
+                    vertices.append((float(c[1]), float(c[0])))
                 return Polygon(vertices)
+    raise KeyError("Footprint not found")
 
 
-def get_origin_from_manifest(xml_path):
+def get_origin_from_manifest(xml_path: str) -> str:
     """Get origin from manifest file, tested for Sentinel-1.
 
     :param xml_path: path to manifest.safe
@@ -154,15 +156,16 @@ def get_origin_from_manifest(xml_path):
     >>> get_origin_from_manifest(os.path.join(r"../tests/testfiles/", "manifest.safe"))
     'United Kingdom'
     """
-    tree = ET.parse(xml_path)
-    root = tree.getroot()
+    tree: ET.ElementTree = ET.parse(xml_path)
+    root: ET.Element = tree.getroot()
     for elem in root.iter("metadataSection"):
         for child in elem.iter():
             if child.tag == "{http://www.esa.int/safe/sentinel-1.0}facility":
                 return child.attrib["country"]
+    raise KeyError("Country of origin not found.")
 
 
-def get_ipf_from_manifest(xml_path):
+def get_ipf_from_manifest(xml_path: str) -> float:
     """Get IPF version from manifest file, tested for Sentinel-1.
 
     :param xml_path: path to manifest.safe
@@ -171,15 +174,16 @@ def get_ipf_from_manifest(xml_path):
     >>> get_ipf_from_manifest(os.path.join(r"../tests/testfiles/", "manifest.safe"))
     2.82
     """
-    tree = ET.parse(xml_path)
-    root = tree.getroot()
+    tree: ET.ElementTree = ET.parse(xml_path)
+    root: ET.Element = tree.getroot()
     for elem in root.iter("metadataSection"):
         for child in elem.iter():
             if child.tag == "{http://www.esa.int/safe/sentinel-1.0}software":
                 return float(child.attrib["version"])
+    raise KeyError("IPF Version not found.")
 
 
-def get_pixel_spacing(scenedir, polarization="HH"):
+def get_pixel_spacing(scenedir: str, polarization: str = "HH") -> Tuple[float, float]:
     """Get pixel spacing, tested for Sentinel-1.
 
     :param scenedir: path to unzipped SAFE-directory of scene
@@ -191,18 +195,20 @@ def get_pixel_spacing(scenedir, polarization="HH"):
     """
     for entry in os.listdir(os.path.join(scenedir, "annotation")):
         if entry.endswith(".xml") and entry.split("-")[3] == polarization.lower():
-            tree = ET.parse(os.path.join(scenedir, "annotation", entry))
-            root = tree.getroot()
+            tree: ET.ElementTree = ET.parse(os.path.join(scenedir, "annotation", entry))
+            root: ET.Element = tree.getroot()
             for elem in root.iter("imageInformation"):
                 for child in elem.iter():
                     if child.tag == "rangePixelSpacing":
+                        assert child.text is not None, "Pixel Spacing not found."
                         pixel_spacing_meter = float(child.text)
                         pixel_spacing_degree = (pixel_spacing_meter / 10.0) * 8.983152841195215e-5
 
                         return pixel_spacing_meter, pixel_spacing_degree
+    raise KeyError("Pixel Spacing not found.")
 
 
-def get_proj_string(footprint):
+def get_proj_string(footprint: Any) -> str:
     """Get UTM projection string the centroid of footprint is located in. Footprint itself might cover multiple UTM
     zones.
 
@@ -213,12 +219,12 @@ def get_proj_string(footprint):
     +proj=utm +zone=56J, +ellps=WGS84 +datum=WGS84 +units=m +no_defs
     """
     try:
-        import utm
+        import utm  # type: ignore
     except ImportError:
         raise ImportError("get_proj_string requires optional dependency utm.")
     # get UTM coordinates from Lat/lon pair of centroid of footprint
     # coords contains UTM coordinates, UTM zone & UTM letter, e.g. (675539.8854425425, 4478111.711657521, 34, 'T')
-    coords = utm.from_latlon(footprint.centroid.y, footprint.centroid.x)
+    coords: Tuple = utm.from_latlon(footprint.centroid.y, footprint.centroid.x)
 
     return f"+proj=utm +zone={coords[2]}{coords[3]}, +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 
