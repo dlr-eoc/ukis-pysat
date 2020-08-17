@@ -8,7 +8,7 @@ import zipfile
 from datetime import datetime, timezone
 from re import compile, Pattern
 
-from typing import List, Union, Dict, Iterator, Tuple, Any, Optional
+from typing import List, Union, Dict, Iterator, Tuple, Any
 
 
 def env_get(key: str) -> str:
