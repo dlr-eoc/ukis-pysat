@@ -29,9 +29,10 @@ def get_sentinel_scene_from_dir(indir):
     ...     print(name)
     S1M_hello_from_inside
     """
+    indir = Path(indir)
     pattern = re.compile("^S[1-3]._+")
 
-    for full_path in Path.iterdir(indir):
+    for full_path in indir.iterdir():
         ident = full_path.stem
         if not pattern.match(ident):
             continue
@@ -48,7 +49,7 @@ def get_sentinel_scene_from_dir(indir):
                             yield res
                 finally:
                     os.chdir(cwd)
-        elif Path.is_dir(full_path):
+        elif full_path.is_dir():
             yield full_path, ident
 
 
