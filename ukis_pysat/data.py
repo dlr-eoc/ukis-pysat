@@ -239,7 +239,8 @@ class Source:
         :param product_uuid: UUID of the satellite image product (String).
         :param target_dir: Target directory that holds the downloaded images (String, Path)
         """
-        target_dir = Path(target_dir)
+        if isinstance(target_dir, str):
+            target_dir = Path(target_dir)
         if self.src == Datahub.File:
             raise Exception("download_image not supported for {self.src}.")
 
@@ -268,7 +269,8 @@ class Source:
         :param product_uuid: UUID of the satellite image product (String).
         :param target_dir: Target directory that holds the downloaded images (String, Path)
         """
-        target_dir = Path(target_dir)
+        if isinstance(target_dir, str):
+            target_dir = Path(target_dir)
         if self.src == Datahub.File:
             raise NotImplementedError(f"download_quicklook not supported for {self.src}.")
 
@@ -439,7 +441,9 @@ class Metadata:
         :param target_dir: Target directory that holds the downloaded metadata (String, Path)
         """
         g = self.to_geojson()
-        with open(Path(target_dir).joinpath(g["properties"]["srcid"] + ".json"), "w") as f:
+        if isinstance(target_dir, str):
+            target_dir = Path(target_dir)
+        with open(target_dir.joinpath(g["properties"]["srcid"] + ".json"), "w") as f:
             json.dump(g, f)
 
 

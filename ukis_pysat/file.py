@@ -29,7 +29,8 @@ def get_sentinel_scene_from_dir(indir):
     ...     print(name)
     S1M_hello_from_inside
     """
-    indir = Path(indir)
+    if isinstance(indir, str):
+        indir = Path(indir)
     pattern = re.compile("^S[1-3]._+")
 
     for full_path in indir.iterdir():
@@ -188,7 +189,8 @@ def get_pixel_spacing(scenedir, polarization="HH"):
     >>> get_pixel_spacing(Path(__file__).parents[1] / "tests/testfiles")
     (40.0, 0.0003593261136478086)
     """
-    scenedir = Path(scenedir)
+    if isinstance(scenedir, str):
+        scenedir = Path(scenedir)
     for entry in scenedir.joinpath("annotation").iterdir():
         if entry.suffix == ".xml" and entry.name.split("-")[3] == polarization.lower():
             tree = ET.parse(entry)
