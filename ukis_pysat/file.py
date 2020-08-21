@@ -188,9 +188,10 @@ def get_pixel_spacing(scenedir, polarization="HH"):
     >>> get_pixel_spacing(Path(__file__).parents[1] / "tests/testfiles")
     (40.0, 0.0003593261136478086)
     """
-    for entry in os.listdir(os.path.join(scenedir, "annotation")):
-        if entry.endswith(".xml") and entry.split("-")[3] == polarization.lower():
-            tree = ET.parse(os.path.join(scenedir, "annotation", entry))
+    scenedir = Path(scenedir)
+    for entry in scenedir.joinpath("annotation").iterdir():
+        if entry.suffix == ".xml" and entry.name.split("-")[3] == polarization.lower():
+            tree = ET.parse(entry)
             root = tree.getroot()
             for elem in root.iter("imageInformation"):
                 for child in elem.iter():

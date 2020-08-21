@@ -1,11 +1,10 @@
-import os
-import shutil
 import unittest
 from datetime import datetime, timezone
+from pathlib import Path
 
 import ukis_pysat.file as psf
 
-path_testfiles = os.path.join(os.path.dirname(__file__), "testfiles")
+path_testfiles = Path(__file__).parents[0] / "testfiles"
 
 
 class FileTest(unittest.TestCase):
@@ -17,7 +16,7 @@ class FileTest(unittest.TestCase):
         with psf.get_sentinel_scene_from_dir(path_testfiles) as (full_path, ident):
             self.assertEqual("S1M_hello_from_inside", ident)
 
-        with psf.get_sentinel_scene_from_dir(os.path.join(path_testfiles, "another_scene")) as (full_path, ident):
+        with psf.get_sentinel_scene_from_dir(path_testfiles.joinpath("another_scene")) as (full_path, ident):
             self.assertEqual("S2__IN_FOLDER", ident)
 
     def test_get_polarization_from_s1_filename(self):
@@ -80,19 +79,19 @@ class FileTest(unittest.TestCase):
 
     def test_get_footprint_from_manifest(self):
         self.assertEqual(
-            psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest.safe")).wkt,
+            psf.get_footprint_from_manifest(path_testfiles.joinpath("manifest.safe")).wkt,
             "POLYGON ((149.766922 -24.439564, 153.728622 -23.51771, 154.075058 -24.737713, 150.077042 "
             "-25.668921, 149.766922 -24.439564))",
         )
 
     def test_get_origin_from_manifest(self):
         self.assertEqual(
-            psf.get_origin_from_manifest(os.path.join(path_testfiles, "manifest.safe")), "United Kingdom",
+            psf.get_origin_from_manifest(path_testfiles.joinpath("manifest.safe")), "United Kingdom",
         )
 
     def test_get_ipf_from_manifest(self):
         self.assertEqual(
-            psf.get_ipf_from_manifest(os.path.join(path_testfiles, "manifest.safe")), 2.82,
+            psf.get_ipf_from_manifest(path_testfiles.joinpath("manifest.safe")), 2.82,
         )
 
     def test_get_pixel_spacing(self):
@@ -100,7 +99,7 @@ class FileTest(unittest.TestCase):
 
     def test_get_proj_string(self):
         self.assertEqual(
-            psf.get_proj_string(psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest.safe"))),
+            psf.get_proj_string(psf.get_footprint_from_manifest(path_testfiles.joinpath("manifest.safe"))),
             r"+proj=utm +zone=56J, +ellps=WGS84 +datum=WGS84 +units=m +no_defs",
         )
 

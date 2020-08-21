@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import unittest
+from pathlib import Path
 
 import dask.array
 import numpy as np
@@ -11,7 +12,7 @@ from shapely.geometry import box
 from ukis_pysat.members import Platform
 from ukis_pysat.raster import Image
 
-TEST_FILE = os.path.join(os.path.dirname(__file__), "testfiles", "dummy.tif")
+TEST_FILE = Path(__file__).parents[0] / "testfiles" / "dummy.tif"
 
 
 class DataTest(unittest.TestCase):
@@ -184,35 +185,33 @@ class DataTest(unittest.TestCase):
         self.assertEqual(source_img.dataset.transform, target_img.dataset.transform)
 
     def test_dn2toa(self):
-        target_dir = os.path.join(os.path.dirname(__file__), "testfiles", "satellite_data")
+        target_dir = Path(__file__).parents[0] / "testfiles" / "satellite_data"
         tests = [
             {
                 "platform": Platform.Landsat8,
-                "dn_file": os.path.join(target_dir, "LC08_L1TP_193024_20200509_20200509_01_RT.tif"),
-                "toa_file": os.path.join(target_dir, "LC08_L1TP_193024_20200509_20200509_01_RT_toa.tif"),
-                "mtl_file": os.path.join(target_dir, "LC08_L1TP_193024_20200509_20200509_01_RT_MTL.txt"),
+                "dn_file": target_dir.joinpath("LC08_L1TP_193024_20200509_20200509_01_RT.tif"),
+                "toa_file": target_dir.joinpath("LC08_L1TP_193024_20200509_20200509_01_RT_toa.tif"),
+                "mtl_file": target_dir.joinpath("LC08_L1TP_193024_20200509_20200509_01_RT_MTL.txt"),
                 "wavelengths": ["Aerosol", "Blue", "Green", "Red", "NIR", "SWIR1", "SWIR2", "Cirrus", "TIRS1", "TIRS2"],
             },
             {
                 "platform": Platform.Landsat7,
-                "dn_file": os.path.join(target_dir, "LE07_L1TP_193024_20100420_20161215_01_T1.tif"),
-                "toa_file": os.path.join(target_dir, "LE07_L1TP_193024_20100420_20161215_01_T1_toa.tif"),
-                "mtl_file": os.path.join(target_dir, "LE07_L1TP_193024_20100420_20161215_01_T1_MTL.txt"),
+                "dn_file": target_dir.joinpath("LE07_L1TP_193024_20100420_20161215_01_T1.tif"),
+                "toa_file": target_dir.joinpath("LE07_L1TP_193024_20100420_20161215_01_T1_toa.tif"),
+                "mtl_file": target_dir.joinpath("LE07_L1TP_193024_20100420_20161215_01_T1_MTL.txt"),
                 "wavelengths": ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS1", "TIRS2", "SWIR2"],
             },
             {
                 "platform": Platform.Landsat5,
-                "dn_file": os.path.join(target_dir, "LT05_L1TP_193024_20050516_20161127_01_T1.tif"),
-                "toa_file": os.path.join(target_dir, "LT05_L1TP_193024_20050516_20161127_01_T1_toa.tif"),
-                "mtl_file": os.path.join(target_dir, "LT05_L1TP_193024_20050516_20161127_01_T1_MTL.txt"),
+                "dn_file": target_dir.joinpath("LT05_L1TP_193024_20050516_20161127_01_T1.tif"),
+                "toa_file": target_dir.joinpath("LT05_L1TP_193024_20050516_20161127_01_T1_toa.tif"),
+                "mtl_file": target_dir.joinpath("LT05_L1TP_193024_20050516_20161127_01_T1_MTL.txt"),
                 "wavelengths": ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"],
             },
             {
                 "platform": Platform.Sentinel2,
-                "dn_file": os.path.join(target_dir, "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159.tif"),
-                "toa_file": os.path.join(
-                    target_dir, "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_toa.tif"
-                ),
+                "dn_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159.tif"),
+                "toa_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_toa.tif"),
                 "mtl_file": None,
                 "wavelengths": None,
             },

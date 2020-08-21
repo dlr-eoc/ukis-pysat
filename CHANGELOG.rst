@@ -34,6 +34,7 @@ Changed
 - ``data.MetadataCollection()``: Improved plotting of MetadataCollection to_pandas method #56
 - ``data.MetadataCollection()``: Made filter method more flexible with list and fuzzy filter options #55
 - ``raster.Image()``: Split `_pad_to_bbox()` into `pad()` and `_get_pad_width()`, updated `mask()` #59
+- replaced os.path with Pathlib #78
 
 Removed
 *******
