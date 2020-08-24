@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 from io import BytesIO
+from pathlib import Path
 from typing import List
 
 try:
@@ -101,13 +102,13 @@ class Source:
             # get all json files in datadir that match substr
             meta_files = sorted(
                 [
-                    os.path.join(dp, f)
+                    Path(dp).joinpath(f)
                     for dp, dn, filenames in os.walk(self.api)
                     for substr in self.api_substr
                     for f in filenames
                     if f.endswith(".json") and substr in f
                 ],
-                key=str.lower,
+                key=lambda path: str(path).lower(),
             )
 
             # filter json files by query parameters
@@ -118,7 +119,7 @@ class Source:
                     try:
                         self.construct_metadata(meta_src=m, platform=platform)
                     except (json.decoder.JSONDecodeError, LookupError, TypeError) as e:
-                        raise ValueError(f"{os.path.basename(meta_file)} not a valid metadata file. {e}.")
+                        raise ValueError(f"{meta_file.name} not a valid metadata file. {e}.")
                     m_platform = m["properties"]["platformname"]
                     m_date = sentinelsat.format_query_date(m["properties"]["acquisitiondate"])
                     m_geom = geometry.shape(m["geometry"])
@@ -236,8 +237,10 @@ class Source:
 
         :param platform: Image platform (<enum 'Platform'>).
         :param product_uuid: UUID of the satellite image product (String).
-        :param target_dir: Target directory that holds the downloaded images (String)
+        :param target_dir: Target directory that holds the downloaded images (String, Path)
         """
+        if isinstance(target_dir, str):
+            target_dir = Path(target_dir)
         if self.src == Datahub.File:
             raise Exception("download_image not supported for {self.src}.")
 
@@ -251,9 +254,9 @@ class Source:
 
             # compress download directory and remove original files
             shutil.make_archive(
-                os.path.join(target_dir, product_srcid), "zip", root_dir=os.path.join(target_dir, product_srcid),
+                target_dir.joinpath(product_srcid), "zip", root_dir=target_dir.joinpath(product_srcid),
             )
-            shutil.rmtree(os.path.join(target_dir, product_srcid))
+            shutil.rmtree(target_dir.joinpath(product_srcid))
 
         else:
             self.api.download(product_uuid, target_dir, checksum=True)
@@ -264,8 +267,10 @@ class Source:
 
         :param platform: Image platform (<enum 'Platform'>).
         :param product_uuid: UUID of the satellite image product (String).
-        :param target_dir: Target directory that holds the downloaded images (String)
+        :param target_dir: Target directory that holds the downloaded images (String, Path)
         """
+        if isinstance(target_dir, str):
+            target_dir = Path(target_dir)
         if self.src == Datahub.File:
             raise NotImplementedError(f"download_quicklook not supported for {self.src}.")
 
@@ -291,14 +296,14 @@ class Source:
         # use threshold of 50 to overcome noise in JPEG compression
         xs, ys, zs = np.where(quicklook >= 50)
         quicklook = quicklook[min(xs) : max(xs) + 1, min(ys) : max(ys) + 1, min(zs) : max(zs) + 1]
-        Image.fromarray(quicklook).save(os.path.join(target_dir, product_srcid + ".jpg"))
+        Image.fromarray(quicklook).save(target_dir.joinpath(product_srcid + ".jpg"))
 
         # geocode quicklook
         quicklook_size = (quicklook.shape[1], quicklook.shape[0])
         dist_x = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[2], bounds[1])) / quicklook_size[0]
         dist_y = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[0], bounds[3])) / quicklook_size[1]
         ul_x, ul_y = bounds[0], bounds[3]
-        with open(os.path.join(os.path.join(target_dir, product_srcid + ".jpgw")), "w") as out_file:
+        with open(target_dir.joinpath(product_srcid + ".jpgw"), "w") as out_file:
             out_file.write(str(dist_x) + "\n")
             out_file.write(str(0.0) + "\n")
             out_file.write(str(0.0) + "\n")
@@ -315,10 +320,10 @@ class Source:
         """
 
         # check if handed object is a string
-        # this could include both fiel paths and WKT strings
-        if isinstance(aoi, str):
+        # this could include both file paths and WKT strings
+        if isinstance(aoi, (str, Path)):
             # check if handed object is a file
-            if os.path.isfile(aoi):
+            if Path(aoi).is_file():
                 with fiona.open(aoi, "r") as aoi:
                     # make sure crs is in epsg:4326
                     project = pyproj.Transformer.from_proj(
@@ -328,18 +333,14 @@ class Source:
                         always_xy=True,
                     )
                     aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
-
-            elif wkt.loads(aoi):
-                aoi = wkt.loads(aoi)
-
             else:
-                raise ValueError(f"aoi must be a filepath or a WKT string")
+                aoi = wkt.loads(aoi)
 
         elif isinstance(aoi, tuple):
             aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
 
         else:
-            raise TypeError(f"aoi must be of type string or tuple")
+            raise TypeError(f"aoi must be of type string, Path or tuple")
 
         return aoi
 
@@ -437,10 +438,12 @@ class Metadata:
     def save(self, target_dir):
         """Saves Metadata to GeoJSON file in target_dir with srcid as filename.
 
-        :param target_dir: Target directory that holds the downloaded metadata (String)
+        :param target_dir: Target directory that holds the downloaded metadata (String, Path)
         """
         g = self.to_geojson()
-        with open(os.path.join(target_dir, g["properties"]["srcid"] + ".json"), "w") as f:
+        if isinstance(target_dir, str):
+            target_dir = Path(target_dir)
+        with open(target_dir.joinpath(g["properties"]["srcid"] + ".json"), "w") as f:
             json.dump(g, f)
 
 
@@ -484,7 +487,7 @@ class MetadataCollection:
         except ImportError:
             raise ImportError("to_pandas requires optional dependency Pandas.")
 
-        pd.set_option('display.max_colwidth', -1)
+        pd.set_option("display.max_colwidth", -1)
         d = [item.to_dict() for item in self.items]
         return pd.DataFrame(d)
 
@@ -492,6 +495,7 @@ class MetadataCollection:
         """Filters MetadataCollection based on filter_dict.
 
         :param filter_dict: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
+        :param type: how to filter match, default 'exact', alternative 'fuzzy'.
         :returns: self
         """
         k = list(filter_dict.keys())[0]
@@ -517,7 +521,7 @@ class MetadataCollection:
     def save(self, target_dir):
         """Saves MetadataCollection to GeoJSON files in target_dir with srcid as filenames.
 
-        :param target_dir: Target directory (String)
+        :param target_dir: Target directory (String, Path)
         """
         for item in self.items:
             item.save(target_dir)

@@ -2,6 +2,7 @@
 
 import math
 from itertools import product
+from pathlib import Path
 
 from ukis_pysat.members import Platform
 
@@ -45,7 +46,7 @@ class Image:
             self.dataset = data
             self.__arr = self.dataset.read()
 
-        elif isinstance(data, str):
+        elif isinstance(data, (str, Path)):
             self.dataset = rasterio.open(data)
             self.__arr = self.dataset.read()
 
@@ -268,7 +269,7 @@ class Image:
                 raise AttributeError(f"'mtl_file' has to be set if platform is {platform}.")
             else:
                 # get rescale factors from mtl file
-                mtl = toa_utils._load_mtl(mtl_file)  # no obvious reason not to call this
+                mtl = toa_utils._load_mtl(str(mtl_file))  # no obvious reason not to call this
                 metadata = mtl["L1_METADATA_FILE"]
                 sun_elevation = metadata["IMAGE_ATTRIBUTES"]["SUN_ELEVATION"]
                 toa = []

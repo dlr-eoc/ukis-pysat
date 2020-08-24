@@ -1,6 +1,7 @@
 import os
 import traceback
 import unittest
+from pathlib import Path
 
 from ukis_pysat.data import Source
 from ukis_pysat.members import Datahub, Platform
@@ -10,11 +11,13 @@ from ukis_pysat.members import Datahub, Platform
 # os.environ["SCIHUB_USER"] = "Tim"
 # os.environ["SCIHUB_PW"] = "TheEnchanter"
 
-aoi_4326 = os.path.join(os.path.dirname(__file__), "testfiles", "aoi_4326.geojson")
-aoi_3857 = os.path.join(os.path.dirname(__file__), "testfiles", "aoi_3857.geojson")
+target_dir = Path(__file__).parents[0] / "testfiles"
+str_target = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
+aoi_4326 = target_dir / "aoi_4326.geojson"
+aoi_3857 = target_dir / "aoi_3857.geojson"
 aoi_wkt = "POLYGON((11.09 47.94, 11.06 48.01, 11.12 48.11, 11.18 48.11, 11.18 47.94, 11.09 47.94))"
 aoi_bbox = (11.90, 51.46, 11.94, 51.50)
-target_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
+
 
 queries = [
     {
@@ -133,20 +136,23 @@ class DownloadTest(unittest.TestCase):
                     cloud_cover=queries[i]["cloud_cover"],
                 )
                 meta.filter(filter_dict={"srcid": queries[i]["returns_srcid"]},)
-                meta.save(target_dir)
+                if i % 2 == 0:
+                    meta.save(target_dir)
+                else:
+                    meta.save(str_target)
             returns_srcid = meta.to_geojson()[0]["properties"]["srcid"]
             returns_uuid = meta.to_geojson()[0]["properties"]["srcuuid"]
             self.assertEqual(returns_srcid, (queries[i]["returns_srcid"]))
             self.assertEqual(returns_uuid, (queries[i]["returns_uuid"]))
-            self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".json"))
-            os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".json")
+            self.assertTrue(target_dir.joinpath(queries[i]["returns_srcid"] + ".json").is_file())
+            target_dir.joinpath(queries[i]["returns_srcid"] + ".json").unlink()
 
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_image(self):
         src = Source(datahub=Datahub.File, datadir=target_dir)
         with self.assertRaises(Exception, msg="download_image not supported for Datahub.File."):
             src.download_image(
-                platform=Datahub.File, product_uuid="1", target_dir=target_dir,
+                platform=Datahub.File, product_uuid="1", target_dir=str_target,
             )
         # TODO download tests
 
@@ -160,7 +166,7 @@ class DownloadTest(unittest.TestCase):
                         src.download_quicklook(
                             platform=queries[i]["platform_name"],
                             product_uuid=queries[i]["returns_uuid"],
-                            target_dir=target_dir,
+                            target_dir=str_target,
                         )
                 else:
                     src.download_quicklook(
@@ -168,10 +174,10 @@ class DownloadTest(unittest.TestCase):
                         product_uuid=queries[i]["returns_uuid"],
                         target_dir=target_dir,
                     )
-                    self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpg"))
-                    self.assertTrue(os.path.isfile(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpgw"))
-                    os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpg")
-                    os.remove(os.path.join(target_dir, queries[i]["returns_srcid"]) + ".jpgw")
+                    self.assertTrue(target_dir.joinpath(queries[i]["returns_srcid"] + ".jpg").is_file())
+                    self.assertTrue(target_dir.joinpath(queries[i]["returns_srcid"] + ".jpgw").is_file())
+                    target_dir.joinpath(queries[i]["returns_srcid"] + ".jpg").unlink()
+                    target_dir.joinpath(queries[i]["returns_srcid"] + ".jpgw").unlink()
 
         src = Source(datahub=Datahub.File, datadir=target_dir)
         with self.assertRaises(NotImplementedError, msg=f"download_quicklook not supported for Datahub.File."):
