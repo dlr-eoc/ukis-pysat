@@ -20,7 +20,7 @@ def env_get(key: str) -> str:
 
 
 @contextlib.contextmanager
-def get_sentinel_scene_from_dir(indir: Union[str, Path]) -> Iterator[Tuple[str, str]]:
+def get_sentinel_scene_from_dir(indir: Union[str, Path]) -> Iterator[Tuple[Path, str]]:
     """Scan directory for s1 scenes, unzips them if necessary. Tested with Sentinel-1, -2 & -3.
 
     :param indir: path to zipped S1 scene or directory with S1 scene
@@ -32,7 +32,7 @@ def get_sentinel_scene_from_dir(indir: Union[str, Path]) -> Iterator[Tuple[str, 
     """
 
     if isinstance(indir, str):
-        indir: Path = Path(indir)
+        indir = Path(indir)
     pattern: Pattern[str] = compile("^S[1-3]._+")
 
     for full_path in indir.iterdir():
@@ -43,7 +43,6 @@ def get_sentinel_scene_from_dir(indir: Union[str, Path]) -> Iterator[Tuple[str, 
         if full_path.suffix == ".zip":
             cwd: Path = Path.cwd()
             with tempfile.TemporaryDirectory() as td:
-                td: Path = Path(td)
                 os.chdir(td)
                 try:
                     with zipfile.ZipFile(full_path) as z:
