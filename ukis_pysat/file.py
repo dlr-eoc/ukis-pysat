@@ -3,11 +3,11 @@
 import contextlib
 import os
 import re
-import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime, timezone
+from pathlib import Path
 
 
 def env_get(key):
@@ -25,32 +25,32 @@ def get_sentinel_scene_from_dir(indir):
     :param indir: path to zipped S1 scene or directory with S1 scene
     :yields: full_path (directory with scene, str), ident (filename of scene, str)
 
-    >>> with get_sentinel_scene_from_dir(os.path.join(r"..", "tests", "testfiles")) as (full_path, ident):
-    ...     print(ident)
+    >>> with get_sentinel_scene_from_dir(Path(__file__).parents[1] / "tests/testfiles") as (fp, name):
+    ...     print(name)
     S1M_hello_from_inside
     """
+    if isinstance(indir, str):
+        indir = Path(indir)
     pattern = re.compile("^S[1-3]._+")
 
-    for entry in os.listdir(indir):
-        full_path = os.path.join(indir, entry)
-
-        ident = os.path.splitext(os.path.basename(full_path))[0]
+    for full_path in indir.iterdir():
+        ident = full_path.stem
         if not pattern.match(ident):
             continue
 
-        if full_path.endswith(".zip"):
-            cwd = os.getcwd()
-            scene_zip = os.path.abspath(full_path)
+        if full_path.suffix == ".zip":
+            cwd = Path.cwd()
             with tempfile.TemporaryDirectory() as td:
+                td = Path(td)
                 os.chdir(td)
                 try:
-                    with zipfile.ZipFile(scene_zip) as z:
+                    with zipfile.ZipFile(full_path) as z:
                         z.extractall()
                         with get_sentinel_scene_from_dir(td) as res:
                             yield res
                 finally:
                     os.chdir(cwd)
-        elif os.path.isdir(full_path):
+        elif full_path.is_dir():
             yield full_path, ident
 
 
@@ -124,7 +124,7 @@ def get_footprint_from_manifest(xml_path):
     :param xml_path: path to manifest.safe
     :return: shapely polygon
 
-    >>> get_footprint_from_manifest(os.path.join(r"../tests/testfiles/", "manifest.safe")).wkt
+    >>> get_footprint_from_manifest(Path(__file__).parents[1] / "tests/testfiles/manifest.safe").wkt
     'POLYGON ((149.766922 -24.439564, 153.728622 -23.51771, 154.075058 -24.737713, 150.077042 -25.668921, 149.766922 -24.439564))'
     """
     try:
@@ -151,7 +151,7 @@ def get_origin_from_manifest(xml_path):
     :param xml_path: path to manifest.safe
     :return: country of origin
 
-    >>> get_origin_from_manifest(os.path.join(r"../tests/testfiles/", "manifest.safe"))
+    >>> get_origin_from_manifest(Path(__file__).parents[1] / "tests/testfiles/manifest.safe")
     'United Kingdom'
     """
     tree = ET.parse(xml_path)
@@ -168,7 +168,7 @@ def get_ipf_from_manifest(xml_path):
     :param xml_path: path to manifest.safe
     :return: ipf version (float)
 
-    >>> get_ipf_from_manifest(os.path.join(r"../tests/testfiles/", "manifest.safe"))
+    >>> get_ipf_from_manifest(Path(__file__).parents[1] / "tests/testfiles/manifest.safe")
     2.82
     """
     tree = ET.parse(xml_path)
@@ -186,12 +186,14 @@ def get_pixel_spacing(scenedir, polarization="HH"):
     :param polarization: str (default: 'HH')
     :return: tuple with pixel spacing in meters and degrees as floats
 
-    >>> get_pixel_spacing(r"../tests/testfiles/")
+    >>> get_pixel_spacing(Path(__file__).parents[1] / "tests/testfiles")
     (40.0, 0.0003593261136478086)
     """
-    for entry in os.listdir(os.path.join(scenedir, "annotation")):
-        if entry.endswith(".xml") and entry.split("-")[3] == polarization.lower():
-            tree = ET.parse(os.path.join(scenedir, "annotation", entry))
+    if isinstance(scenedir, str):
+        scenedir = Path(scenedir)
+    for path_to_file in scenedir.joinpath("annotation").iterdir():
+        if path_to_file.suffix == ".xml" and path_to_file.name.split("-")[3] == polarization.lower():
+            tree = ET.parse(path_to_file)
             root = tree.getroot()
             for elem in root.iter("imageInformation"):
                 for child in elem.iter():
@@ -209,8 +211,8 @@ def get_proj_string(footprint):
     :param footprint: shapely polygon
     :return: string with information about projection
 
-    >>> get_proj_string(get_footprint_from_manifest(r"../tests/testfiles/"))
-    +proj=utm +zone=56J, +ellps=WGS84 +datum=WGS84 +units=m +no_defs
+    >>> get_proj_string(get_footprint_from_manifest(Path(__file__).parents[1] / "tests/testfiles/manifest.safe"))
+    '+proj=utm +zone=56J, +ellps=WGS84 +datum=WGS84 +units=m +no_defs'
     """
     try:
         import utm
