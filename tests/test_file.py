@@ -1,3 +1,4 @@
+import os
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -5,6 +6,7 @@ from pathlib import Path
 import ukis_pysat.file as psf
 
 path_testfiles = Path(__file__).parents[0] / "testfiles"
+str_path = os.path.join(os.path.dirname(__file__), "testfiles")
 
 
 class FileTest(unittest.TestCase):
@@ -14,6 +16,9 @@ class FileTest(unittest.TestCase):
 
     def test_get_sentinel_scene_from_dir(self):
         with psf.get_sentinel_scene_from_dir(path_testfiles) as (full_path, ident):
+            self.assertEqual("S1M_hello_from_inside", ident)
+
+        with psf.get_sentinel_scene_from_dir(str_path) as (full_path, ident):
             self.assertEqual("S1M_hello_from_inside", ident)
 
         with psf.get_sentinel_scene_from_dir(path_testfiles.joinpath("another_scene")) as (full_path, ident):
@@ -96,6 +101,8 @@ class FileTest(unittest.TestCase):
 
     def test_get_pixel_spacing(self):
         self.assertEqual(psf.get_pixel_spacing(path_testfiles), (40.0, 0.0003593261136478086))
+
+        self.assertEqual(psf.get_pixel_spacing(str_path), (40.0, 0.0003593261136478086))
 
     def test_get_proj_string(self):
         self.assertEqual(
