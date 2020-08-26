@@ -86,12 +86,13 @@ def get_polarization_from_s1_filename(filename: str, dual: bool = False) -> Unio
         return polarization
 
 
-def get_ts_from_sentinel_filename(filename: str, start_date: bool = True) -> datetime:
+def get_ts_from_sentinel_filename(filename: str, start_date: bool = True, dformat: str = "%Y%m%dT%H%M%S") -> datetime:
     """Get timestamp from the filename of a Sentinel scene, according to naming conventions.
     Currently works for S1, S2 & S3.
 
     :param  filename: top-level SENTINEL product folder or file name
     :param start_date: boolean (default: True), False is Stop Date, optional
+    :param dformat: str, (default: %Y%m%dT%H%M%S)
     :return: datetime.datetime object with timezone information
 
     >>> get_ts_from_sentinel_filename("S1M_BB_TTTR_LFPP_20200113T074619_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip")
@@ -106,17 +107,17 @@ def get_ts_from_sentinel_filename(filename: str, start_date: bool = True) -> dat
     datetime.datetime(2020, 1, 13, 7, 46, 19, tzinfo=datetime.timezone.utc)
     """
     if filename.startswith("S2"):
-        return datetime.strptime(filename.split("_")[2], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+        return datetime.strptime(filename.split("_")[2], dformat).replace(tzinfo=timezone.utc)
     elif filename.startswith("S1"):
         if start_date:
-            return datetime.strptime(filename.split("_")[4], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+            return datetime.strptime(filename.split("_")[4], dformat).replace(tzinfo=timezone.utc)
         else:
-            return datetime.strptime(filename.split("_")[5], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+            return datetime.strptime(filename.split("_")[5], dformat).replace(tzinfo=timezone.utc)
     else:
         if start_date:
-            return datetime.strptime(filename[16:31], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+            return datetime.strptime(filename[16:31], dformat).replace(tzinfo=timezone.utc)
         else:
-            return datetime.strptime(filename[32:47], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+            return datetime.strptime(filename[32:47], dformat).replace(tzinfo=timezone.utc)
 
 
 def get_footprint_from_manifest(xml_path: Union[str, Path]) -> Any:
