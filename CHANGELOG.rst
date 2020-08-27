@@ -21,6 +21,7 @@ Added
 - ``raster.Image()``: Alter image array #67
 - ``raster.Image()``: Target align option for `warp()` #60
 - ``raster.Image()``: Pass driver specific kwargs to `write_to_file()` #74
+- ``file.get_ts_from_sentinel_filename()``: possibility to choose date format.
 
 Fixed
 *****
