@@ -15,6 +15,10 @@ something was changed
 
 [master]  (2020-**-**)
 ----------------------
+
+[0.6.0]  (2020-08-28)
+----------------------
+
 Added
 *****
 - ``raster.Image()``: With Statement Context Manager for Image #45
@@ -91,9 +95,6 @@ Added
 *****
 - ``download.Source()``: support for local metadata queries #6
 
-Fixed
-*****
-
 Changed
 *******
 - split PyPI package into subsets to not require all dependencies for every installation #16
@@ -133,4 +134,5 @@ Changed
 
 [0.1.0]  (2020-04-29)
 ---------------------
+
 - first release
