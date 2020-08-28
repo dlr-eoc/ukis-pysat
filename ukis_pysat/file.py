@@ -118,14 +118,14 @@ def get_ts_from_sentinel_filename(filename, start_date=True):
             return datetime.strptime(filename[32:47], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
 
 
-def get_ESA_date_from_datetime(dt: datetime, dformat: str = "%Y%m%dT%H%M%S") -> str:
+def get_sat_ts_from_datetime(dt: datetime, dformat: str = "%Y%m%dT%H%M%S") -> str:
     """Get ESA timestamp string (used in their filenames) from datetime object.
 
     :param dt: datetime.datetime object
     :param dformat: : str, (default: %Y%m%dT%H%M%S)
     :return: ESA timestamp as string
 
-    >>> get_ESA_date_from_datetime(datetime(2020, 1, 13, 7, 46, 19, tzinfo=timezone.utc)
+    >>> get_sat_ts_from_datetime(datetime(2020, 1, 13, 7, 46, 19, tzinfo=timezone.utc)
     '20200113T074619'
     """
     return dt.strftime(dformat)
