@@ -16,6 +16,11 @@ something was changed
 [master]  (2020-**-**)
 ----------------------
 
+Added
+*****
+- ``file``: added to_ESA_date() function #80
+
+
 [0.6.0]  (2020-08-28)
 ----------------------
 
@@ -42,7 +47,7 @@ Changed
 
 Removed
 *******
-``file``: removed `pack()` and `unpack()` #57
+- ``file``: removed `pack()` and `unpack()` #57
 
 
 [0.5.0]  (2020-07-03)
