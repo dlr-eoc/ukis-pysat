@@ -118,6 +118,19 @@ def get_ts_from_sentinel_filename(filename, start_date=True):
             return datetime.strptime(filename[32:47], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
 
 
+def get_sat_ts_from_datetime(dt: datetime, dformat: str = "%Y%m%dT%H%M%S") -> str:
+    """Get ESA timestamp string (used in their filenames) from datetime object.
+
+    :param dt: datetime.datetime object
+    :param dformat: : str, (default: %Y%m%dT%H%M%S)
+    :return: ESA timestamp as string
+
+    >>> get_sat_ts_from_datetime(datetime(2020, 1, 13, 7, 46, 19, tzinfo=timezone.utc)
+    '20200113T074619'
+    """
+    return dt.strftime(dformat)
+
+
 def get_footprint_from_manifest(xml_path):
     """Return a shapely polygon with footprint of scene, tested for Sentinel-1.
 
