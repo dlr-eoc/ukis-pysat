@@ -19,6 +19,7 @@ something was changed
 Added
 *****
 - ``file``: added to_ESA_date() function #80
+- ``raster``: added nodata value upon dataset creation with numpy arrays #82
 
 
 [0.6.0]  (2020-08-28)

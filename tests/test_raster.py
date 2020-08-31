@@ -109,6 +109,17 @@ class DataTest(unittest.TestCase):
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
         img_last.close()
 
+    def test_arr_nodata(self):
+        array = np.ones((1, 385, 502))
+        array[0, 0, 0] = 0
+
+        img_nodata = Image(
+            array, crs=self.img.dataset.crs, transform=self.img.dataset.transform, nodata=0
+        )
+
+        self.assertEqual(img_nodata.dataset.nodata, 0.0)
+
+
     def test_set_array(self):
         img = Image(TEST_FILE, dimorder="last")
         img.arr = img.arr + 1
