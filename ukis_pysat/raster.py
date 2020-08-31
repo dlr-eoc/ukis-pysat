@@ -36,7 +36,8 @@ class Image:
         :param dimorder: Order of channels or bands 'first' or 'last' (default: 'first')
         :param crs: Coordinate reference system used when creating form array. If 'data' is np.ndarray this is required (default: None)
         :param transform: Affine transformation mapping the pixel space to geographic space. If 'data' is np.ndarray this is required (default:None)
-        :param nodata: nodata value, optional
+        :param nodata: nodata value used when creating form array, optional (default: None)
+
         """
         if dimorder in ("first", "last"):
             self.dimorder = dimorder
