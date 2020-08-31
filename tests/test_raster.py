@@ -117,7 +117,7 @@ class DataTest(unittest.TestCase):
             array, crs=self.img.dataset.crs, transform=self.img.dataset.transform, nodata=0
         )
 
-        self.assertEqual(img_nodata.dataset.nodata, 0.0)
+        self.assertEqual(img_nodata.dataset.nodata, 0)
 
 
     def test_set_array(self):
