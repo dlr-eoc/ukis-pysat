@@ -110,15 +110,11 @@ class DataTest(unittest.TestCase):
         img_last.close()
 
     def test_arr_nodata(self):
-        array = np.ones((1, 385, 502))
-        array[0, 0, 0] = 0
+        array = np.ones((3, 385, 502))
 
-        img_nodata = Image(
-            array, crs=self.img.dataset.crs, transform=self.img.dataset.transform, nodata=0
-        )
-
-        self.assertEqual(img_nodata.dataset.nodata, 0)
-
+        with Image(array, crs=self.img.dataset.crs, transform=self.img.dataset.transform, nodata=0.0) as img_nodata:
+            self.assertEqual(img_nodata.dataset.nodata, 0.0)
+            self.assertEqual(img_nodata.dataset.nodatavals, (0.0, 0.0, 0.0))
 
     def test_set_array(self):
         img = Image(TEST_FILE, dimorder="last")

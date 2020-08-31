@@ -16,6 +16,9 @@ something was changed
 [master]  (2020-**-**)
 ----------------------
 
+[0.6.1]  (2020-08-31)
+----------------------
+
 Added
 *****
 - ``file``: added to_ESA_date() function #80
