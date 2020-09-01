@@ -58,7 +58,7 @@ class DataTest(unittest.TestCase):
 
     def test_dimorder_error(self):
         with self.assertRaises(TypeError):
-            img_first = Image(TEST_FILE, dimorder="middle")
+            Image(TEST_FILE, dimorder="middle")
 
     def test_arr(self):
         img_first = Image(TEST_FILE, dimorder="first")
@@ -117,10 +117,11 @@ class DataTest(unittest.TestCase):
             self.assertEqual(img_nodata.dataset.nodatavals, (0.0, 0.0, 0.0))
 
     def test_set_array(self):
-        img = Image(TEST_FILE, dimorder="last")
-        img.arr = img.arr + 1
+        with Image(TEST_FILE, dimorder="last") as im:
+            np.putmask(im.arr, im.arr > 0, 0)
+            im.arr = im.arr + 1
 
-        self.assertTrue(np.array_equal(img.arr, np.ones(shape=img.arr.shape)))
+            self.assertTrue(np.array_equal(im.arr, np.ones(shape=im.arr.shape)))
 
     def test_set_array_error(self):
         img_first = Image(TEST_FILE, dimorder="first")
@@ -137,10 +138,8 @@ class DataTest(unittest.TestCase):
 
     def test_get_valid_data_bbox(self):
         self.assertEqual(
-            self.img.get_valid_data_bbox(), (11.896863892, 51.515176657, 11.896863892, 51.515176657),
-        )
-        self.assertEqual(
-            self.img.get_valid_data_bbox(nodata=1), (11.896863892, 51.446545369, 11.9578595, 51.515176657),
+            self.img.get_valid_data_bbox(nodata=0.0),
+            (11.898660522574374, 51.51158339584816, 11.900457153148748, 51.51338002642408),
         )
 
     def test_mask_image(self):

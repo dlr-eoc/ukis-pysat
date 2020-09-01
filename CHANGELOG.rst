@@ -16,6 +16,13 @@ something was changed
 [master]  (2020-**-**)
 ----------------------
 
+[0.6.2]  (2020-09-02)
+----------------------
+
+Fixed
+*****
+- ``raster.get_valid_data_bbox()``: was using the wrong transform #84
+
 Added
 *****
 - ``file``: usage of type hints #76
