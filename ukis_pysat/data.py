@@ -53,7 +53,7 @@ class Source:
             else:
                 self.api = datadir
                 if datadir_substr is None:
-                    self.api_substr = datadir_substr = [""]
+                    self.api_substr = [""]
                 else:
                     self.api_substr = datadir_substr
 

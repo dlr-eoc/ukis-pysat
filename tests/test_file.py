@@ -93,19 +93,27 @@ class FileTest(unittest.TestCase):
             "POLYGON ((149.766922 -24.439564, 153.728622 -23.51771, 154.075058 -24.737713, 150.077042 "
             "-25.668921, 149.766922 -24.439564))",
         )
+        with self.assertRaises(KeyError, msg="Footprint not found"):
+            psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest_bad.safe"))
 
     def test_get_origin_from_manifest(self):
         self.assertEqual(
             psf.get_origin_from_manifest(path_testfiles.joinpath("manifest.safe")), "United Kingdom",
         )
+        with self.assertRaises(KeyError, msg="Country of origin not found."):
+            psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest_bad.safe"))
 
     def test_get_ipf_from_manifest(self):
         self.assertEqual(
             psf.get_ipf_from_manifest(path_testfiles.joinpath("manifest.safe")), 2.82,
         )
+        with self.assertRaises(KeyError, msg="IPF Version not found."):
+            psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest_bad.safe"))
 
     def test_get_pixel_spacing(self):
         self.assertEqual(psf.get_pixel_spacing(path_testfiles), (40.0, 0.0003593261136478086))
+        with self.assertRaises(KeyError, msg="Pixel Spacing not found."):
+            psf.get_pixel_spacing(path_testfiles, polarization="FF")
 
         self.assertEqual(psf.get_pixel_spacing(str_path), (40.0, 0.0003593261136478086))
 
