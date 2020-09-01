@@ -19,7 +19,16 @@ something was changed
 Added
 *****
 - ``file``: usage of type hints #76
+
+
+[0.6.1]  (2020-08-31)
+----------------------
+
+Added
+*****
+- ``file``: added to_ESA_date() function #80
 - ``file.get_ts_from_sentinel_filename()``: possibility to choose date format
+- ``raster``: added nodata value upon dataset creation with numpy arrays #82
 
 
 [0.6.0]  (2020-08-28)
@@ -48,7 +57,7 @@ Changed
 
 Removed
 *******
-``file``: removed `pack()` and `unpack()` #57
+- ``file``: removed `pack()` and `unpack()` #57
 
 
 [0.5.0]  (2020-07-03)

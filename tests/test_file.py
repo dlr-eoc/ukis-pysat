@@ -82,6 +82,11 @@ class FileTest(unittest.TestCase):
             datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
 
+    def test_get_ESA_date_from_datetime(self):
+        self.assertEqual(
+            psf.get_sat_ts_from_datetime(datetime(2020, 1, 13, 7, 46, 19, tzinfo=timezone.utc)), "20200113T074619"
+        )
+
     def test_get_footprint_from_manifest(self):
         self.assertEqual(
             psf.get_footprint_from_manifest(path_testfiles.joinpath("manifest.safe")).wkt,

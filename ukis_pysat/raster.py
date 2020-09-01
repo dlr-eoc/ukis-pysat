@@ -30,12 +30,14 @@ class Image:
 
     da_arr = None
 
-    def __init__(self, data, dimorder="first", crs=None, transform=None):
+    def __init__(self, data, dimorder="first", crs=None, transform=None, nodata=None):
         """
         :param data: rasterio.io.DatasetReader or path to raster or np.ndarray of shape (bands, rows, columns)
         :param dimorder: Order of channels or bands 'first' or 'last' (default: 'first')
         :param crs: Coordinate reference system used when creating form array. If 'data' is np.ndarray this is required (default: None)
         :param transform: Affine transformation mapping the pixel space to geographic space. If 'data' is np.ndarray this is required (default:None)
+        :param nodata: nodata value used when creating form array, optional (default: None)
+
         """
         if dimorder in ("first", "last"):
             self.dimorder = dimorder
@@ -60,7 +62,7 @@ class Image:
             else:
                 self.__arr = reshape_as_raster(data)
             self.dataset = None
-            self.__update_dataset(crs, transform)
+            self.__update_dataset(crs, transform, nodata=nodata)
         else:
             raise TypeError("dataset must be of type rasterio.io.DatasetReader, str or np.ndarray")
 
