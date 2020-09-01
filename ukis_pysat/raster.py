@@ -104,13 +104,14 @@ class Image:
         :return: tuple with valid data bounds
         """
         valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
-        return windows.bounds(valid_data_window, windows.transform(valid_data_window, self.dataset.transform))
+        return windows.bounds(valid_data_window, self.dataset.transform)
 
     def mask(self, bbox, crop=True, pad=False, fill=False, mode="constant", constant_values=0):
         """Mask raster to bbox.
 
         :param bbox: bounding box of type tuple or Shapely Polygon
         :param crop: bool, see rasterio.mask. Optional, (default: True)
+        :param pad: deprecated
         :param fill: enforce raster to cover bbox. if raster extent is smaller than bbox it will be filled according to
             mode and constant_values parameters. Optional (default: False)
         :param mode: str, how to fill, see rasterio.pad. Optional (default: 'constant')
