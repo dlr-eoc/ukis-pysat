@@ -7,8 +7,8 @@ import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from re import compile, Pattern
-from typing import List, Union, Dict, Iterator, Tuple, Any
+from re import compile
+from typing import List, Union, Dict, Iterator, Tuple, Any, Pattern
 
 
 def env_get(key: str) -> str:
