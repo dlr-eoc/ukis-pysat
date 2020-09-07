@@ -52,6 +52,12 @@ class DataTest(unittest.TestCase):
         self.assertTrue(np.array_equal(self.img.arr, img.arr))
         img.close()
 
+    def test_init_2dim(self):
+        with Image(np.ones(shape=(385, 502)), crs=self.img.dataset.crs, transform=self.img.dataset.transform) as img:
+            self.assertEqual(img.arr.ndim, 3)
+            self.assertEqual(len(img.arr), 1)
+            self.assertEqual(img.arr.shape, (1, 385, 502))
+
     def test_init_with_arry_fail_missing_crs(self):
         with self.assertRaises(TypeError):
             Image(data=self.img.arr, crs=self.img.dataset.transform)
