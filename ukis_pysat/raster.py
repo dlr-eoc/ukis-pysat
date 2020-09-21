@@ -61,6 +61,10 @@ class Image:
                 self.__arr = data
             else:
                 self.__arr = reshape_as_raster(data)
+
+            if self.__arr.ndim == 2:
+                self.__arr = np.expand_dims(self.__arr, 0)  # always return 3D for consistency
+
             self.dataset = None
             self.__update_dataset(crs, transform, nodata=nodata)
         else:
@@ -195,15 +199,13 @@ class Image:
             "nodata": nodata,
             "height": self.__arr.shape[-2],
             "width": self.__arr.shape[-1],
-            "count": 1 if self.__arr.ndim == 2 else self.__arr.shape[0],
+            "count": self.__arr.shape[0],
             "crs": crs,
             "transform": transform,
         }
 
         memfile = MemoryFile()
         with memfile.open(**meta) as ds:
-            if self.__arr.ndim == 2:
-                self.__arr = np.expand_dims(self.__arr, 0)  # always return 3D for consistency
             ds.write(self.__arr)
         self.dataset = memfile.open()
         memfile.close()

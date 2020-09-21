@@ -23,9 +23,8 @@ class DataTest(unittest.TestCase):
         self.img.close()
 
     def test_init(self):
-        img = Image(self.img.dataset)
-        self.assertTrue(np.array_equal(self.img.arr, img.arr))
-        img.close()
+        with Image(self.img.dataset) as img:
+            self.assertTrue(np.array_equal(self.img.arr, img.arr))
 
     def test_context(self):
         with Image(TEST_FILE) as raster_file:
