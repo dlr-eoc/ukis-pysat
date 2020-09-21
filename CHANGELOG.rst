@@ -16,12 +16,16 @@ something was changed
 [master]  (2020-**-**)
 ----------------------
 
+Added
+*****
+- ``raster``: possibility to init with 2D array #88
+
 [0.6.3]  (2020-09-02)
 ----------------------
 
 Fixed
 *****
-- ``file`` imported Pattern of module typing
+- ``file``: imported Pattern of module typing
 
 [0.6.2]  (2020-09-02)
 ----------------------

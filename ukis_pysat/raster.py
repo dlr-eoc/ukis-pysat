@@ -61,6 +61,10 @@ class Image:
                 self.__arr = data
             else:
                 self.__arr = reshape_as_raster(data)
+
+            if self.__arr.ndim == 2:
+                self.__arr = np.expand_dims(self.__arr, 0)  # always return 3D for consistency
+
             self.dataset = None
             self.__update_dataset(crs, transform, nodata=nodata)
         else:
