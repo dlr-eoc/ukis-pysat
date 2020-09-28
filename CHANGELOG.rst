@@ -18,6 +18,7 @@ something was changed
 
 Added
 *****
+- ``file``: read and return booleans from env #90
 - ``raster``: possibility to init with 2D array #88
 
 [0.6.3]  (2020-09-02)

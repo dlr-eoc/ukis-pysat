@@ -14,6 +14,11 @@ class FileTest(unittest.TestCase):
         with self.assertRaises(KeyError, msg=f"No environment variable Key found"):
             psf.env_get("Key")
 
+        os.environ["FUN"] = "True"
+        self.assertTrue(psf.env_get("FUN", boolean=True))
+        os.environ["ISITWEEKENDYET"] = "0"
+        self.assertFalse(psf.env_get("ISITWEEKENDYET", boolean=True))
+
     def test_get_sentinel_scene_from_dir(self):
         with psf.get_sentinel_scene_from_dir(path_testfiles) as (full_path, ident):
             self.assertEqual("S1M_hello_from_inside", ident)
