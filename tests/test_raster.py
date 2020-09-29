@@ -274,34 +274,31 @@ class DataTest(unittest.TestCase):
 
     def test_write_to_file(self):
         self.img.write_to_file(r"result.tif", np.uint16)
-        img2 = Image("result.tif")
-        self.assertTrue(np.array_equal(img2.arr, self.img.arr))
+        with Image("result.tif") as img2:
+            self.assertTrue(np.array_equal(img2.arr, self.img.arr))
 
-        img2.close()
         os.remove(r"result.tif")
 
         self.img.write_to_file(r"result.tif", "min", compress="lzw")
-        img2 = Image("result.tif")
-        self.assertEqual(img2.arr.dtype, "uint8")
-        self.assertEqual(img2.dataset.profile["compress"], "lzw")
+        with Image("result.tif") as img2:
+            self.assertEqual(img2.arr.dtype, "uint8")
+            self.assertEqual(img2.dataset.profile["compress"], "lzw")
 
-        img2.close()
         os.remove(r"result.tif")
 
         self.img.write_to_file(r"result.tif", np.uint8, compress="packbits", kwargs={"tiled": True})
-        img2 = Image("result.tif")
-        self.assertEqual(img2.arr.dtype, "uint8")
-        self.assertEqual(img2.dataset.profile["tiled"], True)
+        with Image("result.tif") as img2:
+            self.assertEqual(img2.arr.dtype, "uint8")
+            self.assertEqual(img2.dataset.profile["tiled"], True)
 
-        img2.close()
         os.remove(r"result.tif")
 
-        img3 = Image(self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform)
-        img3.write_to_file(r"result.tif", np.uint16)
-        img3.close()
-        img4 = Image("result.tif")
-        self.assertTrue(np.array_equal(img4.arr, self.img.arr))
-        img4.close()
+        with Image(self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform) as img3:
+            img3.write_to_file(r"result.tif", np.uint16)
+
+        with Image("result.tif") as img4:
+            self.assertTrue(np.array_equal(img4.arr, self.img.arr))
+
         os.remove(r"result.tif")
 
 

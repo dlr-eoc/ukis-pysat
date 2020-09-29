@@ -11,9 +11,16 @@ from re import compile
 from typing import List, Union, Dict, Iterator, Tuple, Any, Pattern
 
 
-def env_get(key: str) -> str:
-    """get an environment variable or fail with a meaningful error message"""
+def env_get(key: str, boolean: bool = False) -> Union[str, bool]:
+    """get an environment variable or fail with a meaningful error message
+
+    :param key: name of environment variable
+    :param boolean: bool (default: False), optional. Returns true if key in ["true", "y", "yes", "1"].
+    :return: str or boolean
+    """
     try:
+        if boolean:
+            return os.environ[key].lower() in ["true", "y", "yes", "1"]
         return os.environ[key]
     except KeyError:
         raise KeyError(f"No environment variable {key} found")
