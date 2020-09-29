@@ -28,24 +28,24 @@ def get_version(rel_path):
 extras_require = {
     "data": [
         "fiona~=1.8.11",
-        "landsatxplore==0.6",
-        "numpy~=1.18.1",
-        "pyproj~=2.6.0",
-        "sentinelsat~=0.13",
-        "requests~=2.23.0",
-        "pillow~=7.1.2",
-        "pyfields~=1.1.4",
+        "landsatxplore==0.8",
+        "numpy~=1.19.2",
+        "pyproj~=2.6.1.post1",
+        "sentinelsat~=0.14",
+        "requests~=2.24.0",
+        "pillow~=7.2.0",
+        "pyfields~=1.6.0",
         "pylandsat==0.4",
         "python-dateutil~=2.8.1",
-        "shapely~=1.7.0",
+        "shapely~=1.7.1",
     ],
-    "raster": ["numpy~=1.18.1", "rasterio!=1.1.5", "rio_toa==0.3.0", "shapely~=1.7.0",],
+    "raster": ["numpy~=1.19.2", "rasterio~=1.1.6", "rio_toa==0.3.0", "shapely~=1.7.1",],
 }
 extras_require["complete"] = list(set([v for req in extras_require.values() for v in req]))
 
 extras_require["dev"] = sorted(
     extras_require["complete"]
-    + ["sphinx >= 1.3", "sphinx_rtd_theme", "pandas~=1.0.3", "dask[array]~=2.14.0", "utm==0.5.0",]
+    + ["sphinx >= 1.3", "sphinx_rtd_theme", "pandas~=1.1.2", "dask[array]~=2.28.0", "utm==0.6.0",]
 )
 
 setup(
