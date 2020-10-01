@@ -9,14 +9,14 @@ from ukis_pysat.members import Platform
 try:
     import numpy as np
     import rasterio
+    import rasterio.dtypes
     import rasterio.mask
-    from rasterio import windows
-    from rasterio.dtypes import get_minimum_dtype
+    import rasterio.plot
+    import rasterio.warp
+    import rasterio.windows
+    import shapely.geometry
     from rasterio.io import MemoryFile
-    from rasterio.plot import reshape_as_image, reshape_as_raster
-    from rasterio.warp import calculate_default_transform, reproject
     from rio_toa import reflectance, brightness_temp, toa_utils
-    from shapely.geometry import box, polygon
 except ImportError as e:
     msg = (
         "ukis_pysat.raster dependencies are not installed.\n\n"
@@ -60,7 +60,7 @@ class Image:
             if dimorder == "first":
                 self.__arr = data
             else:
-                self.__arr = reshape_as_raster(data)
+                self.__arr = rasterio.plot.reshape_as_raster(data)
 
             if self.__arr.ndim == 2:
                 self.__arr = np.expand_dims(self.__arr, 0)  # always return 3D for consistency
@@ -79,7 +79,7 @@ class Image:
         if self.dimorder == "first":
             return self.__arr
         else:
-            return reshape_as_image(self.__arr)
+            return rasterio.plot.reshape_as_image(self.__arr)
 
     @arr.setter
     def arr(self, arr_altered):
@@ -90,7 +90,7 @@ class Image:
             raise TypeError("altered array must be of type np.ndarray")
 
         if self.dimorder == "last":
-            arr_altered = reshape_as_raster(arr_altered)
+            arr_altered = rasterio.plot.reshape_as_raster(arr_altered)
 
         if not arr_altered.shape[-2:] == self.__arr.shape[-2:]:
             raise ValueError(
@@ -107,8 +107,8 @@ class Image:
         :param nodata: nodata value, optional (default: 0)
         :return: tuple with valid data bounds
         """
-        valid_data_window = windows.get_data_window(self.__arr, nodata=nodata)
-        return windows.bounds(valid_data_window, self.dataset.transform)
+        valid_data_window = rasterio.windows.get_data_window(self.__arr, nodata=nodata)
+        return rasterio.windows.bounds(valid_data_window, self.dataset.transform)
 
     def mask(self, bbox, crop=True, pad=False, fill=False, mode="constant", constant_values=0):
         """Mask raster to bbox.
@@ -134,10 +134,10 @@ class Image:
                 # only pad raster if it is smaller than bbox
                 self.pad(pad_width, mode, constant_values)
 
-        if isinstance(bbox, polygon.Polygon):
+        if isinstance(bbox, shapely.geometry.polygon.Polygon):
             self.__arr, transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
         elif isinstance(bbox, tuple):
-            self.__arr, transform = rasterio.mask.mask(self.dataset, [box(*bbox)], crop=crop)
+            self.__arr, transform = rasterio.mask.mask(self.dataset, [shapely.geometry.box(*bbox)], crop=crop)
         else:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
@@ -150,7 +150,7 @@ class Image:
         :param bbox: bounding box of type tuple or Shapely Polygon.
         :return: pad width in pixels, int.
         """
-        if isinstance(bbox, polygon.Polygon):
+        if isinstance(bbox, shapely.geometry.polygon.Polygon):
             bbox = bbox.bounds
         elif isinstance(bbox, tuple):
             pass
@@ -229,7 +229,7 @@ class Image:
 
         else:
             if resolution:
-                transform, width, height = calculate_default_transform(
+                transform, width, height = rasterio.warp.calculate_default_transform(
                     self.dataset.crs,
                     dst_crs,
                     self.dataset.width,
@@ -238,13 +238,13 @@ class Image:
                     resolution=resolution,
                 )
             else:
-                transform, width, height = calculate_default_transform(
+                transform, width, height = rasterio.warp.calculate_default_transform(
                     self.dataset.crs, dst_crs, self.dataset.width, self.dataset.height, *self.dataset.bounds,
                 )
 
         destination = np.zeros((self.dataset.count, height, width), self.__arr.dtype)
 
-        self.__arr, transform = reproject(
+        self.__arr, transform = rasterio.warp.reproject(
             source=self.__arr,
             destination=destination,
             src_transform=self.dataset.transform,
@@ -386,9 +386,9 @@ class Image:
         rows = self.__arr.shape[-2]
         cols = self.__arr.shape[-1]
         offsets = product(range(0, cols, width), range(0, rows, height))
-        bounding_window = windows.Window(col_off=0, row_off=0, width=cols, height=rows)
+        bounding_window = rasterio.windows.Window(col_off=0, row_off=0, width=cols, height=rows)
         for col_off, row_off in offsets:
-            yield windows.Window(
+            yield rasterio.windows.Window(
                 col_off=col_off - overlap,
                 row_off=row_off - overlap,
                 width=width + 2 * overlap,
@@ -405,7 +405,7 @@ class Image:
         :return: Sliced numpy array, bounding box of array slice.
         """
         # access window bounds
-        bounds = windows.bounds(tile, self.dataset.transform)
+        bounds = rasterio.windows.bounds(tile, self.dataset.transform)
         return self.__arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
 
     def to_dask_array(self, chunk_size=(1, 6000, 6000)):
@@ -435,7 +435,7 @@ class Image:
             for more keyword arguments see gdal driver specifications, e.g. https://gdal.org/drivers/raster/gtiff.html
         """
         if type(dtype) == str and dtype == "min":
-            dtype = get_minimum_dtype(self.__arr)
+            dtype = rasterio.dtypes.get_minimum_dtype(self.__arr)
 
         profile = self.dataset.meta
         profile.update(
