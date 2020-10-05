@@ -16,6 +16,9 @@ something was changed
 [master]  (2020-**-**)
 ----------------------
 
+Changed
+*****
+- ``get_polarization_from_s1_filename()``: return type is now only ``str`` instead of ``Union[str, List[str]]``
 Added
 *****
 - ``file``: read and return booleans from env #90
