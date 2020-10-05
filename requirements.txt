@@ -1,5 +1,5 @@
 shapely~=1.7.1
-numpy~=1.19.2
+numpy~=1.19.1
 requests~=2.24.0
 rasterio~=1.1.6
 pillow~=7.2.0
