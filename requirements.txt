@@ -1,7 +1,7 @@
 shapely~=1.7.1
-numpy~=1.19.1
+numpy~=1.18.5
 requests~=2.24.0
-rasterio~=1.1.6
+rasterio~=1.1.7
 pillow~=7.2.0
 sentinelsat~=0.14
 landsatxplore==0.8
