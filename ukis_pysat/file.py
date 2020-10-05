@@ -62,13 +62,13 @@ def get_sentinel_scene_from_dir(indir: Union[str, Path]) -> Iterator[Tuple[Path,
             yield full_path, ident
 
 
-def get_polarization_from_s1_filename(filename: str, dual: bool = False) -> Union[str, List[str]]:
+def get_polarization_from_s1_filename(filename: str, dual: bool = False) -> str:
     """Get polarization from the filename of a Sentinel-1 scene.
     https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/naming-conventions.
 
     :param filename: top-level SENTINEL-1 product folder name
     :param dual: boolean (default: True), optional
-    :return: str or list
+    :return: str
 
     >>> get_polarization_from_s1_filename("MMM_BB_TTTR_1SDH_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip")
     'HH'
@@ -77,18 +77,18 @@ def get_polarization_from_s1_filename(filename: str, dual: bool = False) -> Unio
     >>> get_polarization_from_s1_filename("MMM_BB_TTTR_2SSV_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip")
     'VV'
     >>> get_polarization_from_s1_filename("MMM_BB_TTTR_1SDV_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip", True)
-    ['VV', 'VH']
+    'VV,VH'
     """
-    polarization_dict: Dict[str, Union[str, List[str]]] = {
+    polarization_dict: Dict[str, str] = {
         "SSV": "VV",
         "SSH": "HH",
-        "SDV": ["VV", "VH"],
-        "SDH": ["HH", "HV"],
+        "SDV": "VV,VH",
+        "SDH": "HH,HV",
     }
 
-    polarization: Union[str, List[str]] = polarization_dict[filename[13:16]]
-    if not dual and isinstance(polarization, list):
-        return polarization[0]
+    polarization: str = polarization_dict[filename[13:16]]
+    if not dual and ',' in polarization:
+        return polarization.split(',')[0]
     else:
         return polarization
 
