@@ -234,7 +234,10 @@ class DataTest(unittest.TestCase):
             img_dn.dn2toa(
                 platform=tests[i]["platform"], mtl_file=tests[i]["mtl_file"], wavelengths=tests[i]["wavelengths"]
             )
+
             self.assertTrue(np.array_equal(img_dn.arr, img_toa.arr))
+            img_dn.close()
+            img_toa.close()
 
         with self.assertRaises(AttributeError, msg=f"'mtl_file' has to be set if platform is {Platform.Landsat8}."):
             self.img.dn2toa(platform=Platform.Landsat8)
