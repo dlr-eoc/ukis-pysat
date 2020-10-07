@@ -248,15 +248,17 @@ class Source:
             # query EarthExplorer for srcid of product
             meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
             product_srcid = meta_src[0]["displayId"]
-            # download data from AWS
-            product = Product(product_srcid)
-            product.download(out_dir=target_dir, progressbar=False)
 
-            # compress download directory and remove original files
-            shutil.make_archive(
-                target_dir.joinpath(product_srcid), "zip", root_dir=target_dir.joinpath(product_srcid),
-            )
-            shutil.rmtree(target_dir.joinpath(product_srcid))
+            if not Path(target_dir.joinpath(product_srcid + ".zip")).exists():
+                # download data from AWS if file does not already exist
+                product = Product(product_srcid)
+                product.download(out_dir=target_dir, progressbar=False)
+
+                # compress download directory and remove original files
+                shutil.make_archive(
+                    target_dir.joinpath(product_srcid), "zip", root_dir=target_dir.joinpath(product_srcid),
+                )
+                shutil.rmtree(target_dir.joinpath(product_srcid))
 
         else:
             self.api.download(product_uuid, target_dir, checksum=True)
