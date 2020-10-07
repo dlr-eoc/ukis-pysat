@@ -160,6 +160,63 @@ class Source:
         # construct MetadataCollection from list of Metadata objects
         return MetadataCollection([self.construct_metadata(meta_src=m, platform=platform) for m in meta_src])
 
+    def query_metadata_srcid(self, platform, srcid):
+        """Queries satellite image metadata from data source by srcid.
+
+        :param platform: Image platform (<enum 'Platform'>).
+        :param srcid: Srcid of a specific product which is essentially its name (String).
+        :returns: Metadata of product that matches srcid (MetadataCollection object).
+        """
+        if self.src == Datahub.File:
+            # get all json files in datadir that match substr
+            meta_files = sorted(
+                [
+                    Path(dp).joinpath(f)
+                    for dp, dn, filenames in os.walk(self.api)
+                    for substr in self.api_substr
+                    for f in filenames
+                    if f.endswith(".json") and substr in f
+                ],
+                key=lambda path: str(path).lower(),
+            )
+
+            # filter metadata json files by srcid and construct MetadataCollection
+            meta_src = []
+            for meta_file in meta_files:
+                with open(meta_file) as f:
+                    m = json.load(f)
+                    try:
+                        self.construct_metadata(meta_src=m, platform=platform)
+                    except (json.decoder.JSONDecodeError, LookupError, TypeError) as e:
+                        raise ValueError(f"{meta_file.name} not a valid metadata file. {e}.")
+                    m_platform = m["properties"]["platformname"]
+                    m_srcid = m["properties"]["srcid"]
+                    if m_platform == platform.value and m_srcid == srcid:
+                        meta_src.append(m)
+            meta_src = MetadataCollection([self.construct_metadata(meta_src=m, platform=platform) for m in meta_src])
+
+        elif self.src == Datahub.EarthExplorer:
+            # query Earthexplorer for metadata by srcid and construct MetadataCollection
+            # NOTE: could not figure out how to directly query detailed metadata by srcid, therefore here we
+            # query first for scene acquisitiondate and footprint and use these to query detailed metadata.
+            meta_src = self.api.request(
+                "metadata",
+                **{"datasetName": platform.value, "entityIds": self.api.lookup(platform.value, srcid, inverse=True)},
+            )
+            date_from = meta_src[0]["acquisitionDate"].replace("-", "")
+            date_to = (datetime.datetime.strptime(date_from, '%Y%m%d') + datetime.timedelta(days=1)).strftime('%Y%m%d')
+            aoi = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
+            meta_src = self.query_metadata(platform=platform, date=(date_from, date_to), aoi=aoi).filter(
+                filter_dict={"srcid": srcid}, type="exact"
+            )
+
+        else:
+            # query Scihub for metadata by srcid and construct MetadataCollection
+            meta_src = self.api.to_geojson(self.api.query(identifier=srcid))["features"]
+            meta_src = MetadataCollection([self.construct_metadata(meta_src=m, platform=platform) for m in meta_src])
+
+        return meta_src
+
     def construct_metadata(self, meta_src, platform):
         """Constructs a metadata object that is harmonized across the different satellite image sources.
 

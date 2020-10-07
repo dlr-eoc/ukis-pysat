@@ -18,7 +18,6 @@ aoi_3857 = target_dir / "aoi_3857.geojson"
 aoi_wkt = "POLYGON((11.09 47.94, 11.06 48.01, 11.12 48.11, 11.18 48.11, 11.18 47.94, 11.09 47.94))"
 aoi_bbox = (11.90, 51.46, 11.94, 51.50)
 
-
 queries = [
     {
         "datahub": Datahub.File,
@@ -146,6 +145,20 @@ class DownloadTest(unittest.TestCase):
             self.assertEqual(returns_uuid, (queries[i]["returns_uuid"]))
             self.assertTrue(target_dir.joinpath(queries[i]["returns_srcid"] + ".json").is_file())
             target_dir.joinpath(queries[i]["returns_srcid"] + ".json").unlink()
+
+    # @unittest.skip("until API is reachable again")
+    # @unittest.skip("uncomment when you set ENVs with credentials")
+    def test_query_metadata_srcid(self):
+        for i in range(len(queries)):
+            with Source(datahub=queries[i]["datahub"], datadir=queries[i]["datadir"]) as src:
+                meta = src.query_metadata_srcid(
+                    platform=queries[i]["platform_name"],
+                    srcid=queries[i]["returns_srcid"],
+                )
+            returns_srcid = meta.to_geojson()[0]["properties"]["srcid"]
+            returns_uuid = meta.to_geojson()[0]["properties"]["srcuuid"]
+            self.assertEqual(returns_srcid, (queries[i]["returns_srcid"]))
+            self.assertEqual(returns_uuid, (queries[i]["returns_uuid"]))
 
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_image(self):
