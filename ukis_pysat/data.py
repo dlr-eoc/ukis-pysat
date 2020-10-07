@@ -306,7 +306,7 @@ class Source:
             meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
             product_srcid = meta_src[0]["displayId"]
 
-            if not Path(target_dir.joinpath(product_srcid + ".zip")).exists():
+            if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
                 # download data from AWS if file does not already exist
                 product = Product(product_srcid)
                 product.download(out_dir=target_dir, progressbar=False)
