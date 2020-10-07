@@ -19,11 +19,13 @@ something was changed
 Changed
 *****
 - ``get_polarization_from_s1_filename()``: return type is now only ``str`` instead of ``Union[str, List[str]] #92``
+- ``data``: download_image check if file exists #95
 
 Added
 *****
 - ``file``: read and return booleans from env #90
 - ``raster``: possibility to init with 2D array #88
+- ``data``: query_metadata_srcid() method and related test #96
 
 [0.6.3]  (2020-09-02)
 ----------------------
