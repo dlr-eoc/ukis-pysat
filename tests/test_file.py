@@ -52,7 +52,7 @@ class FileTest(unittest.TestCase):
             psf.get_polarization_from_s1_filename(
                 "MMM_BB_TTTR_1SDV_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip", True,
             ),
-            ["VV", "VH"],
+            "VV,VH",
         )
 
     def test_get_ts_from_sentinel_filename(self):
