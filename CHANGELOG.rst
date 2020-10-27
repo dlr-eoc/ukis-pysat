@@ -16,10 +16,8 @@ something was changed
 [master]  (2020-**-**)
 ----------------------
 
-Changed
-*****
-- ``get_polarization_from_s1_filename()``: return type is now only ``str`` instead of ``Union[str, List[str]] #92``
-- ``data``: download_image check if file exists #95
+[0.7.0]  (2020-10-30)
+---------------------
 
 Added
 *****
@@ -27,27 +25,32 @@ Added
 - ``raster``: possibility to init with 2D array #88
 - ``data``: query_metadata_srcid() method and related test #96
 
+Changed
+*****
+- ``get_polarization_from_s1_filename()``: return type is now only ``str`` instead of ``Union[str, List[str]] #92``
+- ``data``: download_image check if file exists #95
+
 [0.6.3]  (2020-09-02)
-----------------------
+---------------------
 
 Fixed
 *****
 - ``file``: imported Pattern of module typing
 
 [0.6.2]  (2020-09-02)
-----------------------
-
-Fixed
-*****
-- ``raster.get_valid_data_bbox()``: was using the wrong transform #84
+---------------------
 
 Added
 *****
 - ``file``: usage of type hints #76
 
+Fixed
+*****
+- ``raster.get_valid_data_bbox()``: was using the wrong transform #84
+
 
 [0.6.1]  (2020-08-31)
-----------------------
+---------------------
 
 Added
 *****
@@ -57,7 +60,7 @@ Added
 
 
 [0.6.0]  (2020-08-28)
-----------------------
+---------------------
 
 Added
 *****
@@ -86,7 +89,7 @@ Removed
 
 
 [0.5.0]  (2020-07-03)
-----------------------
+---------------------
 
 Added
 *****
@@ -105,7 +108,7 @@ Changed
 
 
 [0.4.0]  (2020-06-05)
-----------------------
+---------------------
 
 Added
 *****
@@ -129,7 +132,7 @@ Changed
 
 
 [0.3.0]  (2020-05-26)
-----------------------
+---------------------
 
 Added
 *****
@@ -144,7 +147,7 @@ Changed
 - updated README #6 #16
 
 [0.2.0]  (2020-05-13)
-----------------------
+---------------------
 
 Added
 *****
