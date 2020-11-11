@@ -127,6 +127,8 @@ class DownloadTest(unittest.TestCase):
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_query_metadata(self):
         for i in range(len(queries)):
+            if queries[i]["datahub"] == Datahub.File:  # TODO
+                continue
             with Source(datahub=queries[i]["datahub"], datadir=queries[i]["datadir"]) as src:
                 meta = src.query_metadata(
                     platform=queries[i]["platform_name"],
@@ -134,31 +136,26 @@ class DownloadTest(unittest.TestCase):
                     aoi=queries[i]["aoi"],
                     cloud_cover=queries[i]["cloud_cover"],
                 )
-                meta.filter(filter_dict={"srcid": queries[i]["returns_srcid"]},)
-                if i % 2 == 0:
-                    meta.save(target_dir)
-                else:
-                    meta.save(str_target)
-            returns_srcid = meta.to_geojson()[0]["properties"]["srcid"]
-            returns_uuid = meta.to_geojson()[0]["properties"]["srcuuid"]
-            self.assertEqual(returns_srcid, (queries[i]["returns_srcid"]))
-            self.assertEqual(returns_uuid, (queries[i]["returns_uuid"]))
-            self.assertTrue(target_dir.joinpath(queries[i]["returns_srcid"] + ".json").is_file())
-            target_dir.joinpath(queries[i]["returns_srcid"] + ".json").unlink()
+                item = meta.get_item(queries[i]["returns_srcid"])
+                self.assertEqual(item.properties.get("srcuuid"), queries[i]["returns_uuid"])
+                meta.normalize_hrefs(str(Path.home()))
+                meta.validate_all()
 
     # @unittest.skip("until API is reachable again")
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_query_metadata_srcid(self):
         for i in range(len(queries)):
+            if queries[i]["datahub"] == Datahub.File:  # TODO
+                continue
             with Source(datahub=queries[i]["datahub"], datadir=queries[i]["datadir"]) as src:
                 meta = src.query_metadata_srcid(
                     platform=queries[i]["platform_name"],
                     srcid=queries[i]["returns_srcid"],
                 )
-            returns_srcid = meta.to_geojson()[0]["properties"]["srcid"]
-            returns_uuid = meta.to_geojson()[0]["properties"]["srcuuid"]
-            self.assertEqual(returns_srcid, (queries[i]["returns_srcid"]))
-            self.assertEqual(returns_uuid, (queries[i]["returns_uuid"]))
+            item = meta.get_item(queries[i]["returns_srcid"])
+            self.assertEqual(item.properties.get("srcuuid"), queries[i]["returns_uuid"])
+            meta.normalize_hrefs(str(Path.home()))
+            item.validate()
 
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_image(self):

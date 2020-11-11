@@ -2,19 +2,22 @@ Changelog
 =========
 
 Added
-~~~~~
+*****
 something was added
 
 Fixed
-~~~~~
+*****
 something was fixed
 
 Changed
-~~~~~~~
+*******
 something was changed
 
 [master]  (2020-**-**)
 ----------------------
+Changed
+*******
+- ``data``: metadata as STAC items and collections #98
 
 [0.7.0]  (2020-10-30)
 ---------------------
@@ -26,7 +29,7 @@ Added
 - ``data``: query_metadata_srcid() method and related test #96
 
 Changed
-*****
+*******
 - ``get_polarization_from_s1_filename()``: return type is now only ``str`` instead of ``Union[str, List[str]] #92``
 - ``data``: download_image check if file exists #95
 
