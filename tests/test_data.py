@@ -2,6 +2,7 @@ import os
 import traceback
 import unittest
 from pathlib import Path
+from tempfile import gettempdir
 
 import pystac
 
@@ -13,7 +14,7 @@ from ukis_pysat.members import Datahub, Platform
 # os.environ["SCIHUB_USER"] = "Tim"
 # os.environ["SCIHUB_PW"] = "TheEnchanter"
 
-dummy_cat = Path(__file__).parents[0] / "testfiles" / "catalog.json"
+catalog_path = Path(gettempdir()) / "catalog.json"
 str_target = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
 target_dir = Path(__file__).parents[0] / "testfiles"
 aoi_4326 = target_dir / "aoi_4326.geojson"
@@ -22,16 +23,6 @@ aoi_wkt = "POLYGON((11.09 47.94, 11.06 48.01, 11.12 48.11, 11.18 48.11, 11.18 47
 aoi_bbox = (11.90, 51.46, 11.94, 51.50)
 
 queries = [
-    {
-        "datahub": Datahub.File,
-        "catalog": dummy_cat,
-        "platform_name": Platform.Sentinel2,
-        "date": ("20200220", "20200225"),
-        "aoi": aoi_3857,
-        "cloud_cover": (90, 100),
-        "returns_srcid": "S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731",
-        "returns_uuid": "ae674e64-013d-4898-a6d7-096d7b02bdde",
-    },
     {
         "datahub": Datahub.Scihub,
         "catalog": None,
@@ -61,6 +52,16 @@ queries = [
         "cloud_cover": (0, 100),
         "returns_srcid": "S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618",
         "returns_uuid": "560f78fb-22b8-4904-87de-160d9236d33e",
+    },
+    {
+        "datahub": Datahub.File,
+        "catalog": catalog_path,
+        "platform_name": Platform.Sentinel2,
+        "date": ("20200220", "20200225"),
+        "aoi": aoi_3857,
+        "cloud_cover": (90, 100),
+        "returns_srcid": "S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731",
+        "returns_uuid": "ae674e64-013d-4898-a6d7-096d7b02bdde",
     },
     {
         "datahub": Datahub.Scihub,
@@ -106,13 +107,27 @@ queries = [
 
 
 class DataTest(unittest.TestCase):
+    def setUp(self):
+        with Source(datahub=queries[2]["datahub"], catalog=queries[2]["catalog"]) as src:
+            meta = src.query_metadata(
+                platform=queries[2]["platform_name"],
+                date=queries[2]["date"],
+                aoi=queries[2]["aoi"],
+                cloud_cover=queries[2]["cloud_cover"],
+            )
+            meta.normalize_hrefs(Path(gettempdir()).as_posix())
+            meta.save()  # used for testing Datahub.file
+
+    def tearDown(self):
+        catalog_path.unlink()
+
     def test_init(self):
         with self.assertRaises(
             AttributeError, msg=f"{traceback.format_exc()} catalog has to be set if datahub is File."
         ):
             Source(datahub=Datahub.File)
 
-        with Source(datahub=Datahub.File, catalog=dummy_cat) as src:
+        with Source(datahub=Datahub.File, catalog=catalog_path) as src:
             self.assertEqual(src.api, None)
             self.assertTrue(isinstance(src.catalog, pystac.catalog.Catalog))
 
@@ -123,7 +138,7 @@ class DataTest(unittest.TestCase):
             Source(datahub=Datahub.Hub)
 
     def test_exceptions(self):
-        with Source(datahub=Datahub.File, catalog=dummy_cat) as src:
+        with Source(datahub=Datahub.File, catalog=catalog_path) as src:
             with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
                 src.prep_aoi(1)
 
@@ -140,7 +155,7 @@ class DataTest(unittest.TestCase):
                 )
                 item = meta.get_item(queries[i]["returns_srcid"])
                 self.assertEqual(item.properties.get("srcuuid"), queries[i]["returns_uuid"])
-                meta.normalize_hrefs(str(Path.home()))
+                meta.normalize_hrefs(Path(gettempdir()).as_posix())
                 meta.validate_all()
 
     # @unittest.skip("until API is reachable again")
@@ -153,12 +168,12 @@ class DataTest(unittest.TestCase):
                 )
             item = meta.get_item(queries[i]["returns_srcid"])
             self.assertEqual(item.properties.get("srcuuid"), queries[i]["returns_uuid"])
-            meta.normalize_hrefs(str(Path.home()))
+            meta.normalize_hrefs(Path(gettempdir()).as_posix())
             item.validate()
 
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_image(self):
-        src = Source(datahub=Datahub.File, catalog=dummy_cat)
+        src = Source(datahub=Datahub.File, catalog=catalog_path)
         with self.assertRaises(Exception, msg="download_image not supported for Datahub.File."):
             src.download_image(
                 platform=Datahub.File, product_uuid="1", target_dir=str_target,
@@ -188,7 +203,7 @@ class DataTest(unittest.TestCase):
                     target_dir.joinpath(queries[i]["returns_srcid"] + ".jpg").unlink()
                     target_dir.joinpath(queries[i]["returns_srcid"] + ".jpgw").unlink()
 
-        with Source(datahub=Datahub.File, catalog=dummy_cat) as src:
+        with Source(datahub=Datahub.File, catalog=catalog_path) as src:
             with self.assertRaises(NotImplementedError, msg=f"download_quicklook not supported for Datahub.File."):
                 src.download_quicklook(
                     platform=Datahub.File, product_uuid="1", target_dir=target_dir,
