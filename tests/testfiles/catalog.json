@@ -1,0 +1,32 @@
+{
+    "id": "4e8828fa-be54-4348-b27e-fe7afc24d904",
+    "stac_version": "1.0.0-beta.2",
+    "description": "Creation Date: 2020-11-12 14:48:45.509716, Datahub: Scihub",
+    "links": [
+        {
+            "rel": "root",
+            "href": ".\\catalog.json",
+            "type": "application/json"
+        },
+        {
+            "rel": "item",
+            "href": ".\\S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618\\S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618.json",
+            "type": "application/json"
+        },
+        {
+            "rel": "item",
+            "href": ".\\S2A_MSIL2A_20200221T102041_N0214_R065_T32UPC_20200221T120618\\S2A_MSIL2A_20200221T102041_N0214_R065_T32UPC_20200221T120618.json",
+            "type": "application/json"
+        },
+        {
+            "rel": "item",
+            "href": ".\\S2A_MSIL1C_20200221T102041_N0209_R065_T32UQC_20200221T110731\\S2A_MSIL1C_20200221T102041_N0209_R065_T32UQC_20200221T110731.json",
+            "type": "application/json"
+        },
+        {
+            "rel": "item",
+            "href": ".\\S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731\\S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731.json",
+            "type": "application/json"
+        }
+    ]
+}
