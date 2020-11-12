@@ -18,6 +18,7 @@ something was changed
 Changed
 *******
 - ``data``: metadata as STAC items and collections #98
+- ``raster``: default raster format Cloud Optimized GeoTIFF #98
 
 [0.7.0]  (2020-10-30)
 ---------------------

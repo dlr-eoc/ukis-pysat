@@ -19,3 +19,4 @@ dask[array]~=2.30.0
 
 setuptools~=50.3.2
 pystac[validation]~=0.5.3
+rio-cogeo

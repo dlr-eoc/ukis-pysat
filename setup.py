@@ -45,7 +45,7 @@ extras_require["complete"] = list(set([v for req in extras_require.values() for 
 
 extras_require["dev"] = sorted(
     extras_require["complete"]
-    + ["sphinx >= 1.3", "sphinx_rtd_theme", "pandas~=1.1.4", "dask[array]~=2.30.0", "utm==0.6.0",]
+    + ["sphinx >= 1.3", "sphinx_rtd_theme", "pandas~=1.1.4", "dask[array]~=2.30.0", "utm==0.6.0", "rio-cogeo"]
 )
 
 setup(

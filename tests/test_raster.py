@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import unittest
 from pathlib import Path
 
@@ -8,6 +7,7 @@ import numpy as np
 from rasterio import windows
 from rasterio.coords import BoundingBox
 from rasterio.transform import from_bounds
+from rio_cogeo.cogeo import cog_validate, cog_info
 from shapely.geometry import box
 from ukis_pysat.members import Platform
 from ukis_pysat.raster import Image
@@ -276,33 +276,39 @@ class DataTest(unittest.TestCase):
         self.assertIsInstance(self.img.to_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
 
     def test_write_to_file(self):
-        self.img.write_to_file(r"result.tif", np.uint16)
-        with Image("result.tif") as img2:
+        tmp_result = Path(r"result.tif")
+
+        self.img.write_to_file(tmp_result, np.uint16)
+        with Image(tmp_result) as img2:
             self.assertTrue(np.array_equal(img2.arr, self.img.arr))
 
-        os.remove(r"result.tif")
+        self.assertTrue(cog_validate(tmp_result))
+        self.assertEqual(cog_info(tmp_result).get('IFD')[0]['Blocksize'], (512, 512))
+        tmp_result.unlink()
 
-        self.img.write_to_file(r"result.tif", "min", compress="lzw")
-        with Image("result.tif") as img2:
+        self.img.write_to_file(tmp_result, "min", compress="lzw")
+        with Image(tmp_result) as img2:
             self.assertEqual(img2.arr.dtype, "uint8")
             self.assertEqual(img2.dataset.profile["compress"], "lzw")
 
-        os.remove(r"result.tif")
+        self.assertTrue(cog_validate(tmp_result))
+        tmp_result.unlink()
 
-        self.img.write_to_file(r"result.tif", np.uint8, compress="packbits", kwargs={"tiled": True})
-        with Image("result.tif") as img2:
+        self.img.write_to_file(tmp_result, np.uint8, driver="GTiff", compress="packbits", kwargs={"tiled": True})
+        with Image(tmp_result) as img2:
             self.assertEqual(img2.arr.dtype, "uint8")
             self.assertEqual(img2.dataset.profile["tiled"], True)
 
-        os.remove(r"result.tif")
+        tmp_result.unlink()
 
         with Image(self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform) as img3:
-            img3.write_to_file(r"result.tif", np.uint16)
+            img3.write_to_file(tmp_result, np.uint16)
 
-        with Image("result.tif") as img4:
+        with Image(tmp_result) as img4:
             self.assertTrue(np.array_equal(img4.arr, self.img.arr))
 
-        os.remove(r"result.tif")
+        self.assertTrue(cog_validate(tmp_result))
+        tmp_result.unlink()
 
 
 if __name__ == "__main__":
