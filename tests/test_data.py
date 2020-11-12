@@ -105,7 +105,7 @@ queries = [
 ]
 
 
-class DownloadTest(unittest.TestCase):
+class DataTest(unittest.TestCase):
     def test_init(self):
         with self.assertRaises(
             AttributeError, msg=f"{traceback.format_exc()} catalog has to be set if datahub is File."

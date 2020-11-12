@@ -15,7 +15,7 @@ from ukis_pysat.raster import Image
 TEST_FILE = Path(__file__).parents[0] / "testfiles" / "dummy.tif"
 
 
-class DataTest(unittest.TestCase):
+class RasterTest(unittest.TestCase):
     def setUp(self):
         self.img = Image(TEST_FILE)
 
