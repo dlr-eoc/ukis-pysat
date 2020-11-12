@@ -3,6 +3,8 @@ import traceback
 import unittest
 from pathlib import Path
 
+import pystac
+
 from ukis_pysat.data import Source
 from ukis_pysat.members import Datahub, Platform
 
@@ -11,8 +13,9 @@ from ukis_pysat.members import Datahub, Platform
 # os.environ["SCIHUB_USER"] = "Tim"
 # os.environ["SCIHUB_PW"] = "TheEnchanter"
 
-target_dir = Path(__file__).parents[0] / "testfiles"
+dummy_cat = Path(__file__).parents[0] / "testfiles" / "catalog.json"
 str_target = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
+target_dir = Path(__file__).parents[0] / "testfiles"
 aoi_4326 = target_dir / "aoi_4326.geojson"
 aoi_3857 = target_dir / "aoi_3857.geojson"
 aoi_wkt = "POLYGON((11.09 47.94, 11.06 48.01, 11.12 48.11, 11.18 48.11, 11.18 47.94, 11.09 47.94))"
@@ -21,17 +24,17 @@ aoi_bbox = (11.90, 51.46, 11.94, 51.50)
 queries = [
     {
         "datahub": Datahub.File,
-        "datadir": target_dir,
+        "catalog": dummy_cat,
         "platform_name": Platform.Sentinel2,
-        "date": ("20200403", "20200409"),
-        "aoi": aoi_bbox,
-        "cloud_cover": (0, 5),
-        "returns_srcid": "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159",
-        "returns_uuid": "d7f7f33c-acd0-4a50-829c-7ca54aee1c50",
+        "date": ("20200220", "20200225"),
+        "aoi": aoi_3857,
+        "cloud_cover": (90, 100),
+        "returns_srcid": "S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731",
+        "returns_uuid": "ae674e64-013d-4898-a6d7-096d7b02bdde",
     },
     {
         "datahub": Datahub.Scihub,
-        "datadir": None,
+        "catalog": None,
         "platform_name": Platform.Sentinel1,
         "date": ("20200224", "20200225"),
         "aoi": aoi_4326,
@@ -41,7 +44,7 @@ queries = [
     },
     {
         "datahub": Datahub.Scihub,
-        "datadir": None,
+        "catalog": None,
         "platform_name": Platform.Sentinel1,
         "date": ("20200502", "20200503"),
         "aoi": aoi_wkt,
@@ -51,7 +54,7 @@ queries = [
     },
     {
         "datahub": Datahub.Scihub,
-        "datadir": None,
+        "catalog": None,
         "platform_name": Platform.Sentinel2,
         "date": ("20200220", "20200225"),
         "aoi": aoi_3857,
@@ -61,7 +64,7 @@ queries = [
     },
     {
         "datahub": Datahub.Scihub,
-        "datadir": None,
+        "catalog": None,
         "platform_name": Platform.Sentinel3,
         "date": ("20200220", "20200225"),
         "aoi": aoi_bbox,
@@ -71,7 +74,7 @@ queries = [
     },
     {
         "datahub": Datahub.EarthExplorer,
-        "datadir": None,
+        "catalog": None,
         "platform_name": Platform.Landsat5,
         "date": ("20100201", "20100225"),
         "aoi": aoi_4326,
@@ -81,7 +84,7 @@ queries = [
     },
     {
         "datahub": Datahub.EarthExplorer,
-        "datadir": None,
+        "catalog": None,
         "platform_name": Platform.Landsat7,
         "date": ("20150810", "20150825"),
         "aoi": aoi_3857,
@@ -91,7 +94,7 @@ queries = [
     },
     {
         "datahub": Datahub.EarthExplorer,
-        "datadir": None,
+        "catalog": None,
         "platform_name": Platform.Landsat8,
         "date": ("20200310", "20200325"),
         "aoi": aoi_bbox,
@@ -105,12 +108,13 @@ queries = [
 class DownloadTest(unittest.TestCase):
     def test_init(self):
         with self.assertRaises(
-            AttributeError, msg=f"{traceback.format_exc()} datadir has to be set if datahub is File."
+            AttributeError, msg=f"{traceback.format_exc()} catalog has to be set if datahub is File."
         ):
             Source(datahub=Datahub.File)
 
-        src = Source(datahub=Datahub.File, datadir=target_dir)
-        self.assertEqual(src.api, target_dir)
+        with Source(datahub=Datahub.File, catalog=dummy_cat) as src:
+            self.assertEqual(src.api, None)
+            self.assertTrue(isinstance(src.catalog, pystac.catalog.Catalog))
 
         with self.assertRaises(NotImplementedError, msg=f"Hub is not supported [File, EarthExplorer, Scihub]."):
             Source(datahub="Hub")
@@ -119,17 +123,15 @@ class DownloadTest(unittest.TestCase):
             Source(datahub=Datahub.Hub)
 
     def test_exceptions(self):
-        src = Source(datahub=Datahub.File, datadir=target_dir)
-        with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
-            src.prep_aoi(1)
+        with Source(datahub=Datahub.File, catalog=dummy_cat) as src:
+            with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
+                src.prep_aoi(1)
 
     # @unittest.skip("until API is reachable again")
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_query_metadata(self):
         for i in range(len(queries)):
-            if queries[i]["datahub"] == Datahub.File:  # TODO
-                continue
-            with Source(datahub=queries[i]["datahub"], datadir=queries[i]["datadir"]) as src:
+            with Source(datahub=queries[i]["datahub"], catalog=queries[i]["catalog"]) as src:
                 meta = src.query_metadata(
                     platform=queries[i]["platform_name"],
                     date=queries[i]["date"],
@@ -145,12 +147,9 @@ class DownloadTest(unittest.TestCase):
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_query_metadata_srcid(self):
         for i in range(len(queries)):
-            if queries[i]["datahub"] == Datahub.File:  # TODO
-                continue
-            with Source(datahub=queries[i]["datahub"], datadir=queries[i]["datadir"]) as src:
+            with Source(datahub=queries[i]["datahub"], catalog=queries[i]["catalog"]) as src:
                 meta = src.query_metadata_srcid(
-                    platform=queries[i]["platform_name"],
-                    srcid=queries[i]["returns_srcid"],
+                    platform=queries[i]["platform_name"], srcid=queries[i]["returns_srcid"],
                 )
             item = meta.get_item(queries[i]["returns_srcid"])
             self.assertEqual(item.properties.get("srcuuid"), queries[i]["returns_uuid"])
@@ -159,7 +158,7 @@ class DownloadTest(unittest.TestCase):
 
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_image(self):
-        src = Source(datahub=Datahub.File, datadir=target_dir)
+        src = Source(datahub=Datahub.File, catalog=dummy_cat)
         with self.assertRaises(Exception, msg="download_image not supported for Datahub.File."):
             src.download_image(
                 platform=Datahub.File, product_uuid="1", target_dir=str_target,
@@ -170,7 +169,7 @@ class DownloadTest(unittest.TestCase):
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_quicklook(self):
         for i in range(len(queries)):
-            with Source(datahub=queries[i]["datahub"], datadir=queries[i]["datadir"]) as src:
+            with Source(datahub=queries[i]["datahub"], catalog=queries[i]["catalog"]) as src:
                 if queries[i]["datahub"] == Datahub.File:
                     with self.assertRaises(Exception, msg="download_quicklook not supported for Datahub.File."):
                         src.download_quicklook(
@@ -182,18 +181,18 @@ class DownloadTest(unittest.TestCase):
                     src.download_quicklook(
                         platform=queries[i]["platform_name"],
                         product_uuid=queries[i]["returns_uuid"],
-                        target_dir=target_dir,
+                        target_dir=str_target,
                     )
                     self.assertTrue(target_dir.joinpath(queries[i]["returns_srcid"] + ".jpg").is_file())
                     self.assertTrue(target_dir.joinpath(queries[i]["returns_srcid"] + ".jpgw").is_file())
                     target_dir.joinpath(queries[i]["returns_srcid"] + ".jpg").unlink()
                     target_dir.joinpath(queries[i]["returns_srcid"] + ".jpgw").unlink()
 
-        src = Source(datahub=Datahub.File, datadir=target_dir)
-        with self.assertRaises(NotImplementedError, msg=f"download_quicklook not supported for Datahub.File."):
-            src.download_quicklook(
-                platform=Datahub.File, product_uuid="1", target_dir=target_dir,
-            )
+        with Source(datahub=Datahub.File, catalog=dummy_cat) as src:
+            with self.assertRaises(NotImplementedError, msg=f"download_quicklook not supported for Datahub.File."):
+                src.download_quicklook(
+                    platform=Datahub.File, product_uuid="1", target_dir=target_dir,
+                )
 
 
 if __name__ == "__main__":

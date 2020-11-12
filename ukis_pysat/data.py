@@ -6,6 +6,8 @@ import uuid
 from io import BytesIO
 from pathlib import Path
 
+from dateutil.parser import parse
+
 try:
     import fiona
     import landsatxplore.api
@@ -15,7 +17,6 @@ try:
     import requests
     import sentinelsat
     from PIL import Image
-    from pyfields import field, make_init
     from pylandsat import Product
     from pystac.extensions import sat  # TODO https://github.com/stac-utils/pystac/issues/133
     from shapely import geometry, wkt, ops
@@ -39,24 +40,19 @@ class Source:
 
     catalog = None
 
-    def __init__(self, datahub, datadir=None, datadir_substr=None):
+    def __init__(self, datahub, catalog=None):
         """
         :param datahub: Data source (<enum 'Datahub'>).
-        :param datadir: Path to directory that holds the metadata if datahub is 'File' (String).
-        :param datadir_substr: Optional substring patterns to identify metadata in datadir if datahub
-            is 'File' (List of String).
+        :param catalog: Path to catalog.json that holds the metadata if datahub is 'File' (String, Path).
         """
         self.src = datahub
 
         if self.src == Datahub.File:
-            if not datadir:
-                raise AttributeError(f"'datadir' has to be set if datahub is 'File'.")
+            if not isinstance(catalog, (str, Path)):
+                raise AttributeError(f"'catalog' has to be set if datahub is 'File'.")
             else:
-                self.api = datadir
-                if datadir_substr is None:
-                    self.api_substr = [""]
-                else:
-                    self.api_substr = datadir_substr
+                self.api = None
+                self.init_catalog(catalog=catalog)
 
         elif self.src == Datahub.EarthExplorer:
             # connect to Earthexplorer
@@ -85,9 +81,14 @@ class Source:
         """
         if isinstance(catalog, (pystac.catalog.Catalog, pystac.collection.Collection)):
             self.catalog = catalog
+        elif isinstance(catalog, (str, Path)):
+            href = Path(catalog).resolve().as_uri()
+            self.catalog = pystac.catalog.Catalog.from_file(href)
         else:
             self.catalog = pystac.catalog.Catalog(
-                id=str(uuid.uuid4()), description=f"Creation Date: {datetime.datetime.now()}, Datahub: {self.src.value}", catalog_type=pystac.catalog.CatalogType.SELF_CONTAINED
+                id=str(uuid.uuid4()),
+                description=f"Creation Date: {datetime.datetime.now()}, Datahub: {self.src.value}",
+                catalog_type=pystac.catalog.CatalogType.SELF_CONTAINED,
             )
 
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
@@ -101,7 +102,20 @@ class Source:
         :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
         """
         if self.src == Datahub.File:
-            raise NotImplementedError  # TODO
+            for item in self.catalog.get_all_items():
+                if item.ext.eo.cloud_cover and cloud_cover:  # not always relevant, but if no need to check rest
+                    if not cloud_cover[0] <= item.ext.eo.cloud_cover < cloud_cover[1]:
+                        self.catalog.remove_item(item.id)
+                        continue
+                if not (
+                    platform.value == item.common_metadata.platform
+                    and parse(sentinelsat.format_query_date(date[0]))
+                    <= parse(item.properties["acquisitiondate"])  # TODO preferably item.datetime again
+                    < parse(sentinelsat.format_query_date(date[1]))
+                    and geometry.shape(item.geometry).intersects(self.prep_aoi(aoi))
+                ):
+                    self.catalog.remove_item(item.id)
+            return self.catalog
 
         elif self.src == Datahub.EarthExplorer:
             # query Earthexplorer for metadata
@@ -141,7 +155,10 @@ class Source:
         :returns: Metadata of product that matches srcid (MetadataCollection object).
         """
         if self.src == Datahub.File:
-            raise NotImplementedError  # TODO
+            for item in self.catalog.get_all_items():  # filter relevant item
+                if item.id != srcid:
+                    self.catalog.remove_item(item.id)
+            return self.catalog
 
         elif self.src == Datahub.EarthExplorer:
             # query Earthexplorer for metadata by srcid and construct MetadataCollection
@@ -178,7 +195,7 @@ class Source:
         :returns: PySTAC item
         """
         if self.src == Datahub.File:
-            raise NotImplementedError  # TODO
+            raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
             item = pystac.Item(
@@ -248,7 +265,7 @@ class Source:
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
         if self.src == Datahub.File:
-            raise Exception("download_image not supported for {self.src}.")
+            raise NotImplementedError(f"download_image not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for srcid of product
@@ -326,6 +343,7 @@ class Source:
         :param aoi: Area of interest as Geojson file, WKT string or bounding box in lat lon coordinates (String, Tuple)
         :return: Shapely Polygon
         """
+        print(aoi)
 
         # check if handed object is a string
         # this could include both file paths and WKT strings
