@@ -54,16 +54,6 @@ queries = [
         "returns_uuid": "560f78fb-22b8-4904-87de-160d9236d33e",
     },
     {
-        "datahub": Datahub.STAC,
-        "catalog": catalog_path,
-        "platform_name": Platform.Sentinel2,
-        "date": ("20200220", "20200225"),
-        "aoi": aoi_3857,
-        "cloud_cover": (90, 100),
-        "returns_srcid": "S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731",
-        "returns_uuid": "ae674e64-013d-4898-a6d7-096d7b02bdde",
-    },
-    {
         "datahub": Datahub.Scihub,
         "catalog": None,
         "platform_name": Platform.Sentinel3,
@@ -103,6 +93,17 @@ queries = [
         "returns_srcid": "LC08_L1TP_193024_20200322_20200326_01_T1",
         "returns_uuid": "LC81930242020082LGN00",
     },
+    {
+        "datahub": Datahub.STAC,
+        "catalog": catalog_path,
+        "platform_name": Platform.Sentinel2,
+        "date": ("20200220", "20200225"),
+        "aoi": aoi_3857,
+        "cloud_cover": (90, 100),
+        "returns_srcid": "S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731",
+        "returns_uuid": "ae674e64-013d-4898-a6d7-096d7b02bdde",
+    },
+
 ]
 
 
@@ -122,14 +123,8 @@ class DataTest(unittest.TestCase):
         catalog_path.unlink()
 
     def test_init(self):
-        with self.assertRaises(
-            AttributeError, msg=f"{traceback.format_exc()} catalog has to be set if datahub is File."
-        ):
-            Source(datahub=Datahub.STAC)
-
         with Source(datahub=Datahub.STAC, catalog=catalog_path) as src:
-            self.assertEqual(src.api, None)
-            self.assertTrue(isinstance(src.catalog, pystac.catalog.Catalog))
+            self.assertTrue(isinstance(src.api, pystac.catalog.Catalog))
 
         with self.assertRaises(NotImplementedError, msg=f"Hub is not supported [File, EarthExplorer, Scihub]."):
             Source(datahub="Hub")

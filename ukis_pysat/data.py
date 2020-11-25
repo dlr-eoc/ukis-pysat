@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import os
 import shutil
 import uuid
 from io import BytesIO
@@ -43,23 +44,22 @@ class Source:
     def __init__(self, datahub, catalog=None):
         """
         :param datahub: Data source (<enum 'Datahub'>).
-        :param catalog: Path to catalog.json that holds the metadata if datahub is 'STAC' (String, Path).
+        :param catalog: Only applicable if datahub is 'STAC'. Can be one of the following types.
+                        Path to catalog.json that holds the metadata (String, Path).
+                        Pystac Catalog or Collection object (pystac.catalog.Catalog, pystac.collection.Collection).
+                        None initializes an empty catalog.
         """
         self.src = datahub
 
         if self.src == Datahub.STAC:
-
-
-            # TODO: catalog should be able to take catalog.json or catalog object,
-            # if None a new empty catalog will be created
-            # TODO: self.api is where the main catalog (the one to query from) is stored
-            if not isinstance(catalog, (str, Path)):
-                raise AttributeError(f"'catalog' has to be set if datahub is 'STAC'.")
+            # connect to Spatio Temporal Asset Catalog
+            if isinstance(catalog, (pystac.catalog.Catalog, pystac.collection.Collection)):
+                self.api = catalog
+            elif isinstance(catalog, (str, Path)):
+                href = Path(catalog).resolve().as_uri()
+                self.api = pystac.catalog.Catalog.from_file(href)
             else:
-                self.api = None
-                self.init_catalog(catalog=catalog)
-
-
+                self.api = self._init_catalog()
 
         elif self.src == Datahub.EarthExplorer:
             # connect to Earthexplorer
@@ -81,48 +81,71 @@ class Source:
     def __enter__(self):
         return self
 
-    def init_catalog(self, catalog=None):
-        """ Initializes PySTAC Catalog
+    def _init_catalog(self):
+        """Initializes an empty Spatio Temporal Asset Catalog."""
+        return pystac.catalog.Catalog(
+            id=str(uuid.uuid4()),
+            description=f"Creation Date: {datetime.datetime.now()}, Datahub: {self.src.value}",
+            catalog_type=pystac.catalog.CatalogType.SELF_CONTAINED,
+        )
 
-        :param catalog: PySTAC Catalog or Collection if already exists
+    def add_items_from_directory(self, item_dir, item_substr=None):
+        """Adds metadata items from a directory to a STAC source.
+
+        :param item_dir: Path to directory that holds the metadata items (String).
+        :param item_substr: Optional substring patterns to identify metadata items in directory (List of String).
         """
-        if isinstance(catalog, (pystac.catalog.Catalog, pystac.collection.Collection)):
-            self.catalog = catalog
-        elif isinstance(catalog, (str, Path)):
-            href = Path(catalog).resolve().as_uri()
-            self.catalog = pystac.catalog.Catalog.from_file(href)
-        else:
-            self.catalog = pystac.catalog.Catalog(
-                id=str(uuid.uuid4()),
-                description=f"Creation Date: {datetime.datetime.now()}, Datahub: {self.src.value}",
-                catalog_type=pystac.catalog.CatalogType.SELF_CONTAINED,
+        if self.src == Datahub.STAC:
+            # get all json files in item_dir that match item_substr
+            if item_substr is None:
+                item_substr = [""]
+            item_files = sorted(
+                [
+                    Path(dp).joinpath(f)
+                    for dp, dn, filenames in os.walk(item_dir)
+                    for substr in item_substr
+                    for f in filenames
+                    if f.endswith(".json") and substr in f
+                ],
+                key=lambda path: str(path).lower(),
             )
+
+            # load items from file and add to catalog source
+            for item_file in item_files:
+                item = pystac.read_file(str(item_file))
+                self.api.add_item(item)
+
+        else:
+            raise NotImplementedError(f"add_items_from_directory only supported for Datahub.STAC.")
 
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
         """Queries satellite image metadata from data source.
 
         :param platform: Image platform (<enum 'Platform'>).
-        :param date: Date from - to (String or Datetime tuple). Expects a tuple of (start, end), e.g.
-            (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
+        :param date: Date from - to in format yyyyMMdd (String or Datetime tuple).
         :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
         :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
         """
         if self.src == Datahub.STAC:
-            for item in self.catalog.get_all_items():
-                if item.ext.eo.cloud_cover and cloud_cover:  # not always relevant, but if no need to check rest
+            # query Spatio Temporal Asset Catalog for metadata
+            catalog = self._init_catalog()
+            geom = self.prep_aoi(aoi)
+            for item in self.api.get_all_items():
+                if item.ext.eo.cloud_cover and cloud_cover:
                     if not cloud_cover[0] <= item.ext.eo.cloud_cover < cloud_cover[1]:
-                        self.catalog.remove_item(item.id)
                         continue
-                if not (
+                if (
                     platform.value == item.common_metadata.platform
-                    and parse(sentinelsat.format_query_date(date[0]))
-                    <= parse(item.properties["acquisitiondate"])  # TODO preferably item.datetime again
-                    < parse(sentinelsat.format_query_date(date[1]))
-                    and geometry.shape(item.geometry).intersects(self.prep_aoi(aoi))
+                    and sentinelsat.format_query_date(date[0])
+                    <= sentinelsat.format_query_date(
+                        parse(item.properties["acquisitiondate"]).strftime("%Y%m%d")
+                    )
+                    < sentinelsat.format_query_date(date[1])
+                    and geometry.shape(item.geometry).intersects(geom)
                 ):
-                    self.catalog.remove_item(item.id)
-            return self.catalog
+                    catalog.add_item(item)
+            return catalog
 
         elif self.src == Datahub.EarthExplorer:
             # query Earthexplorer for metadata
@@ -147,29 +170,32 @@ class Source:
             meta_src = self.api.query(area=self.prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,)
             meta_src = self.api.to_geojson(meta_src)["features"]
 
-        if not self.catalog:
-            self.init_catalog()
-
+        # initialize empty catalog and add metadata items
+        catalog = self._init_catalog()
         for item in meta_src:
-            self.catalog.add_item(self.construct_metadata(meta_src=item, platform=platform))
-        return self.catalog
+            catalog.add_item(self.construct_metadata(meta_src=item, platform=platform))
+
+        return catalog
 
     def query_metadata_srcid(self, platform, srcid):
         """Queries satellite image metadata from data source by srcid.
 
         :param platform: Image platform (<enum 'Platform'>).
         :param srcid: Srcid of a specific product which is essentially its name (String).
-        :returns: Metadata of product that matches srcid (MetadataCollection object).
+        :returns: Metadata of product that matches srcid (PySTAC Catalog).
         """
         if self.src == Datahub.STAC:
-            for item in self.catalog.get_all_items():  # filter relevant item
-                if item.id != srcid:
-                    self.catalog.remove_item(item.id)
-            return self.catalog
+            # query Spatio Temporal Asset Catalog for metadata by srcid
+            catalog = self._init_catalog()
+            for item in self.api.get_all_items():
+                if item.id == srcid:
+                    catalog.add_item(item)
+                    continue
+            return catalog
 
         elif self.src == Datahub.EarthExplorer:
-            # query Earthexplorer for metadata by srcid and construct MetadataCollection
-            # TODO could not figure out how to directly query detailed metadata by srcid, therefore here we
+            # query Earthexplorer for metadata by srcid
+            # TODO: could not figure out how to directly query detailed metadata by srcid, therefore here we
             # query first for scene acquisitiondate and footprint and use these to query detailed metadata.
             meta_src = self.api.request(
                 "metadata",
@@ -178,21 +204,24 @@ class Source:
             date_from = meta_src[0]["acquisitionDate"].replace("-", "")
             date_to = (datetime.datetime.strptime(date_from, "%Y%m%d") + datetime.timedelta(days=1)).strftime("%Y%m%d")
             aoi = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
-            self.query_metadata(platform=platform, date=(date_from, date_to), aoi=aoi)
-            for item in self.catalog.get_all_items():  # filter relevant item
-                if item.id != srcid:
-                    self.catalog.remove_item(item.id)
-            return self.catalog
+            meta_src = self.query_metadata(platform=platform, date=(date_from, date_to), aoi=aoi)
 
-        else:  # query Scihub for metadata by srcid and construct MetadataCollection
+            # initialize empty catalog and add metadata items
+            catalog = self._init_catalog()
+            for item in meta_src.get_all_items():
+                if item.id == srcid:
+                    catalog.add_item(item)
+            return catalog
+
+        else:
+            # query Scihub for metadata by srcid
             meta_src = self.api.to_geojson(self.api.query(identifier=srcid))["features"]
 
-            if not self.catalog:
-                self.init_catalog()
-
+            # initialize empty catalog and add metadata items
+            catalog = self._init_catalog()
             for item in meta_src:
-                self.catalog.add_item(self.construct_metadata(meta_src=item, platform=platform))
-            return self.catalog
+                catalog.add_item(self.construct_metadata(meta_src=item, platform=platform))
+            return catalog
 
     def construct_metadata(self, meta_src, platform):
         """Constructs a STAC item that is harmonized across the different satellite image sources.
@@ -201,6 +230,8 @@ class Source:
         :param platform: Image platform (<enum 'Platform'>).
         :returns: PySTAC item
         """
+        import dateutil.parser as dparser
+
         if self.src == Datahub.STAC:
             raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
@@ -214,8 +245,10 @@ class Source:
                     "producttype": "L1TP",
                     "srcurl": meta_src["dataAccessUrl"],
                     "srcuuid": meta_src["entityId"],
-                    "acquisitiondate": meta_src["acquisitionDate"],
-                    "ingestiondate": meta_src["modifiedDate"],
+                    "acquisitiondate": parse(meta_src["acquisitionDate"], ignoretz=True, fuzzy=True).strftime(
+                        "%Y-%m-%d"
+                    ),
+                    "ingestiondate": parse(meta_src["modifiedDate"], ignoretz=True, fuzzy=True).strftime("%Y-%m-%d"),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
@@ -243,8 +276,12 @@ class Source:
                     "size": meta_src["properties"]["size"],
                     "srcurl": meta_src["properties"]["link"],
                     "srcuuid": meta_src["properties"]["uuid"],
-                    "acquisitiondate": meta_src["properties"]["beginposition"],
-                    "ingestiondate": meta_src["properties"]["ingestiondate"],
+                    "acquisitiondate": parse(
+                        meta_src["properties"]["beginposition"], ignoretz=True, fuzzy=True
+                    ).strftime("%Y-%m-%d"),
+                    "ingestiondate": parse(meta_src["properties"]["ingestiondate"], ignoretz=True, fuzzy=True).strftime(
+                        "%Y-%m-%d"
+                    ),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
@@ -376,7 +413,7 @@ class Source:
         return aoi
 
     def close(self):
-        """Closes connection to or logs out of Datahub"""
+        """Closes connection to or logs out of Datahub."""
         if self.src == Datahub.EarthExplorer:
             self.api.logout()
         elif self.src == Datahub.Scihub:
