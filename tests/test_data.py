@@ -54,7 +54,7 @@ queries = [
         "returns_uuid": "560f78fb-22b8-4904-87de-160d9236d33e",
     },
     {
-        "datahub": Datahub.File,
+        "datahub": Datahub.STAC,
         "catalog": catalog_path,
         "platform_name": Platform.Sentinel2,
         "date": ("20200220", "20200225"),
@@ -125,9 +125,9 @@ class DataTest(unittest.TestCase):
         with self.assertRaises(
             AttributeError, msg=f"{traceback.format_exc()} catalog has to be set if datahub is File."
         ):
-            Source(datahub=Datahub.File)
+            Source(datahub=Datahub.STAC)
 
-        with Source(datahub=Datahub.File, catalog=catalog_path) as src:
+        with Source(datahub=Datahub.STAC, catalog=catalog_path) as src:
             self.assertEqual(src.api, None)
             self.assertTrue(isinstance(src.catalog, pystac.catalog.Catalog))
 
@@ -138,7 +138,7 @@ class DataTest(unittest.TestCase):
             Source(datahub=Datahub.Hub)
 
     def test_exceptions(self):
-        with Source(datahub=Datahub.File, catalog=catalog_path) as src:
+        with Source(datahub=Datahub.STAC, catalog=catalog_path) as src:
             with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
                 src.prep_aoi(1)
 
@@ -173,10 +173,10 @@ class DataTest(unittest.TestCase):
 
     # @unittest.skip("uncomment when you set ENVs with credentials")
     def test_download_image(self):
-        src = Source(datahub=Datahub.File, catalog=catalog_path)
+        src = Source(datahub=Datahub.STAC, catalog=catalog_path)
         with self.assertRaises(Exception, msg="download_image not supported for Datahub.File."):
             src.download_image(
-                platform=Datahub.File, product_uuid="1", target_dir=str_target,
+                platform=Datahub.STAC, product_uuid="1", target_dir=str_target,
             )
         # TODO download tests
 
@@ -185,7 +185,7 @@ class DataTest(unittest.TestCase):
     def test_download_quicklook(self):
         for i in range(len(queries)):
             with Source(datahub=queries[i]["datahub"], catalog=queries[i]["catalog"]) as src:
-                if queries[i]["datahub"] == Datahub.File:
+                if queries[i]["datahub"] == Datahub.STAC:
                     with self.assertRaises(Exception, msg="download_quicklook not supported for Datahub.File."):
                         src.download_quicklook(
                             platform=queries[i]["platform_name"],
@@ -203,10 +203,10 @@ class DataTest(unittest.TestCase):
                     target_dir.joinpath(queries[i]["returns_srcid"] + ".jpg").unlink()
                     target_dir.joinpath(queries[i]["returns_srcid"] + ".jpgw").unlink()
 
-        with Source(datahub=Datahub.File, catalog=catalog_path) as src:
+        with Source(datahub=Datahub.STAC, catalog=catalog_path) as src:
             with self.assertRaises(NotImplementedError, msg=f"download_quicklook not supported for Datahub.File."):
                 src.download_quicklook(
-                    platform=Datahub.File, product_uuid="1", target_dir=target_dir,
+                    platform=Datahub.STAC, product_uuid="1", target_dir=target_dir,
                 )
 
 

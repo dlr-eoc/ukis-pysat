@@ -76,7 +76,7 @@ class Source:
             )
 
         else:
-            raise NotImplementedError(f"{datahub} is not supported [File, EarthExplorer, Scihub]")
+            raise NotImplementedError(f"{datahub} is not supported [STAC, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
