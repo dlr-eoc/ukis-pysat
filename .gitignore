@@ -13,3 +13,5 @@
 /docs/build/
 result.tif
 result.tif.aux.xml
+pystac/*
+test.py
