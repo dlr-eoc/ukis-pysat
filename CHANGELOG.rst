@@ -18,6 +18,7 @@ something was changed
 Changed
 *******
 - ``data``: metadata as STAC items and collections #98
+- ``members``: Datahab.file refactored to Datahub.STAC #99
 
 [0.7.0]  (2020-10-30)
 ---------------------

@@ -43,13 +43,13 @@ class Source:
     def __init__(self, datahub, catalog=None):
         """
         :param datahub: Data source (<enum 'Datahub'>).
-        :param catalog: Path to catalog.json that holds the metadata if datahub is 'File' (String, Path).
+        :param catalog: Path to catalog.json that holds the metadata if datahub is 'STAC' (String, Path).
         """
         self.src = datahub
 
-        if self.src == Datahub.File:
+        if self.src == Datahub.STAC:
             if not isinstance(catalog, (str, Path)):
-                raise AttributeError(f"'catalog' has to be set if datahub is 'File'.")
+                raise AttributeError(f"'catalog' has to be set if datahub is 'STAC'.")
             else:
                 self.api = None
                 self.init_catalog(catalog=catalog)
@@ -69,7 +69,7 @@ class Source:
             )
 
         else:
-            raise NotImplementedError(f"{datahub} is not supported [File, EarthExplorer, Scihub]")
+            raise NotImplementedError(f"{datahub} is not supported [STAC, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
@@ -101,7 +101,7 @@ class Source:
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
         :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
         """
-        if self.src == Datahub.File:
+        if self.src == Datahub.STAC:
             for item in self.catalog.get_all_items():
                 if item.ext.eo.cloud_cover and cloud_cover:  # not always relevant, but if no need to check rest
                     if not cloud_cover[0] <= item.ext.eo.cloud_cover < cloud_cover[1]:
@@ -154,7 +154,7 @@ class Source:
         :param srcid: Srcid of a specific product which is essentially its name (String).
         :returns: Metadata of product that matches srcid (MetadataCollection object).
         """
-        if self.src == Datahub.File:
+        if self.src == Datahub.STAC:
             for item in self.catalog.get_all_items():  # filter relevant item
                 if item.id != srcid:
                     self.catalog.remove_item(item.id)
@@ -194,7 +194,7 @@ class Source:
         :param platform: Image platform (<enum 'Platform'>).
         :returns: PySTAC item
         """
-        if self.src == Datahub.File:
+        if self.src == Datahub.STAC:
             raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
@@ -264,7 +264,7 @@ class Source:
         """
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
-        if self.src == Datahub.File:
+        if self.src == Datahub.STAC:
             raise NotImplementedError(f"download_image not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
@@ -296,7 +296,7 @@ class Source:
         """
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
-        if self.src == Datahub.File:
+        if self.src == Datahub.STAC:
             raise NotImplementedError(f"download_quicklook not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
