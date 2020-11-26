@@ -45,21 +45,25 @@ class Source:
         """
         :param datahub: Data source (<enum 'Datahub'>).
         :param catalog: Only applicable if datahub is 'STAC'. Can be one of the following types.
-                        Path to catalog.json that holds the metadata (String, Path).
+                        Path to STAC Catalog file catalog.json (String, Path).
                         Pystac Catalog or Collection object (pystac.catalog.Catalog, pystac.collection.Collection).
                         None initializes an empty catalog.
         """
         self.src = datahub
 
         if self.src == Datahub.STAC:
-            # connect to Spatio Temporal Asset Catalog
+            # connect to STAC Catalog
             if isinstance(catalog, (pystac.catalog.Catalog, pystac.collection.Collection)):
                 self.api = catalog
             elif isinstance(catalog, (str, Path)):
                 href = Path(catalog).resolve().as_uri()
                 self.api = pystac.catalog.Catalog.from_file(href)
-            else:
+            elif catalog is None:
                 self.api = self._init_catalog()
+            else:
+                raise AttributeError(
+                    f"{catalog} is not a valid STAC Catalog [catalog.json, pystac.catalog.Catalog, pystac.collection.Collection, None]"
+                )
 
         elif self.src == Datahub.EarthExplorer:
             # connect to Earthexplorer
@@ -82,35 +86,24 @@ class Source:
         return self
 
     def _init_catalog(self):
-        """Initializes an empty Spatio Temporal Asset Catalog."""
+        """Initializes an empty STAC Catalog."""
         return pystac.catalog.Catalog(
             id=str(uuid.uuid4()),
             description=f"Creation Date: {datetime.datetime.now()}, Datahub: {self.src.value}",
             catalog_type=pystac.catalog.CatalogType.SELF_CONTAINED,
         )
 
-    def add_items_from_directory(self, item_dir, item_substr=None):
-        """Adds metadata items from a directory to a STAC source.
+    def add_items_from_directory(self, item_dir, item_glob="*"):
+        """Adds STAC items from a directory to a STAC Catalog.
 
-        :param item_dir: Path to directory that holds the metadata items (String).
-        :param item_substr: Optional substring patterns to identify metadata items in directory (List of String).
+        :param item_dir: Path to directory that holds the STAC items (String).
+        :param item_glob: Optional glob pattern to identify STAC items in directory (String).
         """
         if self.src == Datahub.STAC:
             # get all json files in item_dir that match item_substr
-            if item_substr is None:
-                item_substr = [""]
-            item_files = sorted(
-                [
-                    Path(dp).joinpath(f)
-                    for dp, dn, filenames in os.walk(item_dir)
-                    for substr in item_substr
-                    for f in filenames
-                    if f.endswith(".json") and substr in f
-                ],
-                key=lambda path: str(path).lower(),
-            )
+            item_files = sorted(Path(item_dir).rglob(f"{item_glob}.json"))
 
-            # load items from file and add to catalog source
+            # load items from file and add to STAC Catalog
             for item_file in item_files:
                 item = pystac.read_file(str(item_file))
                 self.api.add_item(item)
@@ -119,7 +112,7 @@ class Source:
             raise NotImplementedError(f"add_items_from_directory only supported for Datahub.STAC.")
 
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
-        """Queries satellite image metadata from data source.
+        """Queries metadata from data source.
 
         :param platform: Image platform (<enum 'Platform'>).
         :param date: Date from - to in format yyyyMMdd (String or Datetime tuple).
@@ -128,7 +121,7 @@ class Source:
         :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
         """
         if self.src == Datahub.STAC:
-            # query Spatio Temporal Asset Catalog for metadata
+            # query STAC Catalog for metadata
             catalog = self._init_catalog()
             geom = self.prep_aoi(aoi)
             for item in self.api.get_all_items():
@@ -138,9 +131,7 @@ class Source:
                 if (
                     platform.value == item.common_metadata.platform
                     and sentinelsat.format_query_date(date[0])
-                    <= sentinelsat.format_query_date(
-                        parse(item.properties["acquisitiondate"]).strftime("%Y%m%d")
-                    )
+                    <= sentinelsat.format_query_date(parse(item.properties["acquisitiondate"]).strftime("%Y%m%d"))
                     < sentinelsat.format_query_date(date[1])
                     and geometry.shape(item.geometry).intersects(geom)
                 ):
@@ -178,10 +169,10 @@ class Source:
         return catalog
 
     def query_metadata_srcid(self, platform, srcid):
-        """Queries satellite image metadata from data source by srcid.
+        """Queries metadata from data source by srcid.
 
         :param platform: Image platform (<enum 'Platform'>).
-        :param srcid: Srcid of a specific product which is essentially its name (String).
+        :param srcid: Srcid of a specific product (String).
         :returns: Metadata of product that matches srcid (PySTAC Catalog).
         """
         if self.src == Datahub.STAC:
@@ -230,8 +221,6 @@ class Source:
         :param platform: Image platform (<enum 'Platform'>).
         :returns: PySTAC item
         """
-        import dateutil.parser as dparser
-
         if self.src == Datahub.STAC:
             raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
