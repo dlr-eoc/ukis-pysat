@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import datetime
-import os
 import shutil
 import uuid
 from io import BytesIO
@@ -39,15 +38,14 @@ class Source:
     Remote APIs and local data directories that hold metadata files are supported.
     """
 
-    catalog = None
-
     def __init__(self, datahub, catalog=None):
         """
         :param datahub: Data source (<enum 'Datahub'>).
-        :param catalog: Only applicable if datahub is 'STAC'. Can be one of the following types.
+        :param catalog: Only applicable if datahub is 'STAC'. Can be one of the following types:
                         Path to STAC Catalog file catalog.json (String, Path).
                         Pystac Catalog or Collection object (pystac.catalog.Catalog, pystac.collection.Collection).
                         None initializes an empty catalog.
+                        (default: None)
         """
         self.src = datahub
 
@@ -62,7 +60,8 @@ class Source:
                 self.api = self._init_catalog()
             else:
                 raise AttributeError(
-                    f"{catalog} is not a valid STAC Catalog [catalog.json, pystac.catalog.Catalog, pystac.collection.Collection, None]"
+                    f"{catalog} is not a valid STAC Catalog [catalog.json, pystac.catalog.Catalog, "
+                    f"pystac.collection.Collection, None] "
                 )
 
         elif self.src == Datahub.EarthExplorer:
@@ -93,15 +92,15 @@ class Source:
             catalog_type=pystac.catalog.CatalogType.SELF_CONTAINED,
         )
 
-    def add_items_from_directory(self, item_dir, item_glob="*"):
+    def add_items_from_directory(self, item_dir, item_glob="*.json"):
         """Adds STAC items from a directory to a STAC Catalog.
 
         :param item_dir: Path to directory that holds the STAC items (String).
-        :param item_glob: Optional glob pattern to identify STAC items in directory (String).
+        :param item_glob: Optional glob pattern to identify STAC items in directory (String), (default: '*.json').
         """
         if self.src == Datahub.STAC:
             # get all json files in item_dir that match item_substr
-            item_files = sorted(Path(item_dir).rglob(f"{item_glob}.json"))
+            item_files = sorted(Path(item_dir).rglob(item_glob))
 
             # load items from file and add to STAC Catalog
             for item_file in item_files:
@@ -185,7 +184,7 @@ class Source:
             return catalog
 
         elif self.src == Datahub.EarthExplorer:
-            # query Earthexplorer for metadata by srcid
+            # query EarthExplorer for metadata by srcid
             # TODO: could not figure out how to directly query detailed metadata by srcid, therefore here we
             # query first for scene acquisitiondate and footprint and use these to query detailed metadata.
             meta_src = self.api.request(
