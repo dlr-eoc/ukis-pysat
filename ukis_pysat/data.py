@@ -202,13 +202,9 @@ class Source:
                     catalog.add_item(item)
             return catalog
 
-        else:
-            # query Scihub for metadata by srcid
-            cleaned_products = self.api.to_geojson(self.api.query(identifier=srcid))["features"]
-
-            # initialize empty catalog and add metadata items
-            catalog = self._init_catalog()
-            for meta in cleaned_products:
+        else:  # query Scihub for metadata by srcid
+            catalog = self._init_catalog()  # initialize empty catalog and add metadata items
+            for meta in self.api.to_geojson(self.api.query(filename=srcid))["features"]:
                 catalog.add_item(self.construct_metadata(meta=meta, platform=platform))
             return catalog
 
