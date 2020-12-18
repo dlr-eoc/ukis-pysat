@@ -235,7 +235,7 @@ class RasterTest(unittest.TestCase):
                 platform=tests[i]["platform"], mtl_file=tests[i]["mtl_file"], wavelengths=tests[i]["wavelengths"]
             )
 
-            self.assertTrue(np.array_equal(img_dn.arr, img_toa.arr))
+            self.assertTrue(np.array_equal(img_dn.arr, img_toa.arr, equal_nan=True))
             img_dn.close()
             img_toa.close()
 
