@@ -108,7 +108,7 @@ class Source:
                 self.api.add_item(item)
 
         else:
-            raise NotImplementedError(f"add_items_from_directory only supported for Datahub.STAC.")
+            raise TypeError(f"add_items_from_directory only works for Datahub.STAC.")
 
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
         """Queries metadata from data source.
@@ -143,7 +143,7 @@ class Source:
             kwargs = {}
             if cloud_cover:
                 kwargs["max_cloud_cover"] = cloud_cover[1]
-            meta_src = self.api.search(
+            products = self.api.search(
                 dataset=platform.value,
                 bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
                 start_date=sentinelsat.format_query_date(date[0]),
@@ -157,13 +157,13 @@ class Source:
             kwargs = {}
             if cloud_cover and platform != platform.Sentinel1:
                 kwargs["cloudcoverpercentage"] = cloud_cover
-            meta_src = self.api.query(area=self.prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,)
-            meta_src = self.api.to_geojson(meta_src)["features"]
+            products = self.api.query(area=self.prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,)
+            products = self.api.to_geojson(products)["features"]
 
         # initialize empty catalog and add metadata items
         catalog = self._init_catalog()
-        for item in meta_src:
-            catalog.add_item(self.construct_metadata(meta_src=item, platform=platform))
+        for meta in products:
+            catalog.add_item(self.construct_metadata(meta=meta, platform=platform))
 
         return catalog
 
@@ -194,29 +194,28 @@ class Source:
             date_from = meta_src[0]["acquisitionDate"].replace("-", "")
             date_to = (datetime.datetime.strptime(date_from, "%Y%m%d") + datetime.timedelta(days=1)).strftime("%Y%m%d")
             aoi = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
-            meta_src = self.query_metadata(platform=platform, date=(date_from, date_to), aoi=aoi)
 
             # initialize empty catalog and add metadata items
             catalog = self._init_catalog()
-            for item in meta_src.get_all_items():
+            for item in self.query_metadata(platform=platform, date=(date_from, date_to), aoi=aoi).get_all_items():
                 if item.id == srcid:
                     catalog.add_item(item)
             return catalog
 
         else:
             # query Scihub for metadata by srcid
-            meta_src = self.api.to_geojson(self.api.query(identifier=srcid))["features"]
+            cleaned_products = self.api.to_geojson(self.api.query(identifier=srcid))["features"]
 
             # initialize empty catalog and add metadata items
             catalog = self._init_catalog()
-            for item in meta_src:
-                catalog.add_item(self.construct_metadata(meta_src=item, platform=platform))
+            for meta in cleaned_products:
+                catalog.add_item(self.construct_metadata(meta=meta, platform=platform))
             return catalog
 
-    def construct_metadata(self, meta_src, platform):
+    def construct_metadata(self, meta, platform):
         """Constructs a STAC item that is harmonized across the different satellite image sources.
 
-        :param meta_src: Source metadata (GeoJSON-like mapping)
+        :param meta: Source metadata (GeoJSON-like mapping)
         :param platform: Image platform (<enum 'Platform'>).
         :returns: PySTAC item
         """
@@ -225,63 +224,59 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             item = pystac.Item(
-                id=meta_src["displayId"],
+                id=meta["displayId"],
                 datetime=datetime.datetime.now(),
-                geometry=meta_src["spatialFootprint"],
-                bbox=_get_bbox_from_geometry_string(meta_src["spatialFootprint"]),
+                geometry=meta["spatialFootprint"],
+                bbox=_get_bbox_from_geometry_string(meta["spatialFootprint"]),
                 properties={
                     "producttype": "L1TP",
-                    "srcurl": meta_src["dataAccessUrl"],
-                    "srcuuid": meta_src["entityId"],
-                    "acquisitiondate": parse(meta_src["acquisitionDate"], ignoretz=True, fuzzy=True).strftime(
-                        "%Y-%m-%d"
-                    ),
-                    "ingestiondate": parse(meta_src["modifiedDate"], ignoretz=True, fuzzy=True).strftime("%Y-%m-%d"),
+                    "srcurl": meta["dataAccessUrl"],
+                    "srcuuid": meta["entityId"],
+                    "acquisitiondate": parse(meta["acquisitionDate"], ignoretz=True, fuzzy=True).strftime("%Y-%m-%d"),
+                    "ingestiondate": parse(meta["modifiedDate"], ignoretz=True, fuzzy=True).strftime("%Y-%m-%d"),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
 
-            if "cloudCover" in meta_src:
-                item.ext.eo.cloud_cover = round(float(meta_src["cloudCover"]), 2)
+            if "cloudCover" in meta:
+                item.ext.eo.cloud_cover = round(float(meta["cloudCover"]), 2)
 
             item.common_metadata.platform = platform.value
 
             relative_orbit = int(
-                meta_src["summary"][
-                    meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
-                ]
+                meta["summary"][meta["summary"].find("Path: ") + len("Path: ") : meta["summary"].rfind(", Row: ")]
             )
             item.ext.sat.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
 
         else:  # Scihub
             item = pystac.Item(
-                id=meta_src["properties"]["identifier"],
+                id=meta["properties"]["identifier"],
                 datetime=datetime.datetime.now(),
-                geometry=meta_src["geometry"],
-                bbox=_get_bbox_from_geometry_string(meta_src["geometry"]),
+                geometry=meta["geometry"],
+                bbox=_get_bbox_from_geometry_string(meta["geometry"]),
                 properties={
-                    "producttype": meta_src["properties"]["producttype"],
-                    "size": meta_src["properties"]["size"],
-                    "srcurl": meta_src["properties"]["link"],
-                    "srcuuid": meta_src["properties"]["uuid"],
-                    "acquisitiondate": parse(
-                        meta_src["properties"]["beginposition"], ignoretz=True, fuzzy=True
-                    ).strftime("%Y-%m-%d"),
-                    "ingestiondate": parse(meta_src["properties"]["ingestiondate"], ignoretz=True, fuzzy=True).strftime(
+                    "producttype": meta["properties"]["producttype"],
+                    "size": meta["properties"]["size"],
+                    "srcurl": meta["properties"]["link"],
+                    "srcuuid": meta["properties"]["uuid"],
+                    "acquisitiondate": parse(meta["properties"]["beginposition"], ignoretz=True, fuzzy=True).strftime(
+                        "%Y-%m-%d"
+                    ),
+                    "ingestiondate": parse(meta["properties"]["ingestiondate"], ignoretz=True, fuzzy=True).strftime(
                         "%Y-%m-%d"
                     ),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
 
-            if "cloudcoverpercentage" in meta_src["properties"]:
-                item.ext.eo.cloud_cover = round(float(meta_src["properties"]["cloudcoverpercentage"]), 2)
+            if "cloudcoverpercentage" in meta["properties"]:
+                item.ext.eo.cloud_cover = round(float(meta["properties"]["cloudcoverpercentage"]), 2)
 
             item.common_metadata.platform = platform.value
 
             item.ext.sat.apply(
-                orbit_state=sat.OrbitState[meta_src["properties"]["orbitdirection"].upper()],  # for enum key to work
-                relative_orbit=int(meta_src["properties"]["orbitnumber"]),
+                orbit_state=sat.OrbitState[meta["properties"]["orbitdirection"].upper()],  # for enum key to work
+                relative_orbit=int(meta["properties"]["orbitnumber"]),
             )
 
         return item
