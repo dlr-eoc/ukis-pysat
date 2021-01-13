@@ -1,21 +1,23 @@
-shapely~=1.7.1
-numpy~=1.19.4
-requests~=2.24.0
-rasterio~=1.1.8
-pillow~=8.0.1
-sentinelsat~=0.14
+## data
+fiona>=1.8.17
 landsatxplore==0.8
+numpy
+pillow>=8.0.1
 pylandsat==0.4
+pyproj>=3.0.0
+pystac[validation]>0.5.3
+python-dateutil
+requests
+sentinelsat>=0.13
+shapely>=1.7.1
+
+## raster
+# numpy
+rasterio>=1.1.8
 rio_toa==0.3.0
-pyproj~=3.0.0.post1
+shapely>=1.7.1
 
-fiona~=1.8.17
-
-python-dateutil~=2.8.1
-
-utm==0.6.0
-pandas~=1.1.4
-dask[array]~=2.30.0
-
-setuptools~=50.3.2
-pystac[validation]~=0.5.3
+## complete
+dask[array]
+pandas
+utm==0.7.0
