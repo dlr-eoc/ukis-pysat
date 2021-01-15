@@ -13,28 +13,28 @@ except ImportError as e:
     raise ImportError(str(e) + "\n\n" + msg)
 
 
-import ukis_pysat._IO
+import ukis_pysat._stacapiio
 
 
-class STAC_APIError(Exception):
+class StacApiError(Exception):
     pass
 
 
-class STAC_API:
+class StacApi:
     # TODO be aware of https://github.com/azavea/franklin/issues/471
     def __init__(self, url=os.getenv("STAC_API_URL", None)):
         """API to query STAC
         :param url: STAC Server endpoint, reads from STAC_API_URL environment variable by default
         """
         if url is None:
-            raise STAC_APIError("URL not provided, pass into STAC_API or define STAC_API_URL environment variable")
+            raise StacApiError("URL not provided, pass into StacApi or define STAC_API_URL environment variable")
         self.url = url.rstrip("/") + "/"
 
     def _handle_query(self, url=None, headers=None, **kwargs):
         url = url or urljoin(self.url, "search")
         response = self._query(url, kwargs=kwargs, headers=headers)
         if response.status_code != 200:
-            raise STAC_APIError(response.text)
+            raise StacApiError(response.text)
         return response.json()
 
     @staticmethod
@@ -75,7 +75,7 @@ class STAC_API:
                     next_page = None
                     break
                 """Instead of reading Items from_dict we rebuild the URLs so that they fit to the file system in use"""
-                items.append(ukis_pysat._IO.STAC_API_IO.build_url(f))
+                items.append(ukis_pysat._stacapiio.StacApiIo.build_url(f))
 
         return items
 

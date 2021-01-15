@@ -3,13 +3,13 @@ import unittest
 import geojson
 from shapely import wkt
 
-from ukis_pysat.STAC_API import STAC_API
+from ukis_pysat.stacapi import StacApi
 
 
 class StacApiTest(unittest.TestCase):
     def setUp(self):
         self.url = "https://earth-search.aws.element84.com/v0"
-        self.api = STAC_API(url=self.url)
+        self.api = StacApi(url=self.url)
 
         self.aoi = geojson.Feature(
             geometry=wkt.loads(

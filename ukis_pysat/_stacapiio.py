@@ -1,7 +1,7 @@
 from pystac import Item
 
 
-class STAC_API_IO:
+class StacApiIo:
     def default_build_url_method(feature):
         return Item.from_dict(feature)
 
