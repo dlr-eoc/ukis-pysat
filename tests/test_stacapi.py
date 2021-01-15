@@ -8,7 +8,7 @@ from ukis_pysat.stacapi import StacApi
 
 class StacApiTest(unittest.TestCase):
     def setUp(self):
-        self.url = "https://earth-search.aws.element84.com/v0"
+        self.url = "https://earth-search.aws.element84.com/v0/"
         self.api = StacApi(url=self.url)
 
         self.aoi = geojson.Feature(
@@ -29,8 +29,8 @@ class StacApiTest(unittest.TestCase):
         self.assertEqual(collection[0].id, r"sentinel-s2-l2a")
 
     def test_count(self):
-        cnt = self.api.count(collection=r"sentinel-s2-l2a")
-        self.assertEqual(cnt, 37366451)
+        cnt = self.api.count(collection=r"sentinel-s2-l2a", datetime=r"2019-01-01T00:00:00Z/2019-01-01T23:59:59Z")
+        self.assertEqual(cnt, 25030)
 
     @unittest.skip  # TODO does not work because endpoints expects quotes around ID
     def test_get_item(self):
