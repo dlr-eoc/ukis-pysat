@@ -15,6 +15,11 @@ something was changed
 
 [master]  (2020-**-**)
 ----------------------
+
+Added
+*****
+- ``data``: new stac api #101
+
 Changed
 *******
 - ``data``: metadata as STAC items and collections #98

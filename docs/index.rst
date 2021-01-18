@@ -8,6 +8,21 @@ Welcome to UKIS-pysat's documentation!
 
 The UKIS-pysat package provides generic classes and functions to query, access and process multi-spectral and SAR satellite images.
 
+data
+____
+Download satellites data from different sources (currently Earth Explorer, SciHub, STAC), deal with and structure metadata.
+
+file
+____
+Work with you local satellite data files and read information out of file names and metadata files. Currently, focusing on Sentinel-1.
+
+raster
+______
+Reading satellite data and performing simple, but cumbersome tasks. This is just a layer on top of `rasterio <https://github.com/mapbox/rasterio>`__ for stuff we often need. It can very well be that using *rasterio* directly is often the better choice.
+
+Example
+_______
+Here's an example about some basic features:
 .. code-block:: python
 
   from ukis_pysat.data import Source
@@ -46,10 +61,9 @@ The UKIS-pysat package provides generic classes and functions to query, access a
   with get_sentinel_scene_from_dir(target_dir) as (full_path, ident):
       # initialize an image object
       # keep the dimension order in mind (order of channels or bands)
-      img = Image(os.path_testfiles.join(full_path, 'pre_nrcs.tif'))
-
-      # scale the image array, having one band
-      img.arr = img.arr * 0.3
+      with Image(full_path.join('pre_nrcs.tif')) as img:
+          # scale the image array, having one band
+          img.arr = img.arr * 0.3
 
 Dimension order
 ---------------
@@ -58,6 +72,27 @@ Compare with the `documentation of rasterio <https://rasterio.readthedocs.io/en/
 If the image was initialized with dimension order *last*, the result will be reshaped to *last* (rows, columns, bands) when calling ``img.arr``.
 
 Altering the array replaces all bands. If it is intended to alter a particular band, the remaining bands should be copied.
+
+STAC API Item IO Concept
+___________________
+To enable reading from different types of file systems (similar to `PySTAC <https://pystac.readthedocs.io/en/latest/concepts.html#using-stac-io>`__), it is recommended that in the ``__init__.py`` of the client module, or at the beginning of the script using ``ukis_pysat.data``, you overwrite the ``StacApiIo.ITEM_URL_IO`` with function that read and write however you need. The following is an example for a on premise S3 environment:
+.. code-block:: python
+
+   from ukis_pysat.data import ITEM_URL_IO
+   from pystac import Item
+
+    def on_premise_s3_url_method(feature, root_bucket="dem"):
+        """the href is build like /collections/*collection_prefix*/items/*item_prefix*
+
+        At some environments we will need to give back the href according to this method.
+        """
+        item = Item.from_dict(feature)
+        href = item.get_self_href()
+        stripped_href = href.replace(r"collections/", "").replace(r"items/", "")
+
+        return Item.from_file(f"s3://{root_bucket}{stripped_href}/{item.id}.json")
+
+    ITEM_URL_IO = on_premise_s3_url_method
 
 Environment variables
 ---------------------
