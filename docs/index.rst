@@ -8,6 +8,19 @@ Welcome to UKIS-pysat's documentation!
 
 The UKIS-pysat package provides generic classes and functions to query, access and process multi-spectral and SAR satellite images.
 
+data
+____
+Download satellites data from different sources (currently Earth Explorer, SciHub, STAC), deal with and structure metadata.
+
+file
+____
+Work with you local satellite data files and read information out of file names and metadata files. Currently, focusing on Sentinel-1.
+
+raster
+______
+Reading satellite data and performing simple, but cumbersome tasks. This is just a layer on top of `rasterio <https://github.com/mapbox/rasterio>`__ for stuff we often need. It can very well be that using *rasterio* directly is often the better choice.
+
+
 .. code-block:: python
 
   from ukis_pysat.data import Source
