@@ -74,7 +74,7 @@ If the image was initialized with dimension order *last*, the result will be res
 Altering the array replaces all bands. If it is intended to alter a particular band, the remaining bands should be copied.
 
 STAC API Item IO Concept
-___________________
+________________________
 To enable reading from different types of file systems (similar to `PySTAC <https://pystac.readthedocs.io/en/latest/concepts.html#using-stac-io>`__), it is recommended that in the ``__init__.py`` of the client module, or at the beginning of the script using ``ukis_pysat.data``, you overwrite the ``StacApiIo.ITEM_URL_IO`` with function that read and write however you need. The following is an example for a on premise S3 environment:
 .. code-block:: python
 

@@ -8,6 +8,8 @@ from pathlib import Path
 
 from dateutil.parser import parse
 
+from ukis_pysat.stacapi import StacApi
+
 try:
     import fiona
     import landsatxplore.api
@@ -38,18 +40,21 @@ class Source:
     Remote APIs and local data directories that hold metadata files are supported.
     """
 
-    def __init__(self, datahub, catalog=None):
+    def __init__(self, datahub, catalog=None, url=None):
         """
         :param datahub: Data source (<enum 'Datahub'>).
-        :param catalog: Only applicable if datahub is 'STAC'. Can be one of the following types:
+        :param catalog: Only applicable if datahub is 'Directory'. Can be one of the following types:
                         Path to STAC Catalog file catalog.json (String, Path).
                         Pystac Catalog or Collection object (pystac.catalog.Catalog, pystac.collection.Collection).
                         None initializes an empty catalog.
                         (default: None)
+        :param url: Only applicable if datahub is 'StacApi'. STAC Server endpoint, reads from STAC_API_URL environment
+                        variable by default
+                        (default: None)
         """
         self.src = datahub
 
-        if self.src == Datahub.STAC:
+        if self.src == Datahub.Directory:
             # connect to STAC Catalog
             if isinstance(catalog, (pystac.catalog.Catalog, pystac.collection.Collection)):
                 self.api = catalog
@@ -63,6 +68,12 @@ class Source:
                     f"{catalog} is not a valid STAC Catalog [catalog.json, pystac.catalog.Catalog, "
                     f"pystac.collection.Collection, None] "
                 )
+
+        elif self.src == Datahub.StacApi:
+            if url:
+                self.api = StacApi(url=url)
+            else:
+                self.api = StacApi()
 
         elif self.src == Datahub.EarthExplorer:
             # connect to Earthexplorer
@@ -79,7 +90,7 @@ class Source:
             )
 
         else:
-            raise NotImplementedError(f"{datahub} is not supported [STAC, EarthExplorer, Scihub]")
+            raise NotImplementedError(f"{datahub} is not supported [Directory, StacApi, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
@@ -98,7 +109,7 @@ class Source:
         :param item_dir: Path to directory that holds the STAC items (String).
         :param item_glob: Optional glob pattern to identify STAC items in directory (String), (default: '*.json').
         """
-        if self.src == Datahub.STAC:
+        if self.src == Datahub.Directory:
             # get all json files in item_dir that match item_substr
             item_files = sorted(Path(item_dir).rglob(item_glob))
 
@@ -108,7 +119,7 @@ class Source:
                 self.api.add_item(item)
 
         else:
-            raise TypeError(f"add_items_from_directory only works for Datahub.STAC.")
+            raise TypeError(f"add_items_from_directory only works for Datahub.Directory and not with {self.src}.")
 
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
         """Queries metadata from data source.
@@ -119,7 +130,7 @@ class Source:
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
         :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
         """
-        if self.src == Datahub.STAC:
+        if self.src == Datahub.Directory:
             # query STAC Catalog for metadata
             catalog = self._init_catalog()
             geom = self.prep_aoi(aoi)
@@ -136,6 +147,10 @@ class Source:
                 ):
                     catalog.add_item(item)
             return catalog
+
+        elif self.src == Datahub.StacApi:
+            raise NotImplementedError(f"Do this directly with our stacapi functionalities, see "
+                                      f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html.")
 
         elif self.src == Datahub.EarthExplorer:
             # query Earthexplorer for metadata
@@ -174,7 +189,7 @@ class Source:
         :param srcid: Srcid of a specific product (String).
         :returns: Metadata of product that matches srcid (PySTAC Catalog).
         """
-        if self.src == Datahub.STAC:
+        if self.src == Datahub.Directory:
             # query Spatio Temporal Asset Catalog for metadata by srcid
             catalog = self._init_catalog()
             for item in self.api.get_all_items():
@@ -182,6 +197,10 @@ class Source:
                     catalog.add_item(item)
                     continue
             return catalog
+
+        elif self.src == Datahub.StacApi:
+            raise NotImplementedError(f"Do this directly with our stacapi functionalities, see "
+                                      f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html.")
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for metadata by srcid
@@ -215,7 +234,7 @@ class Source:
         :param platform: Image platform (<enum 'Platform'>).
         :returns: PySTAC item
         """
-        if self.src == Datahub.STAC:
+        if self.src == Datahub.Directory or self.src == Datahub.StacApi:
             raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
@@ -287,8 +306,11 @@ class Source:
         """
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
-        if self.src == Datahub.STAC:
-            raise NotImplementedError(f"download_image not supported for {self.src}.")
+
+        if self.src == Datahub.Directory or self.src == Datahub.StacApi:
+            raise NotImplementedError(
+                f"download_image not supported for {self.src}. It is much easier to get the asset yourself now."
+            )
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for srcid of product
@@ -319,8 +341,12 @@ class Source:
         """
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
-        if self.src == Datahub.STAC:
-            raise NotImplementedError(f"download_quicklook not supported for {self.src}.")
+
+        if self.src == Datahub.Directory or self.src == Datahub.StacApi:
+            raise NotImplementedError(
+                f"download_quicklook not supported for {self.src}. It is much easier to get the asset yourself now, "
+                f"when it is a COG you can read in an overview."
+            )
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for url, srcid and bounds of product
