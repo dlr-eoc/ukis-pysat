@@ -23,7 +23,7 @@ class StacApiError(Exception):
 class StacApi:
     # TODO be aware of https://github.com/azavea/franklin/issues/471
     def __init__(self, url=os.getenv("STAC_API_URL", None)):
-        """API to query STAC
+        """API to query STAC as part of ukis-pysat.data
         :param url: STAC Server endpoint, reads from STAC_API_URL environment variable by default
         """
         if url is None:
