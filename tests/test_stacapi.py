@@ -3,7 +3,7 @@ import unittest
 import geojson
 from shapely import wkt
 
-from ukis_pysat.stacapi import StacApi
+from ukis_pysat.stacapi import StacApi, StacApiError
 
 
 class StacApiTest(unittest.TestCase):
@@ -19,6 +19,10 @@ class StacApiTest(unittest.TestCase):
 
     def test_init(self):
         self.assertEqual(self.api.url, self.url)
+
+    def test_no_url(self):
+        with self.assertRaises(StacApiError):
+            StacApi()
 
     def test_collections(self):
         collections = self.api.get_collections()
