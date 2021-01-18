@@ -90,7 +90,3 @@ class StacApi:
         if isinstance(res, dict):
             res = res.get("collections", [res])
         return [Collection.from_dict(c) for c in res]
-
-
-if __name__ == '__main__':
-    pass

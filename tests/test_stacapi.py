@@ -12,8 +12,7 @@ class StacApiTest(unittest.TestCase):
         self.api = StacApi(url=self.url)
 
         self.aoi = geojson.Feature(
-            geometry=wkt.loads(
-                r"POLYGON((11.00 48.00, 11.05 48.00,11.05 48.05, 11.00 48.05, 11.00 48.00))"),
+            geometry=wkt.loads(r"POLYGON((11.00 48.00, 11.05 48.00,11.05 48.05, 11.00 48.05, 11.00 48.00))"),
             properties={},
         ).geometry
 
@@ -42,13 +41,15 @@ class StacApiTest(unittest.TestCase):
         self.assertEqual(item.id, "S2A_35VLG_20210114_0_L2A")
 
     def test_get_item_intersects(self):
-        cnt = self.api.count(collection="sentinel-s2-l2a", intersects=self.aoi)
-        self.assertEqual(1580, cnt)
+        cnt = self.api.count(
+            collection="sentinel-s2-l2a", intersects=self.aoi, datetime=r"2020-04-01T00:00:00Z/2020-04-01T23:59:59Z"
+        )
+        self.assertEqual(3, cnt)
 
     def test_get_items_limit(self, limit=31):
         items = self.api.get_items(collection="sentinel-s2-l2a", intersects=self.aoi, limit=limit)
         self.assertEqual(limit, len(items))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
