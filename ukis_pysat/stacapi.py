@@ -13,7 +13,7 @@ except ImportError as e:
     raise ImportError(str(e) + "\n\n" + msg)
 
 
-import ukis_pysat._stacapiio
+from ukis_pysat.stacapi_io import STACAPI_IO
 
 
 class StacApiError(Exception):
@@ -75,7 +75,7 @@ class StacApi:
                     next_page = None
                     break
                 """Instead of reading Items from_dict we rebuild the URLs so that they fit to the file system in use"""
-                items.append(ukis_pysat._stacapiio.StacApiIo.build_url(f))
+                items.append(STACAPI_IO.build_url(f))
 
         return items
 

@@ -23,6 +23,7 @@ Reading satellite data and performing simple, but cumbersome tasks. This is just
 Example
 _______
 Here's an example about some basic features:
+
 .. code-block:: python
 
   from ukis_pysat.data import Source
@@ -75,10 +76,11 @@ Altering the array replaces all bands. If it is intended to alter a particular b
 
 STAC API Item IO Concept
 ________________________
-To enable reading from different types of file systems (similar to `PySTAC <https://pystac.readthedocs.io/en/latest/concepts.html#using-stac-io>`__), it is recommended that in the ``__init__.py`` of the client module, or at the beginning of the script using ``ukis_pysat.data``, you overwrite the ``StacApiIo.ITEM_URL_IO`` with function that read and write however you need. The following is an example for a on premise S3 environment:
+To enable reading from different types of file systems (similar to `PySTAC <https://pystac.readthedocs.io/en/latest/concepts.html#using-stac-io>`__), it is recommended that in the ``__init__.py`` of the client module, or at the beginning of the script using ``ukis_pysat.data``, you overwrite the ``STACAPI_IO.read_item_method`` with function that read and write however you need. The following is an example for a on premise S3 environment:
+
 .. code-block:: python
 
-   from ukis_pysat.data import ITEM_URL_IO
+   from ukis_pysat.data import STACAPI_IO
    from pystac import Item
 
     def on_premise_s3_url_method(feature, root_bucket="dem"):
@@ -92,7 +94,7 @@ To enable reading from different types of file systems (similar to `PySTAC <http
 
         return Item.from_file(f"s3://{root_bucket}{stripped_href}/{item.id}.json")
 
-    ITEM_URL_IO = on_premise_s3_url_method
+    STACAPI_IO.read_item_method = on_premise_s3_url_method
 
 Environment variables
 ---------------------
