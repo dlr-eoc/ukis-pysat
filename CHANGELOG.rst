@@ -13,8 +13,15 @@ Changed
 ^^^^^^^
 something was changed
 
-[master]  (2020-^^-^^)
+[master]  (2020-**-**)
 ----------------------
+
+[1.0.1]  (2020-01-20)
+---------------------
+Changed
+^^^^^^^
+- ``data``: make fiona and pyproj optional #104
+- ``data``: refactored stacapi_io for nicer imports
 
 [1.0.0]  (2020-01-20)
 ---------------------
