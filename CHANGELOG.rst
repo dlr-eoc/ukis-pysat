@@ -2,29 +2,29 @@ Changelog
 =========
 
 Added
-*****
+^^^^^
 something was added
 
 Fixed
-*****
+^^^^^
 something was fixed
 
 Changed
-*******
+^^^^^^^
 something was changed
 
-[master]  (2020-**-**)
+[master]  (2020-^^-^^)
 ----------------------
 
 [1.0.0]  (2020-01-20)
 ---------------------
 
 Added
-*****
+^^^^^
 - ``data``: new stac api #101
 
 Changed
-*******
+^^^^^^^
 - ``data``: metadata as STAC items and collections #98
 - ``members``: Datahab.file refactored to Datahub.STAC_local, breaking! #99
 
@@ -32,13 +32,13 @@ Changed
 ---------------------
 
 Added
-*****
+^^^^^
 - ``file``: read and return booleans from env #90
 - ``raster``: possibility to init with 2D array #88
 - ``data``: query_metadata_srcid() method and related test #96
 
 Changed
-*******
+^^^^^^^
 - ``get_polarization_from_s1_filename()``: return type is now only ``str`` instead of ``Union[str, List[str]] #92``
 - ``data``: download_image check if file exists #95
 
@@ -46,18 +46,18 @@ Changed
 ---------------------
 
 Fixed
-*****
+^^^^^
 - ``file``: imported Pattern of module typing
 
 [0.6.2]  (2020-09-02)
 ---------------------
 
 Added
-*****
+^^^^^
 - ``file``: usage of type hints #76
 
 Fixed
-*****
+^^^^^
 - ``raster.get_valid_data_bbox()``: was using the wrong transform #84
 
 
@@ -65,7 +65,7 @@ Fixed
 ---------------------
 
 Added
-*****
+^^^^^
 - ``file``: added to_ESA_date() function #80
 - ``file.get_ts_from_sentinel_filename()``: possibility to choose date format
 - ``raster``: added nodata value upon dataset creation with numpy arrays #82
@@ -75,20 +75,20 @@ Added
 ---------------------
 
 Added
-*****
+^^^^^
 - ``raster.Image()``: With Statement Context Manager for Image #45
 - ``raster.Image()``: Alter image array #67
 - ``raster.Image()``: Target align option for `warp()` #60
 - ``raster.Image()``: Pass driver specific kwargs to `write_to_file()` #74
 
 Fixed
-*****
+^^^^^
 - ``data.Source()``: Fixed query metadata return for new EarthExplorer API #71
 - ``raster.Image()``: Consider all image bands in `pad()` #59
 - ``raster.Image()``: Memory leak caused by `__update_dataset()` #62
 
 Changed
-*******
+^^^^^^^
 - ``data.Metadata()``: Corrected field types #58
 - ``data.MetadataCollection()``: Improved plotting of MetadataCollection to_pandas method #56
 - ``data.MetadataCollection()``: Made filter method more flexible with list and fuzzy filter options #55
@@ -96,7 +96,7 @@ Changed
 - replaced os.path with Pathlib #78
 
 Removed
-*******
+^^^^^^^
 - ``file``: removed `pack()` and `unpack()` #57
 
 
@@ -104,16 +104,16 @@ Removed
 ---------------------
 
 Added
-*****
+^^^^^
 - ``raster.Image()``: optional nodata value for writing #32
 
 Fixed
-*****
+^^^^^
 - ``file.get_ts_from_sentinel_filename()``: Return datetime.datetime objects instead of timestamp strings #42
 - ``raster.Image()``: in-memory dataset could not be updated if not GTiff and other improvements #48 #52
 
 Changed
-*******
+^^^^^^^
 - ``raster.Image()``: renamed `mask_image()` to `mask()`
 - ``raster.Image()``: update of init signature to be less confusing #41 #50
 - ``raster.Image()``: in-memory dataset now always with "GTiff" driver #53
@@ -123,7 +123,7 @@ Changed
 ---------------------
 
 Added
-*****
+^^^^^
 - ``raster.Image()``: expanded test_arr to test AttributeError #31
 - ``raster.Image()``: optional dimorder for arr and according test #31
 - ``dn2toa()`` tests and testfiles #17
@@ -131,11 +131,11 @@ Added
 - ``data.source()``: check if an AOI string is a file or a WKT string #26
 
 Fixed
-*****
+^^^^^
 - ``raster.Image()``: bug in ``dn2toa()`` related to wrong array shape #17
 
 Changed
-*******
+^^^^^^^
 - ``raster.Image()``: changed ``dn2toa(platform, metadata, wavelengths)`` to ``dn2toa(platform, mtl_file, wavelengths)`` #17
 - ``raster.Image()``: ``dn2toa`` now raises an error (instead of logging a warning) if Platform is not supported.
 - ``raster.Image()``: explicit dtype when writing, optional compression #32
@@ -147,11 +147,11 @@ Changed
 ---------------------
 
 Added
-*****
+^^^^^
 - ``download.Source()``: support for local metadata queries #6
 
 Changed
-*******
+^^^^^^^
 - split PyPI package into subsets to not require all dependencies for every installation #16
 - ``download.Source()``: removed ``traceback`` #6
 - ``download.Source()``: changed ``Source(source, source_dir=None)`` to ``Source(datahub, datadir=None, datadir_substr=None)`` #6
@@ -162,7 +162,7 @@ Changed
 ---------------------
 
 Added
-*****
+^^^^^
 - ``download.Source()``: Classes ``Metadata`` and ``MetadataCollection`` for metadata handling #13
 - expanded metadata part in README #13 - requirements: pyfields
 - ``download.Source()``: ``prep_aoi()`` for on the fly preparation of aoi for queries #1
@@ -173,12 +173,12 @@ Added
 - Sentinel3 test #10
 
 Fixed
-*****
+^^^^^
 - ``download.Source()``: Improved geocoding quicklooks #5
 - fixed #7
 
 Changed
-*******
+^^^^^^^
 - renamed ``ukis_pysat.data`` to ``ukis_pysat.raster`` and ``ukis_pysat.download`` to ``ukis_pysat.data``, breaking compatibility with version 0.1.0 #18
 - ``download.Source()``: Moved ``download_metadata()`` and ``filter_metadata()`` to ``Metadata`` class #13
 - ``download.Source()``: Moved all metadata mapping from ``query()`` to ``construct_metadata()`` #1
