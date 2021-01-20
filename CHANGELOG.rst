@@ -2,22 +2,31 @@ Changelog
 =========
 
 Added
-~~~~~
+*****
 something was added
 
 Fixed
-~~~~~
+*****
 something was fixed
 
 Changed
-~~~~~~~
+*******
 something was changed
 
 [master]  (2020-**-**)
 ----------------------
+
+[1.0.0]  (2020-01-20)
+---------------------
+
 Added
 *****
 - ``data``: new stac api #101
+
+Changed
+*******
+- ``data``: metadata as STAC items and collections #98
+- ``members``: Datahab.file refactored to Datahub.STAC_local, breaking! #99
 
 [0.7.0]  (2020-10-30)
 ---------------------
@@ -29,7 +38,7 @@ Added
 - ``data``: query_metadata_srcid() method and related test #96
 
 Changed
-*****
+*******
 - ``get_polarization_from_s1_filename()``: return type is now only ``str`` instead of ``Union[str, List[str]] #92``
 - ``data``: download_image check if file exists #95
 

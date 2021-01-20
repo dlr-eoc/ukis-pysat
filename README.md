@@ -64,7 +64,9 @@ src.download_image(platform=Platform.Sentinel2, product_uuid=uuid, target_dir="t
 
 # get sentinel scene from directory
 with get_sentinel_scene_from_dir(target_dir) as (full_path, ident):
-    img = Image(os.path_testfiles.join(full_path, 'pre_nrcs.tif'))
+    with Image(full_path.join('pre_nrcs.tif')) as img:
+    # scale the image array, having one band
+      img.arr = img.arr * 0.3
 ````
 
 ### Environment variables to configure Datahub credentials

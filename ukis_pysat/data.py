@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
 
 import datetime
-import json
-import os
 import shutil
+import uuid
 from io import BytesIO
 from pathlib import Path
-from typing import List
+
+from dateutil.parser import parse
+
+from ukis_pysat.stacapi import StacApi
 
 try:
     import fiona
     import landsatxplore.api
     import numpy as np
     import pyproj
+    import pystac
     import requests
     import sentinelsat
     from PIL import Image
-    from dateutil.parser import parse
-    from pyfields import field, make_init
     from pylandsat import Product
+    from pystac.extensions import sat
     from shapely import geometry, wkt, ops
 except ImportError as e:
     msg = (
@@ -29,7 +31,7 @@ except ImportError as e:
     raise ImportError(str(e) + "\n\n" + msg)
 
 from ukis_pysat.file import env_get
-from ukis_pysat.members import Datahub, Platform
+from ukis_pysat.members import Datahub
 
 
 class Source:
@@ -38,24 +40,40 @@ class Source:
     Remote APIs and local data directories that hold metadata files are supported.
     """
 
-    def __init__(self, datahub, datadir=None, datadir_substr=None):
+    def __init__(self, datahub, catalog=None, url=None):
         """
         :param datahub: Data source (<enum 'Datahub'>).
-        :param datadir: Path to directory that holds the metadata if datahub is 'File' (String).
-        :param datadir_substr: Optional substring patterns to identify metadata in datadir if datahub
-            is 'File' (List of String).
+        :param catalog: Only applicable if datahub is 'STAC_local'. Can be one of the following types:
+                        Path to STAC Catalog file catalog.json (String, Path).
+                        Pystac Catalog or Collection object (pystac.catalog.Catalog, pystac.collection.Collection).
+                        None initializes an empty catalog.
+                        (default: None)
+        :param url: Only applicable if datahub is 'STAC_API'. STAC Server endpoint, reads from STAC_API_URL environment
+                        variable by default
+                        (default: None)
         """
         self.src = datahub
 
-        if self.src == Datahub.File:
-            if not datadir:
-                raise AttributeError(f"'datadir' has to be set if datahub is 'File'.")
+        if self.src == Datahub.STAC_local:
+            # connect to STAC Catalog
+            if isinstance(catalog, (pystac.catalog.Catalog, pystac.collection.Collection)):
+                self.api = catalog
+            elif isinstance(catalog, (str, Path)):
+                href = Path(catalog).resolve().as_uri()
+                self.api = pystac.catalog.Catalog.from_file(href)
+            elif catalog is None:
+                self.api = self._init_catalog()
             else:
-                self.api = datadir
-                if datadir_substr is None:
-                    self.api_substr = [""]
-                else:
-                    self.api_substr = datadir_substr
+                raise AttributeError(
+                    f"{catalog} is not a valid STAC Catalog [catalog.json, pystac.catalog.Catalog, "
+                    f"pystac.collection.Collection, None] "
+                )
+
+        elif self.src == Datahub.STAC_API:
+            if url:
+                self.api = StacApi(url=url)
+            else:
+                self.api = StacApi()
 
         elif self.src == Datahub.EarthExplorer:
             # connect to Earthexplorer
@@ -68,71 +86,76 @@ class Source:
             self.user = env_get("SCIHUB_USER")
             self.pw = env_get("SCIHUB_PW")
             self.api = sentinelsat.SentinelAPI(
-                self.user, self.pw, "https://scihub.copernicus.eu/dhus", show_progressbars=False,
+                self.user,
+                self.pw,
+                "https://scihub.copernicus.eu/dhus",
+                show_progressbars=False,
             )
 
         else:
-            raise NotImplementedError(f"{datahub} is not supported [File, EarthExplorer, Scihub]")
+            raise NotImplementedError(f"{datahub} is not supported [STAC_local, STAC_API, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
 
+    def _init_catalog(self):
+        """Initializes an empty STAC Catalog."""
+        return pystac.catalog.Catalog(
+            id=str(uuid.uuid4()),
+            description=f"Creation Date: {datetime.datetime.now()}, Datahub: {self.src.value}",
+            catalog_type=pystac.catalog.CatalogType.SELF_CONTAINED,
+        )
+
+    def add_items_from_directory(self, item_dir, item_glob="*.json"):
+        """Adds STAC items from a directory to a STAC Catalog.
+
+        :param item_dir: Path to directory that holds the STAC items (String).
+        :param item_glob: Optional glob pattern to identify STAC items in directory (String), (default: '*.json').
+        """
+        if self.src == Datahub.STAC_local:
+            # get all json files in item_dir that match item_substr
+            item_files = sorted(Path(item_dir).rglob(item_glob))
+
+            # load items from file and add to STAC Catalog
+            for item_file in item_files:
+                item = pystac.read_file(str(item_file))
+                self.api.add_item(item)
+
+        else:
+            raise TypeError(f"add_items_from_directory only works for Datahub.STAC_local and not with {self.src}.")
+
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
-        """Queries satellite image metadata from data source.
+        """Queries metadata from data source.
 
         :param platform: Image platform (<enum 'Platform'>).
-        :param date: Date from - to (String or Datetime tuple). Expects a tuple of (start, end), e.g.
-            (yyyyMMdd, yyyy-MM-ddThh:mm:ssZ, NOW, NOW-<n>DAY(S), HOUR(S), MONTH(S), etc.)
+        :param date: Date from - to in format yyyyMMdd (String or Datetime tuple).
         :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
-        :returns: Metadata of products that match query criteria (List of Metadata objects).
+        :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
         """
-        if self.src == Datahub.File:
-            # query Filesystem for metadata
-            start_date = sentinelsat.format_query_date(date[0])
-            end_date = sentinelsat.format_query_date(date[1])
+        if self.src == Datahub.STAC_local:
+            # query STAC Catalog for metadata
+            catalog = self._init_catalog()
             geom = self.prep_aoi(aoi)
-            if cloud_cover and platform != platform.Sentinel1:
-                min_cloud_cover = cloud_cover[0]
-                max_cloud_cover = cloud_cover[1]
-            else:
-                min_cloud_cover = 0
-                max_cloud_cover = 100
+            for item in self.api.get_all_items():
+                if item.ext.eo.cloud_cover and cloud_cover:
+                    if not cloud_cover[0] <= item.ext.eo.cloud_cover < cloud_cover[1]:
+                        continue
+                if (
+                    platform.value == item.common_metadata.platform
+                    and sentinelsat.format_query_date(date[0])
+                    <= sentinelsat.format_query_date(parse(item.properties["acquisitiondate"]).strftime("%Y%m%d"))
+                    < sentinelsat.format_query_date(date[1])
+                    and geometry.shape(item.geometry).intersects(geom)
+                ):
+                    catalog.add_item(item)
+            return catalog
 
-            # get all json files in datadir that match substr
-            meta_files = sorted(
-                [
-                    Path(dp).joinpath(f)
-                    for dp, dn, filenames in os.walk(self.api)
-                    for substr in self.api_substr
-                    for f in filenames
-                    if f.endswith(".json") and substr in f
-                ],
-                key=lambda path: str(path).lower(),
+        elif self.src == Datahub.STAC_API:
+            raise NotImplementedError(
+                f"Do this directly with our StacApi functionalities, see "
+                f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html."
             )
-
-            # filter json files by query parameters
-            meta_src = []
-            for meta_file in meta_files:
-                with open(meta_file) as f:
-                    m = json.load(f)
-                    try:
-                        self.construct_metadata(meta_src=m, platform=platform)
-                    except (json.decoder.JSONDecodeError, LookupError, TypeError) as e:
-                        raise ValueError(f"{meta_file.name} not a valid metadata file. {e}.")
-                    m_platform = m["properties"]["platformname"]
-                    m_date = sentinelsat.format_query_date(m["properties"]["acquisitiondate"])
-                    m_geom = geometry.shape(m["geometry"])
-                    m_cloud_cover = m["properties"]["cloudcoverpercentage"]
-                    if m_cloud_cover is None:
-                        m_cloud_cover = 0
-                    if (
-                        m_platform == platform.value
-                        and start_date <= m_date < end_date
-                        and m_geom.intersects(geom)
-                        and min_cloud_cover <= m_cloud_cover < max_cloud_cover
-                    ):
-                        meta_src.append(m)
 
         elif self.src == Datahub.EarthExplorer:
             # query Earthexplorer for metadata
@@ -140,7 +163,7 @@ class Source:
             kwargs = {}
             if cloud_cover:
                 kwargs["max_cloud_cover"] = cloud_cover[1]
-            meta_src = self.api.search(
+            products = self.api.search(
                 dataset=platform.value,
                 bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
                 start_date=sentinelsat.format_query_date(date[0]),
@@ -154,139 +177,136 @@ class Source:
             kwargs = {}
             if cloud_cover and platform != platform.Sentinel1:
                 kwargs["cloudcoverpercentage"] = cloud_cover
-            meta_src = self.api.query(area=self.prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,)
-            meta_src = self.api.to_geojson(meta_src)["features"]
+            products = self.api.query(
+                area=self.prep_aoi(aoi).wkt,
+                date=date,
+                platformname=platform.value,
+                **kwargs,
+            )
+            products = self.api.to_geojson(products)["features"]
 
-        # construct MetadataCollection from list of Metadata objects
-        return MetadataCollection([self.construct_metadata(meta_src=m, platform=platform) for m in meta_src])
+        # initialize empty catalog and add metadata items
+        catalog = self._init_catalog()
+        for meta in products:
+            catalog.add_item(self.construct_metadata(meta=meta, platform=platform))
+
+        return catalog
 
     def query_metadata_srcid(self, platform, srcid):
-        """Queries satellite image metadata from data source by srcid.
+        """Queries metadata from data source by srcid.
 
         :param platform: Image platform (<enum 'Platform'>).
-        :param srcid: Srcid of a specific product which is essentially its name (String).
-        :returns: Metadata of product that matches srcid (MetadataCollection object).
+        :param srcid: Srcid of a specific product (String).
+        :returns: Metadata of product that matches srcid (PySTAC Catalog).
         """
-        if self.src == Datahub.File:
-            # get all json files in datadir that match substr
-            meta_files = sorted(
-                [
-                    Path(dp).joinpath(f)
-                    for dp, dn, filenames in os.walk(self.api)
-                    for substr in self.api_substr
-                    for f in filenames
-                    if f.endswith(".json") and substr in f
-                ],
-                key=lambda path: str(path).lower(),
+        if self.src == Datahub.STAC_local:
+            # query Spatio Temporal Asset Catalog for metadata by srcid
+            catalog = self._init_catalog()
+            for item in self.api.get_all_items():
+                if item.id == srcid:
+                    catalog.add_item(item)
+                    continue
+            return catalog
+
+        elif self.src == Datahub.STAC_API:
+            raise NotImplementedError(
+                f"Do this directly with our StacApi functionalities, see "
+                f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html."
             )
 
-            # filter metadata json files by srcid and construct MetadataCollection
-            meta_src = []
-            for meta_file in meta_files:
-                with open(meta_file) as f:
-                    m = json.load(f)
-                    try:
-                        self.construct_metadata(meta_src=m, platform=platform)
-                    except (json.decoder.JSONDecodeError, LookupError, TypeError) as e:
-                        raise ValueError(f"{meta_file.name} not a valid metadata file. {e}.")
-                    m_platform = m["properties"]["platformname"]
-                    m_srcid = m["properties"]["srcid"]
-                    if m_platform == platform.value and m_srcid == srcid:
-                        meta_src.append(m)
-            meta_src = MetadataCollection([self.construct_metadata(meta_src=m, platform=platform) for m in meta_src])
-
         elif self.src == Datahub.EarthExplorer:
-            # query Earthexplorer for metadata by srcid and construct MetadataCollection
-            # NOTE: could not figure out how to directly query detailed metadata by srcid, therefore here we
+            # query EarthExplorer for metadata by srcid
+            # TODO: could not figure out how to directly query detailed metadata by srcid, therefore here we
             # query first for scene acquisitiondate and footprint and use these to query detailed metadata.
             meta_src = self.api.request(
                 "metadata",
                 **{"datasetName": platform.value, "entityIds": self.api.lookup(platform.value, srcid, inverse=True)},
             )
             date_from = meta_src[0]["acquisitionDate"].replace("-", "")
-            date_to = (datetime.datetime.strptime(date_from, '%Y%m%d') + datetime.timedelta(days=1)).strftime('%Y%m%d')
+            date_to = (datetime.datetime.strptime(date_from, "%Y%m%d") + datetime.timedelta(days=1)).strftime("%Y%m%d")
             aoi = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
-            meta_src = self.query_metadata(platform=platform, date=(date_from, date_to), aoi=aoi).filter(
-                filter_dict={"srcid": srcid}, type="exact"
-            )
 
-        else:
-            # query Scihub for metadata by srcid and construct MetadataCollection
-            meta_src = self.api.to_geojson(self.api.query(identifier=srcid))["features"]
-            meta_src = MetadataCollection([self.construct_metadata(meta_src=m, platform=platform) for m in meta_src])
+            # initialize empty catalog and add metadata items
+            catalog = self._init_catalog()
+            for item in self.query_metadata(platform=platform, date=(date_from, date_to), aoi=aoi).get_all_items():
+                if item.id == srcid:
+                    catalog.add_item(item)
+            return catalog
 
-        return meta_src
+        else:  # query Scihub for metadata by srcid
+            catalog = self._init_catalog()  # initialize empty catalog and add metadata items
+            for meta in self.api.to_geojson(self.api.query(identifier=srcid))["features"]:
+                catalog.add_item(self.construct_metadata(meta=meta, platform=platform))
+            return catalog
 
-    def construct_metadata(self, meta_src, platform):
-        """Constructs a metadata object that is harmonized across the different satellite image sources.
+    def construct_metadata(self, meta, platform):
+        """Constructs a STAC item that is harmonized across the different satellite image sources.
 
-        :param meta_src: Source metadata (GeoJSON-like mapping)
+        :param meta: Source metadata (GeoJSON-like mapping)
         :param platform: Image platform (<enum 'Platform'>).
-        :returns: Harmonized metadata (Metadata object)
+        :returns: PySTAC item
         """
-        if self.src == Datahub.File:
-            meta = Metadata(
-                id=meta_src["properties"]["id"],
-                platformname=platform,
-                producttype=meta_src["properties"]["producttype"],
-                orbitdirection=meta_src["properties"]["orbitdirection"],
-                orbitnumber=int(meta_src["properties"]["orbitnumber"]),
-                relativeorbitnumber=int(meta_src["properties"]["relativeorbitnumber"]),
-                acquisitiondate=meta_src["properties"]["acquisitiondate"],
-                ingestiondate=meta_src["properties"]["ingestiondate"],
-                cloudcoverpercentage=meta_src["properties"]["cloudcoverpercentage"],
-                format=meta_src["properties"]["format"],
-                size=meta_src["properties"]["size"],
-                srcid=meta_src["properties"]["srcid"],
-                srcurl=meta_src["properties"]["srcurl"],
-                srcuuid=meta_src["properties"]["srcuuid"],
-                geom=meta_src["geometry"],
-            )
+        if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
+            raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
-            meta = Metadata(
-                id=meta_src["displayId"],
-                platformname=platform,
-                producttype="L1TP",
-                orbitdirection="DESCENDING",
-                orbitnumber=int(
-                    meta_src["summary"][
-                        meta_src["summary"].find("Path: ") + len("Path: ") : meta_src["summary"].rfind(", Row: ")
-                    ]
-                ),
-                relativeorbitnumber=int(meta_src["summary"][meta_src["summary"].find("Row: ") + len("Row: ") :]),
-                acquisitiondate=meta_src["acquisitionDate"],
-                ingestiondate=meta_src["modifiedDate"],
-                cloudcoverpercentage=round(float(meta_src["cloudCover"]), 2) if "cloudCover" in meta_src else None,
-                format="GeoTIFF",
-                srcid=meta_src["displayId"],
-                srcurl=meta_src["dataAccessUrl"],
-                srcuuid=meta_src["entityId"],
-                geom=meta_src["spatialFootprint"],
+            item = pystac.Item(
+                id=meta["displayId"],
+                datetime=datetime.datetime.now(),
+                geometry=meta["spatialFootprint"],
+                bbox=_get_bbox_from_geometry_string(meta["spatialFootprint"]),
+                properties={
+                    "producttype": "L1TP",
+                    "srcurl": meta["dataAccessUrl"],
+                    "srcuuid": meta["entityId"],
+                    "acquisitiondate": parse(meta["acquisitionDate"], ignoretz=True, fuzzy=True).strftime("%Y-%m-%d"),
+                    "ingestiondate": parse(meta["modifiedDate"], ignoretz=True, fuzzy=True).strftime("%Y-%m-%d"),
+                },
+                stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
 
-        else:
-            meta = Metadata(
-                id=meta_src["properties"]["identifier"],
-                platformname=platform,
-                producttype=meta_src["properties"]["producttype"],
-                orbitdirection=meta_src["properties"]["orbitdirection"],
-                orbitnumber=int(meta_src["properties"]["orbitnumber"]),
-                relativeorbitnumber=int(meta_src["properties"]["relativeorbitnumber"]),
-                acquisitiondate=meta_src["properties"]["beginposition"],
-                ingestiondate=meta_src["properties"]["ingestiondate"],
-                cloudcoverpercentage=round(float(meta_src["properties"]["cloudcoverpercentage"]), 2)
-                if "cloudcoverpercentage" in meta_src["properties"]
-                else None,
-                format=meta_src["properties"]["format"],
-                size=meta_src["properties"]["size"],
-                srcid=meta_src["properties"]["identifier"],
-                srcurl=meta_src["properties"]["link"],
-                srcuuid=meta_src["properties"]["uuid"],
-                geom=meta_src["geometry"],
+            if "cloudCover" in meta:
+                item.ext.eo.cloud_cover = round(float(meta["cloudCover"]), 2)
+
+            item.common_metadata.platform = platform.value
+
+            relative_orbit = int(
+                meta["summary"][meta["summary"].find("Path: ") + len("Path: ") : meta["summary"].rfind(", Row: ")]
+            )
+            item.ext.sat.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
+
+        else:  # Scihub
+            item = pystac.Item(
+                id=meta["properties"]["identifier"],
+                datetime=datetime.datetime.now(),
+                geometry=meta["geometry"],
+                bbox=_get_bbox_from_geometry_string(meta["geometry"]),
+                properties={
+                    "producttype": meta["properties"]["producttype"],
+                    "size": meta["properties"]["size"],
+                    "srcurl": meta["properties"]["link"],
+                    "srcuuid": meta["properties"]["uuid"],
+                    "acquisitiondate": parse(meta["properties"]["beginposition"], ignoretz=True, fuzzy=True).strftime(
+                        "%Y-%m-%d"
+                    ),
+                    "ingestiondate": parse(meta["properties"]["ingestiondate"], ignoretz=True, fuzzy=True).strftime(
+                        "%Y-%m-%d"
+                    ),
+                },
+                stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
 
-        return meta
+            if "cloudcoverpercentage" in meta["properties"]:
+                item.ext.eo.cloud_cover = round(float(meta["properties"]["cloudcoverpercentage"]), 2)
+
+            item.common_metadata.platform = platform.value
+
+            item.ext.sat.apply(
+                orbit_state=sat.OrbitState[meta["properties"]["orbitdirection"].upper()],  # for enum key to work
+                relative_orbit=int(meta["properties"]["orbitnumber"]),
+            )
+
+        return item
 
     def download_image(self, platform, product_uuid, target_dir):
         """Downloads satellite image data to a target directory for a specific product_id.
@@ -298,12 +318,21 @@ class Source:
         """
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
-        if self.src == Datahub.File:
-            raise Exception("download_image not supported for {self.src}.")
+
+        if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
+            raise NotImplementedError(
+                f"download_image not supported for {self.src}. It is much easier to get the asset yourself now."
+            )
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for srcid of product
-            meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+            meta_src = self.api.request(
+                "metadata",
+                **{
+                    "datasetName": platform.value,
+                    "entityIds": [product_uuid],
+                },
+            )
             product_srcid = meta_src[0]["displayId"]
 
             if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
@@ -313,7 +342,9 @@ class Source:
 
                 # compress download directory and remove original files
                 shutil.make_archive(
-                    target_dir.joinpath(product_srcid), "zip", root_dir=target_dir.joinpath(product_srcid),
+                    target_dir.joinpath(product_srcid),
+                    "zip",
+                    root_dir=target_dir.joinpath(product_srcid),
                 )
                 shutil.rmtree(target_dir.joinpath(product_srcid))
 
@@ -330,12 +361,22 @@ class Source:
         """
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
-        if self.src == Datahub.File:
-            raise NotImplementedError(f"download_quicklook not supported for {self.src}.")
+
+        if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
+            raise NotImplementedError(
+                f"download_quicklook not supported for {self.src}. It is much easier to get the asset yourself now, "
+                f"when it is a COG you can read in an overview."
+            )
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for url, srcid and bounds of product
-            meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+            meta_src = self.api.request(
+                "metadata",
+                **{
+                    "datasetName": platform.value,
+                    "entityIds": [product_uuid],
+                },
+            )
             url = meta_src[0]["browseUrl"]
             bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
             product_srcid = meta_src[0]["displayId"]
@@ -377,7 +418,6 @@ class Source:
         :param aoi: Area of interest as Geojson file, WKT string or bounding box in lat lon coordinates (String, Tuple)
         :return: Shapely Polygon
         """
-
         # check if handed object is a string
         # this could include both file paths and WKT strings
         if isinstance(aoi, (str, Path)):
@@ -404,7 +444,7 @@ class Source:
         return aoi
 
     def close(self):
-        """Closes connection to or logs out of Datahub"""
+        """Closes connection to or logs out of Datahub."""
         if self.src == Datahub.EarthExplorer:
             self.api.logout()
         elif self.src == Datahub.Scihub:
@@ -416,176 +456,5 @@ class Source:
         self.close()
 
 
-class Metadata:
-    """
-    Provides a container to store metadata. Fields are assigned a default value, checked for dtype, validated
-    and converted if needed.
-    """
-
-    __init__ = make_init()
-    id: str = field(check_type=True, read_only=True, doc="Product ID")
-    platformname: Platform = field(check_type=True, default=None, doc="Platform name")
-    producttype: str = field(check_type=True, default="", doc="Product type")
-    orbitdirection: str = field(check_type=True, default="", doc="Orbitdirection")
-    orbitnumber: int = field(check_type=True, default=None, doc="Orbitnumber")
-    relativeorbitnumber: int = field(check_type=True, default=None, doc="Relative orbitnumber")
-    acquisitiondate = field(type_hint=datetime.date, check_type=True, default=None, doc="Acquisitiondate")
-    ingestiondate = field(type_hint=datetime.date, check_type=True, default=None, doc="Ingestiondate")
-    processingdate = field(type_hint=datetime.date, check_type=True, default=None, doc="Processingdate")
-    processingsteps: list = field(check_type=True, default=None, doc="Processingsteps")
-    processingversion: str = field(check_type=True, default="", doc="Processing version")
-    bandlist: list = field(check_type=True, default=None, doc="Bandlist")
-    cloudcoverpercentage: float = field(check_type=True, default=None, doc="Cloudcover [percent]")
-    format: str = field(check_type=True, default="", doc="File format")
-    size: str = field(check_type=True, default="", doc="File size [MB]")
-    srcid: str = field(check_type=True, doc="Source product ID")
-    srcurl: str = field(check_type=True, default="", doc="Source product URL")
-    srcuuid: str = field(check_type=True, doc="Source product UUID")
-    geom: dict = field(check_type=True, default=None, doc="Geometry [multipolygon dict]")
-
-    @acquisitiondate.converter(accepts=str)
-    @ingestiondate.converter(accepts=str)
-    @processingdate.converter(accepts=str)
-    def _prep_date(self, value):
-        """Converts a date string to datetime.date object.
-
-        :returns: Datetime.date
-        """
-        if value is not None:
-            return parse(value)
-
-    def to_dict(self):
-        """Converts Metadata to Dict.
-
-        :returns: Metadata (Dict)
-        """
-        return {
-            "id": self.id,
-            "platformname": None if self.platformname is None else self.platformname.value,
-            "producttype": self.producttype,
-            "orbitdirection": self.orbitdirection,
-            "orbitnumber": self.orbitnumber,
-            "relativeorbitnumber": self.relativeorbitnumber,
-            "acquisitiondate": None if self.acquisitiondate is None else self.acquisitiondate.strftime("%Y/%m/%d"),
-            "ingestiondate": None if self.ingestiondate is None else self.ingestiondate.strftime("%Y/%m/%d"),
-            "processingdate": None if self.processingdate is None else self.processingdate.strftime("%Y/%m/%d"),
-            "processingsteps": self.processingsteps,
-            "processingversion": self.processingversion,
-            "bandlist": self.bandlist,
-            "cloudcoverpercentage": self.cloudcoverpercentage,
-            "format": self.format,
-            "size": self.size,
-            "srcid": self.srcid,
-            "srcurl": self.srcurl,
-            "srcuuid": self.srcuuid,
-        }
-
-    def to_json(self):
-        """Converts Metadata to JSON.
-
-        :returns: Metadata (JSON)
-        """
-        return json.dumps(self.to_dict())
-
-    def to_geojson(self):
-        """Converts Metadata to GeoJSON.
-
-        :returns: Metadata (GeoJSON)
-        """
-        return geometry.mapping(_GeoInterface({"type": "Feature", "properties": self.to_dict(), "geometry": self.geom}))
-
-    def save(self, target_dir):
-        """Saves Metadata to GeoJSON file in target_dir with srcid as filename.
-
-        :param target_dir: Target directory that holds the downloaded metadata (String, Path)
-        """
-        g = self.to_geojson()
-        if isinstance(target_dir, str):
-            target_dir = Path(target_dir)
-        with open(target_dir.joinpath(g["properties"]["srcid"] + ".json"), "w") as f:
-            json.dump(g, f)
-
-
-class MetadataCollection:
-    """
-    Provides a container to store a collection of Metadata objects. Conversion methods are provided to
-    analyse the MetadataCollection further.
-    """
-
-    __init__ = make_init()
-    items: List[Metadata] = field(doc="Collection of Metadata objects")
-
-    def to_dict(self):
-        """Converts MetadataCollection to List of Dict.
-
-        :returns: MetadataCollection (List of Dict)
-        """
-        return [item.to_dict() for item in self.items]
-
-    def to_json(self):
-        """Converts MetadataCollection to List of JSON.
-
-        :returns: MetadataCollection (List of JSON)
-        """
-        return [item.to_json() for item in self.items]
-
-    def to_geojson(self):
-        """Converts MetadataCollection to list of GeoJSON.
-
-        :returns: MetadataCollection (List of GeoJSON)
-        """
-        return [item.to_geojson() for item in self.items]
-
-    def to_pandas(self):
-        """Converts MetadataCollection to Pandas Dataframe.
-
-        :returns: MetadataCollection (Pandas Dataframe)
-        """
-        try:
-            import pandas as pd
-        except ImportError:
-            raise ImportError("to_pandas requires optional dependency Pandas.")
-
-        pd.set_option("display.max_colwidth", -1)
-        d = [item.to_dict() for item in self.items]
-        return pd.DataFrame(d)
-
-    def filter(self, filter_dict, type="exact"):
-        """Filters MetadataCollection based on filter_dict.
-
-        :param filter_dict: Key value pair to use as filter e.g. {"producttype": "S2MSI1C"} (Dictionary).
-        :param type: how to filter match, default 'exact', alternative 'fuzzy'.
-        :returns: self
-        """
-        k = list(filter_dict.keys())[0]
-
-        if isinstance(filter_dict[k], list) is False:
-            # make sure that filter value is a list
-            filter_dict[k] = [filter_dict[k]]
-
-        if type == "exact":
-            # apply exact filter matching
-            self.items = [
-                item for item in self.items for filter in filter_dict[k] if filter == item.to_geojson()["properties"][k]
-            ]
-        elif type == "fuzzy":
-            # apply fuzzy filter matching
-            self.items = [
-                item for item in self.items for filter in filter_dict[k] if filter in item.to_geojson()["properties"][k]
-            ]
-        else:
-            raise NotImplementedError(f"{type} is not supported [exact, fuzzy]")
-        return self
-
-    def save(self, target_dir):
-        """Saves MetadataCollection to GeoJSON files in target_dir with srcid as filenames.
-
-        :param target_dir: Target directory (String, Path)
-        """
-        for item in self.items:
-            item.save(target_dir)
-
-
-class _GeoInterface(object):
-    def __init__(self, d):
-        self.__geo_interface__ = d
+def _get_bbox_from_geometry_string(geom):
+    return list(geometry.shape(geom).bounds)
