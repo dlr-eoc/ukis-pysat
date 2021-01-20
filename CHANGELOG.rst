@@ -16,6 +16,9 @@ something was changed
 [master]  (2020-**-**)
 ----------------------
 
+[1.0.0]  (2020-01-20)
+---------------------
+
 Added
 *****
 - ``data``: new stac api #101
@@ -23,7 +26,7 @@ Added
 Changed
 *******
 - ``data``: metadata as STAC items and collections #98
-- ``members``: Datahab.file refactored to Datahub.STAC #99
+- ``members``: Datahab.file refactored to Datahub.STAC_local, breaking! #99
 
 [0.7.0]  (2020-10-30)
 ---------------------
