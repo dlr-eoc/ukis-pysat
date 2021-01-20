@@ -11,10 +11,8 @@ from dateutil.parser import parse
 from ukis_pysat.stacapi import StacApi
 
 try:
-    import fiona
     import landsatxplore.api
     import numpy as np
-    import pyproj
     import pystac
     import requests
     import sentinelsat
@@ -423,6 +421,11 @@ class Source:
         if isinstance(aoi, (str, Path)):
             # check if handed object is a file
             if Path(aoi).is_file():
+                try:
+                    import fiona
+                    import pyproj
+                except ImportError:
+                    raise ImportError("if your AOI is a file optional dependencies [fiona, pyproj] are required.")
                 with fiona.open(aoi, "r") as aoi:
                     # make sure crs is in epsg:4326
                     project = pyproj.Transformer.from_proj(

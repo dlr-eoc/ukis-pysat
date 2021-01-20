@@ -1,10 +1,8 @@
 ## data
-fiona>=1.8.17
 landsatxplore==0.8
 numpy
 pillow>=8.0.1
 pylandsat==0.4
-pyproj>=3.0.0
 pystac[validation]>0.5.3
 python-dateutil
 requests
@@ -17,7 +15,9 @@ rasterio>=1.1.8
 rio_toa==0.3.0
 shapely>=1.7.1
 
-## complete
+## dev
 dask[array]
+fiona>=1.8.17
 pandas
+pyproj>=3.0.0
 utm==0.7.0

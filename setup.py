@@ -27,13 +27,11 @@ def get_version(rel_path):
 # please also update requirements.txt for testing. Make sure package versions are the same in each subset.
 extras_require = {
     "data": [
-        "fiona>=1.8.17",
         "landsatxplore==0.8",
         "numpy",
         "pillow>=8.0.1",
         "pylandsat==0.4",
-        "pyproj>=3.0.0",
-        "pystac>0.5.3",
+        "pystac>=0.5.4",
         "python-dateutil",
         "requests",
         "sentinelsat>=0.13",
@@ -45,7 +43,7 @@ extras_require["complete"] = list(set([v for req in extras_require.values() for 
 
 extras_require["dev"] = sorted(
     extras_require["complete"]
-    + ["dask[array]", "pandas", "utm==0.7.0", "sphinx >= 1.3", "sphinx_rtd_theme",]
+    + ["dask[array]", "fiona>=1.8.17", "pandas", "pyproj>=3.0.0", "utm==0.7.0", "sphinx >= 1.3", "sphinx_rtd_theme",]
 )
 
 setup(
