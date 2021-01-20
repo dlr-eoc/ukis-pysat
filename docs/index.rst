@@ -80,21 +80,21 @@ To enable reading from different types of file systems (similar to `PySTAC <http
 
 .. code-block:: python
 
-   from ukis_pysat.data import STACAPI_IO
    from pystac import Item
+   from ukis_pysat.stacapi_io import STACAPI_IO
 
-    def on_premise_s3_url_method(feature, root_bucket="dem"):
-        """the href is build like /collections/*collection_prefix*/items/*item_prefix*
+   def on_premise_s3_url_method(feature, root_bucket="dem"):
+      """the href is build like /collections/*collection_prefix*/items/*item_prefix*
 
-        At some environments we will need to give back the href according to this method.
-        """
-        item = Item.from_dict(feature)
-        href = item.get_self_href()
-        stripped_href = href.replace(r"collections/", "").replace(r"items/", "")
+      At some environments we will need to give back the href according to this method.
+      """
+      item = Item.from_dict(feature)
+      href = item.get_self_href()
+      stripped_href = href.replace(r"collections/", "").replace(r"items/", "")
 
-        return Item.from_file(f"s3://{root_bucket}{stripped_href}/{item.id}.json")
+      return Item.from_file(f"s3://{root_bucket}{stripped_href}/{item.id}.json")
 
-    STACAPI_IO.read_item_method = on_premise_s3_url_method
+   STACAPI_IO.read_item_method = on_premise_s3_url_method
 
 Environment variables
 ---------------------
