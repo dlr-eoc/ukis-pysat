@@ -11,7 +11,7 @@ class Platform(Enum):
 
 
 class Datahub(Enum):
-    Directory = "Directory"
+    STAC_local = "STAC Catalog/Collection"
     EarthExplorer = "EarthExplorer"
     Scihub = "Scihub"
-    StacApi = "stac API"
+    STAC_API = "STAC API"

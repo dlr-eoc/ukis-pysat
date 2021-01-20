@@ -20,7 +20,7 @@ try:
     import sentinelsat
     from PIL import Image
     from pylandsat import Product
-    from pystac.extensions import sat  # TODO https://github.com/stac-utils/pystac/issues/133
+    from pystac.extensions import sat
     from shapely import geometry, wkt, ops
 except ImportError as e:
     msg = (
@@ -43,18 +43,18 @@ class Source:
     def __init__(self, datahub, catalog=None, url=None):
         """
         :param datahub: Data source (<enum 'Datahub'>).
-        :param catalog: Only applicable if datahub is 'Directory'. Can be one of the following types:
+        :param catalog: Only applicable if datahub is 'STAC_local'. Can be one of the following types:
                         Path to STAC Catalog file catalog.json (String, Path).
                         Pystac Catalog or Collection object (pystac.catalog.Catalog, pystac.collection.Collection).
                         None initializes an empty catalog.
                         (default: None)
-        :param url: Only applicable if datahub is 'StacApi'. STAC Server endpoint, reads from STAC_API_URL environment
+        :param url: Only applicable if datahub is 'STAC_API'. STAC Server endpoint, reads from STAC_API_URL environment
                         variable by default
                         (default: None)
         """
         self.src = datahub
 
-        if self.src == Datahub.Directory:
+        if self.src == Datahub.STAC_local:
             # connect to STAC Catalog
             if isinstance(catalog, (pystac.catalog.Catalog, pystac.collection.Collection)):
                 self.api = catalog
@@ -69,7 +69,7 @@ class Source:
                     f"pystac.collection.Collection, None] "
                 )
 
-        elif self.src == Datahub.StacApi:
+        elif self.src == Datahub.STAC_API:
             if url:
                 self.api = StacApi(url=url)
             else:
@@ -86,11 +86,14 @@ class Source:
             self.user = env_get("SCIHUB_USER")
             self.pw = env_get("SCIHUB_PW")
             self.api = sentinelsat.SentinelAPI(
-                self.user, self.pw, "https://scihub.copernicus.eu/dhus", show_progressbars=False,
+                self.user,
+                self.pw,
+                "https://scihub.copernicus.eu/dhus",
+                show_progressbars=False,
             )
 
         else:
-            raise NotImplementedError(f"{datahub} is not supported [Directory, StacApi, EarthExplorer, Scihub]")
+            raise NotImplementedError(f"{datahub} is not supported [STAC_local, STAC_API, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
@@ -109,7 +112,7 @@ class Source:
         :param item_dir: Path to directory that holds the STAC items (String).
         :param item_glob: Optional glob pattern to identify STAC items in directory (String), (default: '*.json').
         """
-        if self.src == Datahub.Directory:
+        if self.src == Datahub.STAC_local:
             # get all json files in item_dir that match item_substr
             item_files = sorted(Path(item_dir).rglob(item_glob))
 
@@ -119,7 +122,7 @@ class Source:
                 self.api.add_item(item)
 
         else:
-            raise TypeError(f"add_items_from_directory only works for Datahub.Directory and not with {self.src}.")
+            raise TypeError(f"add_items_from_directory only works for Datahub.STAC_local and not with {self.src}.")
 
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
         """Queries metadata from data source.
@@ -130,7 +133,7 @@ class Source:
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
         :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
         """
-        if self.src == Datahub.Directory:
+        if self.src == Datahub.STAC_local:
             # query STAC Catalog for metadata
             catalog = self._init_catalog()
             geom = self.prep_aoi(aoi)
@@ -148,9 +151,11 @@ class Source:
                     catalog.add_item(item)
             return catalog
 
-        elif self.src == Datahub.StacApi:
-            raise NotImplementedError(f"Do this directly with our stacapi functionalities, see "
-                                      f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html.")
+        elif self.src == Datahub.STAC_API:
+            raise NotImplementedError(
+                f"Do this directly with our StacApi functionalities, see "
+                f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html."
+            )
 
         elif self.src == Datahub.EarthExplorer:
             # query Earthexplorer for metadata
@@ -172,7 +177,12 @@ class Source:
             kwargs = {}
             if cloud_cover and platform != platform.Sentinel1:
                 kwargs["cloudcoverpercentage"] = cloud_cover
-            products = self.api.query(area=self.prep_aoi(aoi).wkt, date=date, platformname=platform.value, **kwargs,)
+            products = self.api.query(
+                area=self.prep_aoi(aoi).wkt,
+                date=date,
+                platformname=platform.value,
+                **kwargs,
+            )
             products = self.api.to_geojson(products)["features"]
 
         # initialize empty catalog and add metadata items
@@ -189,7 +199,7 @@ class Source:
         :param srcid: Srcid of a specific product (String).
         :returns: Metadata of product that matches srcid (PySTAC Catalog).
         """
-        if self.src == Datahub.Directory:
+        if self.src == Datahub.STAC_local:
             # query Spatio Temporal Asset Catalog for metadata by srcid
             catalog = self._init_catalog()
             for item in self.api.get_all_items():
@@ -198,9 +208,11 @@ class Source:
                     continue
             return catalog
 
-        elif self.src == Datahub.StacApi:
-            raise NotImplementedError(f"Do this directly with our stacapi functionalities, see "
-                                      f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html.")
+        elif self.src == Datahub.STAC_API:
+            raise NotImplementedError(
+                f"Do this directly with our StacApi functionalities, see "
+                f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html."
+            )
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for metadata by srcid
@@ -234,7 +246,7 @@ class Source:
         :param platform: Image platform (<enum 'Platform'>).
         :returns: PySTAC item
         """
-        if self.src == Datahub.Directory or self.src == Datahub.StacApi:
+        if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
             raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
@@ -307,14 +319,20 @@ class Source:
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
 
-        if self.src == Datahub.Directory or self.src == Datahub.StacApi:
+        if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
             raise NotImplementedError(
                 f"download_image not supported for {self.src}. It is much easier to get the asset yourself now."
             )
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for srcid of product
-            meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+            meta_src = self.api.request(
+                "metadata",
+                **{
+                    "datasetName": platform.value,
+                    "entityIds": [product_uuid],
+                },
+            )
             product_srcid = meta_src[0]["displayId"]
 
             if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
@@ -324,7 +342,9 @@ class Source:
 
                 # compress download directory and remove original files
                 shutil.make_archive(
-                    target_dir.joinpath(product_srcid), "zip", root_dir=target_dir.joinpath(product_srcid),
+                    target_dir.joinpath(product_srcid),
+                    "zip",
+                    root_dir=target_dir.joinpath(product_srcid),
                 )
                 shutil.rmtree(target_dir.joinpath(product_srcid))
 
@@ -342,7 +362,7 @@ class Source:
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
 
-        if self.src == Datahub.Directory or self.src == Datahub.StacApi:
+        if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
             raise NotImplementedError(
                 f"download_quicklook not supported for {self.src}. It is much easier to get the asset yourself now, "
                 f"when it is a COG you can read in an overview."
@@ -350,7 +370,13 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for url, srcid and bounds of product
-            meta_src = self.api.request("metadata", **{"datasetName": platform.value, "entityIds": [product_uuid],},)
+            meta_src = self.api.request(
+                "metadata",
+                **{
+                    "datasetName": platform.value,
+                    "entityIds": [product_uuid],
+                },
+            )
             url = meta_src[0]["browseUrl"]
             bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
             product_srcid = meta_src[0]["displayId"]
