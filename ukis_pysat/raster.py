@@ -35,8 +35,8 @@ class Image:
         :param data: rasterio.io.DatasetReader or path to raster or np.ndarray of shape (bands, rows, columns)
         :param dimorder: Order of channels or bands 'first' or 'last' (default: 'first')
         :param crs: Coordinate reference system used when creating form array. If 'data' is np.ndarray this is required (default: None)
-        :param transform: Affine transformation mapping the pixel space to geographic space. If 'data' is np.ndarray this is required (default:None)
-        :param nodata: nodata value used when creating form array, optional (default: None)
+        :param transform: Affine transformation mapping the pixel space to geographic space. If 'data' is np.ndarray this is required (default: None)
+        :param nodata: nodata value only used when creating from np.ndarray, otherwise this has no effects, optional (default: None)
 
         """
         if dimorder in ("first", "last"):

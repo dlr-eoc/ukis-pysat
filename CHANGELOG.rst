@@ -15,6 +15,9 @@ something was changed
 
 [master]  (2020-**-**)
 ----------------------
+Changed
+^^^^^^^
+- ``raster``: documentation clarification for `Image` initialization with `nodata` #105
 
 [1.0.1]  (2020-01-20)
 ---------------------
