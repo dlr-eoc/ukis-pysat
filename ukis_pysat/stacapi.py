@@ -39,7 +39,8 @@ class StacApi:
 
     @staticmethod
     def _query(url, kwargs, headers):
-        if "intersects" in kwargs:  # TODO intersects will be deprecated with v1.0.0-beta.2 and replaced with OGC CQL
+        if {"intersects", "bbox"}.intersection(kwargs):
+            # TODO intersects will be deprecated with v1.0.0-beta.2 and replaced with OGC CQL
             return requests.post(url, json=kwargs, headers=headers)
         else:
             return requests.get(url, kwargs, headers=headers)

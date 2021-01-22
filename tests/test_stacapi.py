@@ -46,6 +46,14 @@ class StacApiTest(unittest.TestCase):
         )
         self.assertEqual(3, cnt)
 
+    def test_get_item_bbox(self):
+        cnt = self.api.count(
+            collection="sentinel-s2-l2a",
+            bbox=[-110, 39.5, -105, 40.5],
+            datetime=r"2020-04-01T00:00:00Z/2020-04-01T23:59:59Z",
+        )
+        self.assertEqual(30, cnt)
+
     def test_get_items_limit(self, limit=31):
         items = self.api.get_items(collection="sentinel-s2-l2a", intersects=self.aoi, limit=limit)
         self.assertEqual(limit, len(items))

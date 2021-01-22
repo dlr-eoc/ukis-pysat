@@ -13,11 +13,16 @@ Changed
 ^^^^^^^
 something was changed
 
-[master]  (2020-**-**)
-----------------------
+[1.0.2]  (2020-01-22)
+
+---------------------
 Changed
 ^^^^^^^
 - ``raster``: documentation clarification for `Image` initialization with `nodata` #105
+
+Fixed
+^^^^^
+- ``data``: bugfix stacapi, bbox did not work because it has to be post like intersection
 
 [1.0.1]  (2020-01-20)
 ---------------------
