@@ -13,8 +13,11 @@ Changed
 ^^^^^^^
 something was changed
 
-[1.0.2]  (2020-01-22)
+[master]  (2020-**-**)
+----------------------
+- ``data``: change default scihup endpoint `/dhus` to `/apihub`#110
 
+[1.0.2]  (2020-01-22)
 ---------------------
 Changed
 ^^^^^^^
