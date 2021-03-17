@@ -19,13 +19,13 @@ class FileTest(unittest.TestCase):
         os.environ["ISITWEEKENDYET"] = "0"
         self.assertFalse(psf.env_get("ISITWEEKENDYET", boolean=True))
 
-    def test_get_sentinel_scene_from_dir(self):
+    def test_get_sentinel_scene_from_dir_path_testfiles(self):
         with psf.get_sentinel_scene_from_dir(path_testfiles) as (full_path, ident):
             self.assertEqual("S1M_hello_from_inside", ident)
-
+    def test_get_sentinel_scene_from_dir_str_path(self):
         with psf.get_sentinel_scene_from_dir(str_path) as (full_path, ident):
             self.assertEqual("S1M_hello_from_inside", ident)
-
+    def test_get_sentinel_scene_from_dir_joinpath(self):
         with psf.get_sentinel_scene_from_dir(path_testfiles.joinpath("another_scene")) as (full_path, ident):
             self.assertEqual("S2__IN_FOLDER", ident)
 
