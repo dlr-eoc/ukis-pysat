@@ -86,7 +86,6 @@ class Source:
             self.api = sentinelsat.SentinelAPI(
                 self.user,
                 self.pw,
-
                 show_progressbars=False,
             )
 
