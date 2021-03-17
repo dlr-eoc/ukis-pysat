@@ -7,6 +7,7 @@ import dask.array
 import numpy as np
 from rasterio import windows
 from rasterio.coords import BoundingBox
+from rasterio.crs import CRS
 from rasterio.transform import from_bounds
 from shapely.geometry import box
 from ukis_pysat.members import Platform
@@ -182,21 +183,21 @@ class RasterTest(unittest.TestCase):
         )
 
     def test_warp(self):
-        self.assertEqual(self.img.dataset.crs, "EPSG:4326")
+        self.assertEqual(self.img.dataset.crs, CRS.from_epsg(4326))
 
-        self.img.warp("EPSG:3857")
-        self.assertEqual(self.img.dataset.crs, "EPSG:3857")
-        self.assertEqual(self.img.dataset.meta["crs"], "EPSG:3857")
+        self.img.warp(CRS.from_epsg(3857))
+        self.assertEqual(self.img.dataset.crs, CRS.from_epsg(3857))
+        self.assertEqual(self.img.dataset.meta["crs"], CRS.from_epsg(3857))
 
-        self.img.warp("EPSG:4326", resolution=1.0)
+        self.img.warp(CRS.from_epsg(4326), resolution=1.0)
         self.assertEqual(1.0, self.img.dataset.transform.to_gdal()[1])
 
         source_img = Image(TEST_FILE)
-        source_img.warp("EPSG:3857", resolution=10)
+        source_img.warp(CRS.from_epsg(3857), resolution=10)
         target_img = Image(TEST_FILE)
-        target_img.warp("EPSG:3857", resolution=25)
+        target_img.warp(CRS.from_epsg(3857), resolution=25)
         self.assertNotEqual(source_img.dataset.transform, target_img.dataset.transform)
-        source_img.warp("EPSG:3857", target_align=target_img)
+        source_img.warp(CRS.from_epsg(3857), target_align=target_img)
         self.assertEqual(source_img.dataset.transform, target_img.dataset.transform)
 
     @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
