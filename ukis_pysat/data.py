@@ -86,7 +86,7 @@ class Source:
             self.api = sentinelsat.SentinelAPI(
                 self.user,
                 self.pw,
-                "https://scihub.copernicus.eu/apihub",
+
                 show_progressbars=False,
             )
 
