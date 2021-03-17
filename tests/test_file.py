@@ -29,25 +29,28 @@ class FileTest(unittest.TestCase):
         with psf.get_sentinel_scene_from_dir(path_testfiles.joinpath("another_scene")) as (full_path, ident):
             self.assertEqual("S2__IN_FOLDER", ident)
 
-    def test_get_polarization_from_s1_filename(self):
+    def test_get_polarization_from_s1_filename_1SDH(self):
         self.assertEqual(
             psf.get_polarization_from_s1_filename(
                 "MMM_BB_TTTR_1SDH_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip"
             ),
             "HH",
         )
+    def test_get_polarization_from_s1_filename_1SSH(self):
         self.assertEqual(
             psf.get_polarization_from_s1_filename(
                 "MMM_BB_TTTR_1SSH_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip"
             ),
             "HH",
         )
+    def test_get_polarization_from_s1_filename_2SSV(self):
         self.assertEqual(
             psf.get_polarization_from_s1_filename(
                 "MMM_BB_TTTR_2SSV_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip"
             ),
             "VV",
         )
+    def test_get_polarization_from_s1_filename_1SDV(self):
         self.assertEqual(
             psf.get_polarization_from_s1_filename(
                 "MMM_BB_TTTR_1SDV_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip", True,
@@ -55,31 +58,35 @@ class FileTest(unittest.TestCase):
             "VV,VH",
         )
 
-    def test_get_ts_from_sentinel_filename(self):
+    def test_get_ts_from_sentinel_filename_S3M_TTT(self):
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
                 "S3M_OL_L_TTT____20200113T002219_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_i_GGG_c.SEN3"
             ),
             datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
+    def test_get_ts_from_sentinel_filename_S1M_2219(self):
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
                 "S1M_BB_TTTR_LFPP_YYYYMMDDTHHMMSS_20200113T002219_OOOOOO_DDDDDD_CCCC.SAFE.zip", False,
             ),
             datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
+    def test_get_ts_from_sentinel_filename_S1M_4619(self):
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
                 "S1M_BB_TTTR_LFPP_20200113T074619_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip"
             ),
             datetime(2020, 1, 13, 7, 46, 19, tzinfo=timezone.utc),
         )
+    def test_get_ts_from_sentinel_filename_S2AM_2219(self):
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
                 "S2AM_MSIXXX_20200113T002219_Nxxyy_ROOO_Txxxxx_<Product Discriminator>.SAFE"
             ),
             datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
+    def test_get_ts_from_sentinel_filename_S3M_2219(self):
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
                 "S3M_OL_L_TTTTTT_yyyymmddThhmmss_20200113T002219_YYYYMMDDTHHMMSS_i_GGG_c.SEN3", False

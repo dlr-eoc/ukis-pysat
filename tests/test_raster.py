@@ -65,7 +65,7 @@ class RasterTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             Image(TEST_FILE, dimorder="middle")
 
-    def test_arr(self):
+    def test_arr_dimorder_first(self):
         img_first = Image(TEST_FILE, dimorder="first")
         img_first.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(img_first.arr.shape, (1, 385, 502))
@@ -84,6 +84,7 @@ class RasterTest(unittest.TestCase):
         )
         img_first.close()
 
+    def test_arr_dimorder_last(self):
         img_last = Image(TEST_FILE, dimorder="last")
         img_last.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
@@ -102,12 +103,14 @@ class RasterTest(unittest.TestCase):
         )
         img_last.close()
 
+    def test_img_first_dimorder_first(self):
         img_first = Image(
             np.ones((1, 385, 502)), dimorder="first", crs=self.img.dataset.crs, transform=self.img.dataset.transform
         )
         self.assertEqual(img_first.arr.shape, (1, 385, 502))
         img_first.close()
 
+    def test_img_last_dimorder_last(self):
         img_last = Image(
             np.ones((385, 502, 1)), dimorder="last", crs=self.img.dataset.crs, transform=self.img.dataset.transform
         )
@@ -128,7 +131,7 @@ class RasterTest(unittest.TestCase):
 
             self.assertTrue(np.array_equal(im.arr, np.ones(shape=im.arr.shape)))
 
-    def test_set_array_error(self):
+    def test_set_array_error_dimorder_first(self):
         img_first = Image(TEST_FILE, dimorder="first")
 
         with self.assertRaises(TypeError):
@@ -137,6 +140,7 @@ class RasterTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             img_first.arr = np.ones(shape=(764, 679, 1))
 
+    def test_set_array_error_dimorder_last(self):
         with self.assertRaises(ValueError):
             img_last = Image(TEST_FILE, dimorder="last")
             img_last.arr = np.ones(shape=(1, 764, 679))
