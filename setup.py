@@ -34,7 +34,7 @@ extras_require = {
         "pystac>=0.5.4",
         "python-dateutil",
         "requests",
-        "sentinelsat>=0.13",
+        "sentinelsat>=0.14",
         "shapely>=1.7.1",
     ],
     "raster": ["numpy", "rasterio>=1.1.8", "rio_toa==0.3.0", "shapely>=1.7.1",],
