@@ -22,7 +22,8 @@ class FileTest(unittest.TestCase):
     def test_get_sentinel_scene_from_dir_path_testfiles(self):
         with psf.get_sentinel_scene_from_dir(path_testfiles) as (full_path, ident):
             self.assertEqual("S1M_hello_from_inside", ident)
-    def test_get_sentinel_scene_from_dir_str_path(self):
+    def test_get_sentinel_scene_from_str_path(self):
+
         with psf.get_sentinel_scene_from_dir(str_path) as (full_path, ident):
             self.assertEqual("S1M_hello_from_inside", ident)
     def test_get_sentinel_scene_from_dir_joinpath(self):
