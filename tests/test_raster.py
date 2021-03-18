@@ -101,7 +101,8 @@ class RasterTest(unittest.TestCase):
                 ),
             )
 
-    def test_img_first_dimorder_first(self):
+    def test_arr_dimorder_first(self):
+
         with Image(
             np.ones((1, 385, 502)), dimorder="first", crs=self.img.dataset.crs, transform=self.img.dataset.transform
         ) as img_first:
