@@ -108,7 +108,8 @@ class RasterTest(unittest.TestCase):
         ) as img_first:
             self.assertEqual(img_first.arr.shape, (1, 385, 502))
 
-    def test_img_last_dimorder_last(self):
+    def test_arr_dimorder_last(self):
+
         with Image(
             np.ones((385, 502, 1)), dimorder="last", crs=self.img.dataset.crs, transform=self.img.dataset.transform
         ) as img_last:
