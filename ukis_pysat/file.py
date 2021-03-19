@@ -87,8 +87,8 @@ def get_polarization_from_s1_filename(filename: str, dual: bool = False) -> str:
     }
 
     polarization: str = polarization_dict[filename[13:16]]
-    if not dual and ',' in polarization:
-        return polarization.split(',')[0]
+    if not dual and "," in polarization:
+        return polarization.split(",")[0]
     else:
         return polarization
 

@@ -37,13 +37,26 @@ extras_require = {
         "sentinelsat>=0.13",
         "shapely>=1.7.1",
     ],
-    "raster": ["numpy", "rasterio>=1.1.8", "rio_toa==0.3.0", "shapely>=1.7.1",],
+    "raster": [
+        "numpy",
+        "rasterio>=1.1.8",
+        "rio_toa==0.3.0",
+        "shapely>=1.7.1",
+    ],
 }
 extras_require["complete"] = list(set([v for req in extras_require.values() for v in req]))
 
 extras_require["dev"] = sorted(
     extras_require["complete"]
-    + ["dask[array]", "fiona>=1.8.17", "pandas", "pyproj>=3.0.0", "utm==0.7.0", "sphinx >= 1.3", "sphinx_rtd_theme",]
+    + [
+        "dask[array]",
+        "fiona>=1.8.17",
+        "pandas",
+        "pyproj>=3.0.0",
+        "utm==0.7.0",
+        "sphinx >= 1.3",
+        "sphinx_rtd_theme",
+    ]
 )
 
 setup(
