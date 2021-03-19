@@ -13,9 +13,16 @@ Changed
 ^^^^^^^
 something was changed
 
-[1.0.2]  (2020-01-22)
-
+[master] (2021-**-**)
 ---------------------
+
+Added
+^^^^^
+- Github Action for black #111
+
+[1.0.2]  (2020-01-22)
+---------------------
+
 Changed
 ^^^^^^^
 - ``raster``: documentation clarification for `Image` initialization with `nodata` #105
@@ -26,6 +33,7 @@ Fixed
 
 [1.0.1]  (2020-01-20)
 ---------------------
+
 Changed
 ^^^^^^^
 - ``data``: make fiona and pyproj optional #104
