@@ -172,13 +172,21 @@ class Image:
         :return: closed, buffered dataset in memory
         """
         destination = np.zeros(
-            (self.dataset.count, self.__arr.shape[1] + 2 * pad_width, self.__arr.shape[2] + 2 * pad_width,),
+            (
+                self.dataset.count,
+                self.__arr.shape[1] + 2 * pad_width,
+                self.__arr.shape[2] + 2 * pad_width,
+            ),
             self.__arr.dtype,
         )
 
         for i in range(0, self.dataset.count):
             destination[i], transform = rasterio.pad(
-                self.__arr[i], self.dataset.transform, pad_width, mode, constant_values=constant_values,
+                self.__arr[i],
+                self.dataset.transform,
+                pad_width,
+                mode,
+                constant_values=constant_values,
             )
 
         self.__arr = destination
@@ -239,7 +247,11 @@ class Image:
                 )
             else:
                 transform, width, height = rasterio.warp.calculate_default_transform(
-                    self.dataset.crs, dst_crs, self.dataset.width, self.dataset.height, *self.dataset.bounds,
+                    self.dataset.crs,
+                    dst_crs,
+                    self.dataset.width,
+                    self.dataset.height,
+                    *self.dataset.bounds,
                 )
 
         destination = np.zeros((self.dataset.count, height, width), self.__arr.dtype)
@@ -409,7 +421,7 @@ class Image:
         return self.__arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
 
     def to_dask_array(self, chunk_size=(1, 6000, 6000)):
-        """ transforms numpy to dask array
+        """transforms numpy to dask array
 
         :param chunk_size: tuple, size of chunk, optional (default: (1, 6000, 6000))
         :return: dask array

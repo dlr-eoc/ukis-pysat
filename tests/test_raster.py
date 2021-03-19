@@ -35,7 +35,9 @@ class RasterTest(unittest.TestCase):
             Image(1)
 
     def test_init_fail_invalid_dataset(self):
-        with self.assertRaises(TypeError,):
+        with self.assertRaises(
+            TypeError,
+        ):
             Image(1)
 
     def test_init_with_arry_fail_missing_crs_and_transform(self):
@@ -67,7 +69,14 @@ class RasterTest(unittest.TestCase):
 
     def test_arr(self):
         img_first = Image(TEST_FILE, dimorder="first")
-        img_first.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        img_first.mask(
+            box(
+                11.9027457562112939,
+                51.4664152338322580,
+                11.9477435281016131,
+                51.5009522690838750,
+            )
+        )
         self.assertEqual(img_first.arr.shape, (1, 385, 502))
         self.assertEqual(
             str(img_first.dataset.transform),
@@ -85,7 +94,14 @@ class RasterTest(unittest.TestCase):
         img_first.close()
 
         img_last = Image(TEST_FILE, dimorder="last")
-        img_last.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
+        img_last.mask(
+            box(
+                11.9027457562112939,
+                51.4664152338322580,
+                11.9477435281016131,
+                51.5009522690838750,
+            )
+        )
         self.assertEqual(img_last.arr.shape, (385, 502, 1))
         self.assertEqual(
             str(img_last.dataset.transform),
@@ -151,24 +167,50 @@ class RasterTest(unittest.TestCase):
         with self.assertRaises(TypeError, msg="bbox must be of type tuple or Shapely Polygon"):
             self.img.mask([1, 2, 3])
 
-        self.img.mask(box(11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
-        self.assertEqual(
-            self.img.dataset.bounds,
-            BoundingBox(
-                left=11.902702941366716, bottom=51.46639813686387, right=11.947798368783504, top=51.50098327545026,
-            ),
+        self.img.mask(
+            box(
+                11.9027457562112939,
+                51.4664152338322580,
+                11.9477435281016131,
+                51.5009522690838750,
+            )
         )
-
-        self.img.mask((11.9027457562112939, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,))
         self.assertEqual(
             self.img.dataset.bounds,
             BoundingBox(
-                left=11.902702941366716, bottom=51.46639813686387, right=11.947798368783504, top=51.50098327545026,
+                left=11.902702941366716,
+                bottom=51.46639813686387,
+                right=11.947798368783504,
+                top=51.50098327545026,
             ),
         )
 
         self.img.mask(
-            box(11.8919236802142620, 51.4664152338322580, 11.9477435281016131, 51.5009522690838750,), fill=True,
+            (
+                11.9027457562112939,
+                51.4664152338322580,
+                11.9477435281016131,
+                51.5009522690838750,
+            )
+        )
+        self.assertEqual(
+            self.img.dataset.bounds,
+            BoundingBox(
+                left=11.902702941366716,
+                bottom=51.46639813686387,
+                right=11.947798368783504,
+                top=51.50098327545026,
+            ),
+        )
+
+        self.img.mask(
+            box(
+                11.8919236802142620,
+                51.4664152338322580,
+                11.9477435281016131,
+                51.5009522690838750,
+            ),
+            fill=True,
         )
         self.assertEqual(
             self.img.dataset.bounds,
@@ -252,10 +294,12 @@ class RasterTest(unittest.TestCase):
 
     def test__lookup_bands(self):
         self.assertEqual(
-            ["1", "2", "3"], self.img._lookup_bands(Platform.Landsat5, ["Blue", "Green", "Red"]),
+            ["1", "2", "3"],
+            self.img._lookup_bands(Platform.Landsat5, ["Blue", "Green", "Red"]),
         )
         self.assertEqual(
-            ["8", "10", "11"], self.img._lookup_bands(Platform.Landsat8, ["PAN", "Tirs1", "Tirs2"]),
+            ["8", "10", "11"],
+            self.img._lookup_bands(Platform.Landsat8, ["PAN", "Tirs1", "Tirs2"]),
         )
 
     def test_get_tiles(self):
