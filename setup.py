@@ -39,7 +39,7 @@ extras_require = {
     ],
     "raster": [
         "numpy",
-        "rasterio>=1.1.8",
+        "rasterio>=1.2.1",
         "rio_toa==0.3.0",
         "shapely>=1.7.1",
     ],
