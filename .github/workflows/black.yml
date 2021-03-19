@@ -11,7 +11,7 @@ jobs:
       - name: black lint
         run: |
           python -m pip install black
-          black . . --check --line-length 120"
+          black . . --check --line-length 120
 #      - uses: psf/black@stable
 #        with:
 #          args: ". --check --line-length 120"
