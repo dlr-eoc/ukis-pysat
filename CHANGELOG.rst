@@ -18,7 +18,8 @@ something was changed
 
 Changed
 ^^^^^^^
-- mocked all interaction with Hubs for unit testing #116
+- ``data``: mocked all interaction with Hubs for unit testing #116
+- ``data``: change default scihup endpoint `/dhus` to `/apihub`#110
 
 Added
 ^^^^^
