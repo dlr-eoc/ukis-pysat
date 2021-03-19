@@ -219,12 +219,12 @@ class RasterTest(unittest.TestCase):
             ),
         )
 
+    @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
     def test_warp(self):
-        # TODO uncomment when Github Actions can find the proj.db again
-        # self.assertEqual(self.img.dataset.crs.data, {"init": "epsg:4326"})
+        self.assertEqual(self.img.dataset.crs.data, {"init": "epsg:4326"})
 
         self.img.warp("EPSG:3857")
-        # self.assertEqual(self.img.dataset.crs.data, {"init": "epsg:3857"})
+        self.assertEqual(self.img.dataset.crs.data, {"init": "epsg:3857"})
         self.assertEqual(self.img.dataset.meta["crs"], "EPSG:3857")
 
         self.img.warp("EPSG:4326", resolution=1.0)
