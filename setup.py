@@ -53,6 +53,7 @@ extras_require["dev"] = sorted(
         "fiona>=1.8.17",
         "pandas",
         "pyproj>=3.0.0",
+        "requests_mock",
         "utm==0.7.0",
         "sphinx >= 1.3",
         "sphinx_rtd_theme",

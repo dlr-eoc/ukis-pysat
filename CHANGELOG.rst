@@ -16,6 +16,10 @@ something was changed
 [master] (2021-**-**)
 ---------------------
 
+Changed
+^^^^^^^
+- mocked all interaction with Hubs for unit testing #116
+
 Added
 ^^^^^
 - Github Action for black #111

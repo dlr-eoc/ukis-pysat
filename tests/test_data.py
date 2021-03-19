@@ -4,213 +4,155 @@ from pathlib import Path
 from tempfile import gettempdir
 
 import pystac
+import requests_mock
 
 from ukis_pysat.data import Source
 from ukis_pysat.members import Datahub, Platform
 
-# os.environ["EARTHEXPLORER_USER"] = "Tim"
-# os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
-# os.environ["SCIHUB_USER"] = "Tim"
-# os.environ["SCIHUB_PW"] = "TheEnchanter"
+os.environ["EARTHEXPLORER_USER"] = "Tim"
+os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
+os.environ["SCIHUB_USER"] = "Tim"
+os.environ["SCIHUB_PW"] = "TheEnchanter"
 
 catalog_path = Path(gettempdir()) / "catalog.json"
-str_target = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testfiles")
 target_dir = Path(__file__).parents[0] / "testfiles"
 aoi_4326 = target_dir / "aoi_4326.geojson"
 aoi_3857 = target_dir / "aoi_3857.geojson"
-aoi_wkt = "POLYGON((11.09 47.94, 11.06 48.01, 11.12 48.11, 11.18 48.11, 11.18 47.94, 11.09 47.94))"
 aoi_bbox = (11.90, 51.46, 11.94, 51.50)
-
-queries = [
-    {
-        "datahub": Datahub.Scihub,
-        "catalog": None,
-        "platform_name": Platform.Sentinel1,
-        "date": ("20200224", "20200225"),
-        "aoi": aoi_4326,
-        "cloud_cover": None,
-        "returns_srcid": "S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6",
-        "returns_uuid": "8a611d5b-f9d9-437e-9f55-eca18cf79fd4",
-    },
-    {
-        "datahub": Datahub.Scihub,
-        "catalog": None,
-        "platform_name": Platform.Sentinel1,
-        "date": ("20200502", "20200503"),
-        "aoi": aoi_wkt,
-        "cloud_cover": None,
-        "returns_srcid": "S1A_IW_GRDH_1SDV_20200502T170726_20200502T170751_032389_03BFFF_3105",
-        "returns_uuid": "a28e1042-f221-4716-8298-01bca35e6187",
-    },
-    {
-        "datahub": Datahub.Scihub,
-        "catalog": None,
-        "platform_name": Platform.Sentinel2,
-        "date": ("20200220", "20200225"),
-        "aoi": aoi_3857,
-        "cloud_cover": (0, 100),
-        "returns_srcid": "S2A_MSIL2A_20200221T102041_N0214_R065_T32UQC_20200221T120618",
-        "returns_uuid": "560f78fb-22b8-4904-87de-160d9236d33e",
-    },
-    {
-        "datahub": Datahub.Scihub,
-        "catalog": None,
-        "platform_name": Platform.Sentinel3,
-        "date": ("20200220", "20200225"),
-        "aoi": aoi_bbox,
-        "cloud_cover": (0, 100),
-        "returns_srcid": "S3B_OL_2_LRR____20200220T092808_20200220T101154_20200221T143235_2626_035_364______LN1_O_NT_002",
-        "returns_uuid": "a50c1e2f-0688-4be1-ae2f-dc69fe8b170a",
-    },
-    {
-        "datahub": Datahub.EarthExplorer,
-        "catalog": None,
-        "platform_name": Platform.Landsat5,
-        "date": ("20100201", "20100225"),
-        "aoi": aoi_4326,
-        "cloud_cover": (0, 100),
-        "returns_srcid": "LT05_L1GS_193024_20100207_20161016_01_T2",
-        "returns_uuid": "LT51930242010038MOR00",
-    },
-    {
-        "datahub": Datahub.EarthExplorer,
-        "catalog": None,
-        "platform_name": Platform.Landsat7,
-        "date": ("20150810", "20150825"),
-        "aoi": aoi_3857,
-        "cloud_cover": (0, 50),
-        "returns_srcid": "LE07_L1TP_193024_20150824_20161025_01_T1",
-        "returns_uuid": "LE71930242015236ASN00",
-    },
-    {
-        "datahub": Datahub.EarthExplorer,
-        "catalog": None,
-        "platform_name": Platform.Landsat8,
-        "date": ("20200310", "20200325"),
-        "aoi": aoi_bbox,
-        "cloud_cover": (0, 20),
-        "returns_srcid": "LC08_L1TP_193024_20200322_20200326_01_T1",
-        "returns_uuid": "LC81930242020082LGN00",
-    },
-    {
-        "datahub": Datahub.STAC_local,
-        "catalog": catalog_path,
-        "platform_name": Platform.Sentinel2,
-        "date": ("20200220", "20200225"),
-        "aoi": aoi_3857,
-        "cloud_cover": (90, 100),
-        "returns_srcid": "S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731",
-        "returns_uuid": "ae674e64-013d-4898-a6d7-096d7b02bdde",
-    },
-]
 
 
 class DataTest(unittest.TestCase):
-    def setUp(self):
-        with Source(datahub=queries[2]["datahub"], catalog=queries[2]["catalog"]) as src:
-            meta = src.query_metadata(
-                platform=queries[2]["platform_name"],
-                date=queries[2]["date"],
-                aoi=queries[2]["aoi"],
-                cloud_cover=queries[2]["cloud_cover"],
-            )
-            meta.normalize_hrefs(Path(gettempdir()).as_posix())
-            meta.save()  # used for testing Datahub.file
-
-    def tearDown(self):
-        catalog_path.unlink()
-
-    def test_init(self):
+    def test_init_stac_catalog(self):
         with Source(datahub=Datahub.STAC_local, catalog=catalog_path) as src:
             self.assertTrue(isinstance(src.api, pystac.catalog.Catalog))
 
+    def test_init_stac_url(self):
+        with Source(datahub=Datahub.STAC_API, url=r"https://earth-search.aws.element84.com/v0/") as src:
+            self.assertEqual(src.api.url, r"https://earth-search.aws.element84.com/v0/")
+
+    def test_init_exception_other_hub(self):
         with self.assertRaises(
             NotImplementedError, msg=f"Hub is not supported [STAC_local, STAC_API, EarthExplorer, " f"Scihub]."
         ):
             Source(datahub="Hub")
 
+    def test_init_exception_other_enum(self):
         with self.assertRaises(AttributeError):
             Source(datahub=Datahub.Hub)
 
-        with Source(datahub=Datahub.STAC_API, url=r"https://earth-search.aws.element84.com/v0/") as src:
-            self.assertEqual(src.api.url, r"https://earth-search.aws.element84.com/v0/")
-
-    def test_exceptions(self):
+    def test_exception_false_aoi(self):
         with Source(datahub=Datahub.STAC_local, catalog=catalog_path) as src:
             with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
                 src.prep_aoi(1)
 
-    # @unittest.skip("until API is reachable again")
-    # @unittest.skip("uncomment when you set ENVs with credentials")
-    def test_query_metadata(self):
-        for i in range(len(queries)):
-            with Source(datahub=queries[i]["datahub"], catalog=queries[i]["catalog"]) as src:
-                meta = src.query_metadata(
-                    platform=queries[i]["platform_name"],
-                    date=queries[i]["date"],
-                    aoi=queries[i]["aoi"],
-                    cloud_cover=queries[i]["cloud_cover"],
-                )
-                item = meta.get_item(queries[i]["returns_srcid"])
-                self.assertEqual(item.properties.get("srcuuid"), queries[i]["returns_uuid"])
-                meta.normalize_hrefs(Path(gettempdir()).as_posix())
-                meta.validate_all()
-
-    # @unittest.skip("until API is reachable again")
-    # @unittest.skip("uncomment when you set ENVs with credentials")
-    def test_query_metadata_srcid(self):
-        for i in range(len(queries)):
-            with Source(datahub=queries[i]["datahub"], catalog=queries[i]["catalog"]) as src:
-                meta = src.query_metadata_srcid(
-                    platform=queries[i]["platform_name"],
-                    srcid=queries[i]["returns_srcid"],
-                )
-            item = meta.get_item(queries[i]["returns_srcid"])
-            self.assertEqual(item.properties.get("srcuuid"), queries[i]["returns_uuid"])
-            meta.normalize_hrefs(Path(gettempdir()).as_posix())
-            item.validate()
-
-    # @unittest.skip("uncomment when you set ENVs with credentials")
-    def test_download_image(self):
-        src = Source(datahub=Datahub.STAC_local, catalog=catalog_path)
-        with self.assertRaises(Exception, msg="download_image not supported for Datahub.File."):
-            src.download_image(
-                platform=Datahub.STAC_local,
-                product_uuid="1",
-                target_dir=str_target,
-            )
-        # TODO download tests
-
-    # @unittest.skip("until API is reachable again")
-    # @unittest.skip("uncomment when you set ENVs with credentials")
-    def test_download_quicklook(self):
-        for i in range(len(queries)):
-            with Source(datahub=queries[i]["datahub"], catalog=queries[i]["catalog"]) as src:
-                if queries[i]["datahub"] == Datahub.STAC_local:
-                    with self.assertRaises(Exception, msg="download_quicklook not supported for Datahub.File."):
-                        src.download_quicklook(
-                            platform=queries[i]["platform_name"],
-                            product_uuid=queries[i]["returns_uuid"],
-                            target_dir=str_target,
-                        )
-                else:
-                    src.download_quicklook(
-                        platform=queries[i]["platform_name"],
-                        product_uuid=queries[i]["returns_uuid"],
-                        target_dir=str_target,
-                    )
-                    self.assertTrue(target_dir.joinpath(queries[i]["returns_srcid"] + ".jpg").is_file())
-                    self.assertTrue(target_dir.joinpath(queries[i]["returns_srcid"] + ".jpgw").is_file())
-                    target_dir.joinpath(queries[i]["returns_srcid"] + ".jpg").unlink()
-                    target_dir.joinpath(queries[i]["returns_srcid"] + ".jpgw").unlink()
-
+    def test_query_metadata_stac_local(self):
         with Source(datahub=Datahub.STAC_local, catalog=catalog_path) as src:
-            with self.assertRaises(NotImplementedError, msg=f"download_quicklook not supported for Datahub.File."):
-                src.download_quicklook(
-                    platform=Datahub.STAC_local,
-                    product_uuid="1",
-                    target_dir=target_dir,
-                )
+            meta = src.query_metadata(
+                platform=Platform.Sentinel2,
+                date=("20200220", "20200225"),
+                aoi=aoi_3857,
+                cloud_cover=(90, 100),
+            )
+            item = meta.get_item("S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731")
+            self.assertEqual(item.properties.get("srcuuid"), "ae674e64-013d-4898-a6d7-096d7b02bdde")
+            meta.normalize_hrefs(Path(gettempdir()).as_posix())
+            meta.validate_all()
+
+    @requests_mock.Mocker(real_http=True)
+    def test_query_metadata_scihub(self, m):
+        m.post(
+            "https://scihub.copernicus.eu/apihub/search?format=json&rows=100&start=0",
+            content=b'{"feed":{"xmlns:opensearch":"http://a9.com/-/spec/opensearch/1.1/","xmlns":"http://www.w3.org/2005/Atom","title":"Sentinels Scientific Data Hub search results for: beginPosition:[2020-02-24T00:00:00Z TO 2020-02-25T00:00:00Z] platformname:Sentinel-1 footprint:\\"Intersects(POLYGON ((11.90274575621129 51.46641523383226, 11.90274575621129 51.50095226908388, 11.94774352810161 51.50095226908388, 11.94774352810161 51.46641523383226, 11.90274575621129 51.46641523383226)))\\"","subtitle":"Displaying 3 results. Request done in 0 seconds.","updated":"2021-03-19T13:13:37.261Z","author":{"name":"Sentinels Scientific Data Hub"},"id":"https://scihub.copernicus.eu/apihub/search?q=beginPosition:[2020-02-24T00:00:00Z TO 2020-02-25T00:00:00Z] platformname:Sentinel-1 footprint:\\"Intersects(POLYGON ((11.90274575621129 51.46641523383226, 11.90274575621129 51.50095226908388, 11.94774352810161 51.50095226908388, 11.94774352810161 51.46641523383226, 11.90274575621129 51.46641523383226)))\\"","opensearch:totalResults":"3","opensearch:startIndex":"0","opensearch:itemsPerPage":"100","opensearch:Query":{"role":"request","searchTerms":"beginPosition:[2020-02-24T00:00:00Z TO 2020-02-25T00:00:00Z] platformname:Sentinel-1 footprint:\\"Intersects(POLYGON ((11.90274575621129 51.46641523383226, 11.90274575621129 51.50095226908388, 11.94774352810161 51.50095226908388, 11.94774352810161 51.46641523383226, 11.90274575621129 51.46641523383226)))\\"","startPage":"1"},"link":[{"rel":"self","type":"application/json","href":"https://scihub.copernicus.eu/apihub/search?q=beginPosition:[2020-02-24T00:00:00Z TO 2020-02-25T00:00:00Z] platformname:Sentinel-1 footprint:\\"Intersects(POLYGON ((11.90274575621129 51.46641523383226, 11.90274575621129 51.50095226908388, 11.94774352810161 51.50095226908388, 11.94774352810161 51.46641523383226, 11.90274575621129 51.46641523383226)))\\"&start=0&rows=100&format=json"},{"rel":"first","type":"application/json","href":"https://scihub.copernicus.eu/apihub/search?q=beginPosition:[2020-02-24T00:00:00Z TO 2020-02-25T00:00:00Z] platformname:Sentinel-1 footprint:\\"Intersects(POLYGON ((11.90274575621129 51.46641523383226, 11.90274575621129 51.50095226908388, 11.94774352810161 51.50095226908388, 11.94774352810161 51.46641523383226, 11.90274575621129 51.46641523383226)))\\"&start=0&rows=100&format=json"},{"rel":"last","type":"application/json","href":"https://scihub.copernicus.eu/apihub/search?q=beginPosition:[2020-02-24T00:00:00Z TO 2020-02-25T00:00:00Z] platformname:Sentinel-1 footprint:\\"Intersects(POLYGON ((11.90274575621129 51.46641523383226, 11.90274575621129 51.50095226908388, 11.94774352810161 51.50095226908388, 11.94774352810161 51.46641523383226, 11.90274575621129 51.46641523383226)))\\"&start=2&rows=100&format=json"},{"rel":"search","type":"application/opensearchdescription+xml","href":"opensearch_description.xml"}],"entry":[{"title":"S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6","link":[{"href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'8a611d5b-f9d9-437e-9f55-eca18cf79fd4\')/$value"},{"rel":"alternative","href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'8a611d5b-f9d9-437e-9f55-eca18cf79fd4\')/"},{"rel":"icon","href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'8a611d5b-f9d9-437e-9f55-eca18cf79fd4\')/Products(\'Quicklook\')/$value"}],"id":"8a611d5b-f9d9-437e-9f55-eca18cf79fd4","summary":"Date: 2020-02-24T05:25:28.861Z, Instrument: SAR-C SAR, Mode: VV VH, Satellite: Sentinel-1, Size: 7.65 GB","ondemand":"false","date":[{"name":"beginposition","content":"2020-02-24T05:25:28.861Z"},{"name":"endposition","content":"2020-02-24T05:25:55.96Z"},{"name":"ingestiondate","content":"2020-02-24T09:44:57.338Z"}],"int":[{"name":"missiondatatakeid","content":"236786"},{"name":"slicenumber","content":"16"},{"name":"orbitnumber","content":"31390"},{"name":"lastorbitnumber","content":"31390"},{"name":"relativeorbitnumber","content":"168"},{"name":"lastrelativeorbitnumber","content":"168"}],"str":[{"name":"sensoroperationalmode","content":"IW"},{"name":"swathidentifier","content":"IW1 IW2 IW3"},{"name":"orbitdirection","content":"DESCENDING"},{"name":"producttype","content":"SLC"},{"name":"timeliness","content":"Fast-24h"},{"name":"platformname","content":"Sentinel-1"},{"name":"platformidentifier","content":"2014-016A"},{"name":"instrumentname","content":"Synthetic Aperture Radar (C-band)"},{"name":"instrumentshortname","content":"SAR-C SAR"},{"name":"filename","content":"S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6.SAFE"},{"name":"format","content":"SAFE"},{"name":"productclass","content":"S"},{"name":"polarisationmode","content":"VV VH"},{"name":"acquisitiontype","content":"NOMINAL"},{"name":"status","content":"ARCHIVED"},{"name":"size","content":"7.65 GB"},{"name":"gmlfootprint","content":"<gml:Polygon srsName=\\"http://www.opengis.net/gml/srs/epsg.xml#4326\\" xmlns:gml=\\"http://www.opengis.net/gml\\">\\n   <gml:outerBoundaryIs>\\n      <gml:LinearRing>\\n         <gml:coordinates>50.907326,13.664250 51.312340,10.003944 52.933346,10.404160 52.525398,14.201497 50.907326,13.664250</gml:coordinates>\\n      </gml:LinearRing>\\n   </gml:outerBoundaryIs>\\n</gml:Polygon>"},{"name":"footprint","content":"MULTIPOLYGON (((13.66425 50.907326, 14.201497 52.525398, 10.40416 52.933346, 10.003944 51.31234, 13.66425 50.907326)))"},{"name":"identifier","content":"S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6"},{"name":"uuid","content":"8a611d5b-f9d9-437e-9f55-eca18cf79fd4"}]},{"title":"S1A_IW_GRDH_1SDV_20200224T052530_20200224T052555_031390_039CF2_EBED","link":[{"href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'8b78a444-e6a4-48bc-9aa8-6b6a00cfcd80\')/$value"},{"rel":"alternative","href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'8b78a444-e6a4-48bc-9aa8-6b6a00cfcd80\')/"},{"rel":"icon","href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'8b78a444-e6a4-48bc-9aa8-6b6a00cfcd80\')/Products(\'Quicklook\')/$value"}],"id":"8b78a444-e6a4-48bc-9aa8-6b6a00cfcd80","summary":"Date: 2020-02-24T05:25:30.023Z, Instrument: SAR-C SAR, Mode: VV VH, Satellite: Sentinel-1, Size: 1.64 GB","ondemand":"false","date":[{"name":"beginposition","content":"2020-02-24T05:25:30.023Z"},{"name":"endposition","content":"2020-02-24T05:25:55.021Z"},{"name":"ingestiondate","content":"2020-02-24T09:29:17.891Z"}],"int":[{"name":"missiondatatakeid","content":"236786"},{"name":"slicenumber","content":"16"},{"name":"orbitnumber","content":"31390"},{"name":"lastorbitnumber","content":"31390"},{"name":"relativeorbitnumber","content":"168"},{"name":"lastrelativeorbitnumber","content":"168"}],"str":[{"name":"sensoroperationalmode","content":"IW"},{"name":"swathidentifier","content":"IW"},{"name":"orbitdirection","content":"DESCENDING"},{"name":"producttype","content":"GRD"},{"name":"timeliness","content":"Fast-24h"},{"name":"platformname","content":"Sentinel-1"},{"name":"platformidentifier","content":"2014-016A"},{"name":"instrumentname","content":"Synthetic Aperture Radar (C-band)"},{"name":"instrumentshortname","content":"SAR-C SAR"},{"name":"filename","content":"S1A_IW_GRDH_1SDV_20200224T052530_20200224T052555_031390_039CF2_EBED.SAFE"},{"name":"format","content":"SAFE"},{"name":"productclass","content":"S"},{"name":"polarisationmode","content":"VV VH"},{"name":"acquisitiontype","content":"NOMINAL"},{"name":"status","content":"ARCHIVED"},{"name":"size","content":"1.64 GB"},{"name":"gmlfootprint","content":"<gml:Polygon srsName=\\"http://www.opengis.net/gml/srs/epsg.xml#4326\\" xmlns:gml=\\"http://www.opengis.net/gml\\">\\n   <gml:outerBoundaryIs>\\n      <gml:LinearRing>\\n         <gml:coordinates>50.963913,13.678375 51.374710,9.951296 52.869320,10.326388 52.455978,14.178555 50.963913,13.678375</gml:coordinates>\\n      </gml:LinearRing>\\n   </gml:outerBoundaryIs>\\n</gml:Polygon>"},{"name":"footprint","content":"MULTIPOLYGON (((13.678375 50.963913, 14.178555 52.455978, 10.326388 52.86932, 9.951296 51.37471, 13.678375 50.963913)))"},{"name":"identifier","content":"S1A_IW_GRDH_1SDV_20200224T052530_20200224T052555_031390_039CF2_EBED"},{"name":"uuid","content":"8b78a444-e6a4-48bc-9aa8-6b6a00cfcd80"}]},{"title":"S1A_IW_RAW__0SDV_20200224T052526_20200224T052558_031390_039CF2_16A0","link":[{"href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'82cde615-bd22-44bb-98ca-b3e5d2811d32\')/$value"},{"rel":"alternative","href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'82cde615-bd22-44bb-98ca-b3e5d2811d32\')/"},{"rel":"icon","href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'82cde615-bd22-44bb-98ca-b3e5d2811d32\')/Products(\'Quicklook\')/$value"}],"id":"82cde615-bd22-44bb-98ca-b3e5d2811d32","summary":"Date: 2020-02-24T05:25:26.325Z, Instrument: SAR-C SAR, Mode: VH VV, Satellite: Sentinel-1, Size: 1.52 GB","ondemand":"false","date":[{"name":"beginposition","content":"2020-02-24T05:25:26.325Z"},{"name":"endposition","content":"2020-02-24T05:25:58.724Z"},{"name":"ingestiondate","content":"2020-02-24T07:34:15.963Z"}],"int":[{"name":"missiondatatakeid","content":"236786"},{"name":"slicenumber","content":"16"},{"name":"orbitnumber","content":"31390"},{"name":"lastorbitnumber","content":"31390"},{"name":"relativeorbitnumber","content":"168"},{"name":"lastrelativeorbitnumber","content":"168"}],"str":[{"name":"sensoroperationalmode","content":"IW"},{"name":"orbitdirection","content":"DESCENDING"},{"name":"producttype","content":"RAW"},{"name":"platformname","content":"Sentinel-1"},{"name":"platformidentifier","content":"2014-016A"},{"name":"instrumentname","content":"Synthetic Aperture Radar (C-band)"},{"name":"instrumentshortname","content":"SAR-C SAR"},{"name":"filename","content":"S1A_IW_RAW__0SDV_20200224T052526_20200224T052558_031390_039CF2_16A0.SAFE"},{"name":"format","content":"SAFE"},{"name":"productclass","content":"S"},{"name":"polarisationmode","content":"VH VV"},{"name":"acquisitiontype","content":"NOMINAL"},{"name":"status","content":"ARCHIVED"},{"name":"size","content":"1.52 GB"},{"name":"gmlfootprint","content":"<gml:Polygon srsName=\\"http://www.opengis.net/gml/srs/epsg.xml#4326\\" xmlns:gml=\\"http://www.opengis.net/gml\\">\\n   <gml:outerBoundaryIs>\\n      <gml:LinearRing>\\n         <gml:coordinates>52.8520,10.6192 50.9032,10.1431 50.6090,13.6194 52.5508,14.2489 52.8520,10.6192 52.8520,10.6192</gml:coordinates>\\n      </gml:LinearRing>\\n   </gml:outerBoundaryIs>\\n</gml:Polygon>"},{"name":"footprint","content":"MULTIPOLYGON (((13.6194 50.609, 14.2489 52.5508, 10.6192 52.852, 10.1431 50.9032, 13.6194 50.609)))"},{"name":"identifier","content":"S1A_IW_RAW__0SDV_20200224T052526_20200224T052558_031390_039CF2_16A0"},{"name":"productconsolidation","content":"SLICE"},{"name":"uuid","content":"82cde615-bd22-44bb-98ca-b3e5d2811d32"}]}]}}',
+        )
+
+        with Source(datahub=Datahub.Scihub) as src:
+            meta = src.query_metadata(
+                platform=Platform.Sentinel1,
+                date=("20200224", "20200225"),
+                aoi=aoi_4326,
+            )
+
+            item = meta.get_item("S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6")
+            self.assertEqual(item.properties.get("srcuuid"), "8a611d5b-f9d9-437e-9f55-eca18cf79fd4")
+            meta.normalize_hrefs(Path(gettempdir()).as_posix())
+            meta.validate_all()
+
+    @requests_mock.Mocker(real_http=True)
+    def test_query_metadata_earth_explorer(self, m):
+        m.post(
+            "https://earthexplorer.usgs.gov/inventory/json/v/1.4.1/login",
+            content=b'{"errorCode":null,"error":"","data":"mockKey","api_version":"1.4.1","access_level":"guest","catalog_id":"EE","executionTime":1}',
+        )
+        m.get(
+            "https://earthexplorer.usgs.gov/inventory/json/v/1.4.1/search",
+            content=b'{"errorCode":null,"error":"","data":{"numberReturned":1,"totalHits":1,"firstRecord":1,"lastRecord":1,"nextRecord":1,"results":[{"acquisitionDate":"2020-03-22","startTime":"2020-03-22","endTime":"2020-03-22","spatialFootprint":{"type":"Polygon","coordinates":[[[11.10993,51.06488],[13.73261,50.60479],[14.54244,52.29581],[11.8232,52.76405],[11.10993,51.06488]]]},"sceneBounds":"11.10993,50.60479,14.54244,52.76405","browseUrl":"https:\\/\\/ims.cr.usgs.gov\\/browse\\/landsat_8_c1\\/2020\\/193\\/024\\/LC08_L1TP_193024_20200322_20200326_01_T1.jpg","dataAccessUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/full\\/landsat_8_c1\\/LC81930242020082LGN00\\/","downloadUrl":"https:\\/\\/earthexplorer.usgs.gov\\/download\\/external\\/options\\/landsat_8_c1\\/LC81930242020082LGN00\\/M2M\\/","entityId":"LC81930242020082LGN00","displayId":"LC08_L1TP_193024_20200322_20200326_01_T1","cloudCover":"12.47","metadataUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/full\\/landsat_8_c1\\/LC81930242020082LGN00\\/?responseType=viewXml","fgdcMetadataUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/fgdc\\/landsat_8_c1\\/LC81930242020082LGN00\\/","modifiedDate":"2020-03-22 09:56:49","orderUrl":null,"bulkOrdered":false,"ordered":false,"summary":"ID: LC08_L1TP_193024_20200322_20200326_01_T1, Acquisition Date: 2020-03-22, Path: 193, Row: 24"}]},"api_version":"1.4.1","access_level":"user","catalog_id":"EE","executionTime":0.5484530925750732}',
+        )
+        m.get(
+            "https://earthexplorer.usgs.gov/inventory/json/v/1.4.1/logout?jsonRequest=%7B%22apiKey%22%3A+%22mockKey%22%7D",
+            text='{"errorCode":null,"error":"","data":true,"api_version":"1.4.1","access_level":"user","catalog_id":"EE","executionTime":0.4}',
+        )
+
+        with Source(datahub=Datahub.EarthExplorer) as src:
+            meta = src.query_metadata(
+                platform=Platform.Landsat8,
+                date=("20200310", "20200325"),
+                aoi=aoi_bbox,
+                cloud_cover=(0, 20),
+            )
+
+            item = meta.get_item("LC08_L1TP_193024_20200322_20200326_01_T1")
+            self.assertEqual(item.properties.get("srcuuid"), "LC81930242020082LGN00")
+            meta.normalize_hrefs(Path(gettempdir()).as_posix())
+            meta.validate_all()
+
+    @requests_mock.Mocker(real_http=True)
+    def test_query_metadata_srcid_scihub(self, m):
+        m.post(
+            "https://scihub.copernicus.eu/apihub/search?format=json&rows=100&start=0",
+            content=b'{"feed":{"xmlns:opensearch":"http://a9.com/-/spec/opensearch/1.1/","xmlns":"http://www.w3.org/2005/Atom","title":"Sentinels Scientific Data Hub search results for: identifier:S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6","subtitle":"Displaying 1 results. Request done in 0.003 seconds.","updated":"2021-03-19T14:20:16.483Z","author":{"name":"Sentinels Scientific Data Hub"},"id":"https://scihub.copernicus.eu/apihub/search?q=identifier:S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6","opensearch:totalResults":"1","opensearch:startIndex":"0","opensearch:itemsPerPage":"100","opensearch:Query":{"role":"request","searchTerms":"identifier:S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6","startPage":"1"},"link":[{"rel":"self","type":"application/json","href":"https://scihub.copernicus.eu/apihub/search?q=identifier:S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6&start=0&rows=100&format=json"},{"rel":"first","type":"application/json","href":"https://scihub.copernicus.eu/apihub/search?q=identifier:S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6&start=0&rows=100&format=json"},{"rel":"last","type":"application/json","href":"https://scihub.copernicus.eu/apihub/search?q=identifier:S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6&start=0&rows=100&format=json"},{"rel":"search","type":"application/opensearchdescription+xml","href":"opensearch_description.xml"}],"entry":{"title":"S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6","link":[{"href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'8a611d5b-f9d9-437e-9f55-eca18cf79fd4\')/$value"},{"rel":"alternative","href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'8a611d5b-f9d9-437e-9f55-eca18cf79fd4\')/"},{"rel":"icon","href":"https://scihub.copernicus.eu/apihub/odata/v1/Products(\'8a611d5b-f9d9-437e-9f55-eca18cf79fd4\')/Products(\'Quicklook\')/$value"}],"id":"8a611d5b-f9d9-437e-9f55-eca18cf79fd4","summary":"Date: 2020-02-24T05:25:28.861Z, Instrument: SAR-C SAR, Mode: VV VH, Satellite: Sentinel-1, Size: 7.65 GB","ondemand":"false","date":[{"name":"beginposition","content":"2020-02-24T05:25:28.861Z"},{"name":"endposition","content":"2020-02-24T05:25:55.96Z"},{"name":"ingestiondate","content":"2020-02-24T09:44:57.338Z"}],"int":[{"name":"missiondatatakeid","content":"236786"},{"name":"slicenumber","content":"16"},{"name":"orbitnumber","content":"31390"},{"name":"lastorbitnumber","content":"31390"},{"name":"relativeorbitnumber","content":"168"},{"name":"lastrelativeorbitnumber","content":"168"}],"str":[{"name":"sensoroperationalmode","content":"IW"},{"name":"swathidentifier","content":"IW1 IW2 IW3"},{"name":"orbitdirection","content":"DESCENDING"},{"name":"producttype","content":"SLC"},{"name":"timeliness","content":"Fast-24h"},{"name":"platformname","content":"Sentinel-1"},{"name":"platformidentifier","content":"2014-016A"},{"name":"instrumentname","content":"Synthetic Aperture Radar (C-band)"},{"name":"instrumentshortname","content":"SAR-C SAR"},{"name":"filename","content":"S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6.SAFE"},{"name":"format","content":"SAFE"},{"name":"productclass","content":"S"},{"name":"polarisationmode","content":"VV VH"},{"name":"acquisitiontype","content":"NOMINAL"},{"name":"status","content":"ARCHIVED"},{"name":"size","content":"7.65 GB"},{"name":"gmlfootprint","content":"<gml:Polygon srsName=\\"http://www.opengis.net/gml/srs/epsg.xml#4326\\" xmlns:gml=\\"http://www.opengis.net/gml\\">\\n   <gml:outerBoundaryIs>\\n      <gml:LinearRing>\\n         <gml:coordinates>50.907326,13.664250 51.312340,10.003944 52.933346,10.404160 52.525398,14.201497 50.907326,13.664250</gml:coordinates>\\n      </gml:LinearRing>\\n   </gml:outerBoundaryIs>\\n</gml:Polygon>"},{"name":"footprint","content":"MULTIPOLYGON (((13.66425 50.907326, 14.201497 52.525398, 10.40416 52.933346, 10.003944 51.31234, 13.66425 50.907326)))"},{"name":"identifier","content":"S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6"},{"name":"uuid","content":"8a611d5b-f9d9-437e-9f55-eca18cf79fd4"}]}}}',
+        )
+        with Source(datahub=Datahub.Scihub) as src:
+            meta = src.query_metadata_srcid(
+                platform=Platform.Sentinel1,
+                srcid="S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6",
+            )
+        item = meta.get_item("S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6")
+        self.assertEqual(item.properties.get("srcuuid"), "8a611d5b-f9d9-437e-9f55-eca18cf79fd4")
+        meta.normalize_hrefs(Path(gettempdir()).as_posix())
+        item.validate()
+
+    @requests_mock.Mocker(real_http=True)
+    def test_query_metadata_srcid_earth_explorer(self, m):
+        m.post(
+            "https://earthexplorer.usgs.gov/inventory/json/v/1.4.1/login",
+            content=b'{"errorCode":null,"error":"","data":"mockKey","api_version":"1.4.1","access_level":"guest","catalog_id":"EE","executionTime":1}',
+        )
+        m.get(
+            "https://earthexplorer.usgs.gov/inventory/json/v/1.4.1/idlookup",
+            content=b'{"errorCode":null,"error":"","data":{"LC08_L1TP_193024_20200322_20200326_01_T1":"LC81930242020082LGN00"},"api_version":"1.4.1","access_level":"user","catalog_id":"EE","executionTime":0.6667380332946777}',
+        )
+        m.get(
+            "https://earthexplorer.usgs.gov/inventory/json/v/1.4.1/metadata",
+            content=b'{"errorCode":null,"error":"","data":[{"acquisitionDate":"2020-03-22","spatialFootprint":{"type":"Polygon","coordinates":[[[11.10993,51.06488],[13.73261,50.60479],[14.54244,52.29581],[11.8232,52.76405],[11.10993,51.06488]]]},"sceneBounds":"11.10993,50.60479,14.54244,52.76405","browseUrl":"https:\\/\\/ims.cr.usgs.gov\\/browse\\/landsat_8_c1\\/2020\\/193\\/024\\/LC08_L1TP_193024_20200322_20200326_01_T1.jpg","entityId":"LC81930242020082LGN00","displayId":"LC08_L1TP_193024_20200322_20200326_01_T1","fgdcMetadataUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/fgdc\\/landsat_8_c1\\/LC81930242020082LGN00\\/?responseType=viewXml","modifiedDate":"2020-03-22T09:56:49","dataAccess":null,"metadataFields":[{"fieldName":"Landsat Product Identifier","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#landsat_product_id","value":"LC08_L1TP_193024_20200322_20200326_01_T1"},{"fieldName":"Landsat Scene Identifier","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#landsat_scene_id","value":"LC81930242020082LGN00"},{"fieldName":"Acquisition Date","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#acquisition_date","value":"2020\\/03\\/22"},{"fieldName":"Collection Category","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#acquisition_date","value":"T1"},{"fieldName":"Collection Number","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#acquisition_date","value":1},{"fieldName":"WRS Path","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#acquisition_date","value":" 193"},{"fieldName":"WRS Row","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#acquisition_date","value":" 024"},{"fieldName":"Target WRS Path","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#acquisition_date","value":" 193"},{"fieldName":"Target WRS Row","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#acquisition_date","value":" 024"},{"fieldName":"Nadir\\/Off Nadir","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_c2_dictionary.html#acquisition_date","value":"NADIR"},{"fieldName":"Roll Angle","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#roll_angle","value":"-0.001"},{"fieldName":"Date L-1 Generated","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#date_l1_generated","value":"2020\\/03\\/26"},{"fieldName":"Start Time","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#start_time","value":"2020:082:10:02:29.1296010"},{"fieldName":"Stop Time","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#stop_time","value":"2020:082:10:03:00.8996000"},{"fieldName":"Station Identifier","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#distribution_site","value":"LGN"},{"fieldName":"Day\\/Night Indicator","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#day_or_night","value":"DAY"},{"fieldName":"Land Cloud Cover","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#cloud_cover_land","value":"12.47"},{"fieldName":"Scene Cloud Cover","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#cloud_cover","value":"12.47"},{"fieldName":"Ground Control Points Model","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#ground_control_points_model","value":253},{"fieldName":"Ground Control Points Version","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#ground_control_points_version","value":4},{"fieldName":"Geometric RMSE Model (meters)","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#geometric_rmse_model","value":"8.296"},{"fieldName":"Geometric RMSE Model X","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#geometric_rmse_model_x","value":"5.809"},{"fieldName":"Geometric RMSE Model Y","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#geometric_rmse_model_y","value":"5.924"},{"fieldName":"Image Quality","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#image_quality_landsat_8","value":9},{"fieldName":"Processing Software Version","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#processing_software_version","value":"LPGS_13.1.0"},{"fieldName":"Sun Elevation L1","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#sun_elevation","value":"36.94009856"},{"fieldName":"Sun Azimuth L1","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#sun_azimuth","value":"156.99969272"},{"fieldName":"TIRS SSM Model","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#tirs_ssm_model","value":"FINAL"},{"fieldName":"Data Type Level-1","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#data_type_l1","value":"OLI_TIRS_L1TP"},{"fieldName":"Sensor Identifier","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#sensor_id ","value":"OLI_TIRS"},{"fieldName":"Panchromatic Lines","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#panchromatic_lines","value":16301},{"fieldName":"Panchromatic Samples","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#panchromatic_samples","value":16101},{"fieldName":"Reflective Lines","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#reflective_lines","value":8151},{"fieldName":"Reflective Samples","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#reflective_samples","value":8051},{"fieldName":"Thermal Lines","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#thermal_lines","value":8151},{"fieldName":"Thermal Samples","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#thermal_samples","value":8051},{"fieldName":"Map Projection Level-1","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#map_projection_l1","value":"UTM"},{"fieldName":"UTM Zone","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#utm_zone","value":33},{"fieldName":"Datum","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#datum","value":"WGS84"},{"fieldName":"Ellipsoid","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#ellipsoid","value":"WGS84"},{"fieldName":"Grid Cell Size Panchromatic","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#grid_cell_size_panchromatic","value":"15.00"},{"fieldName":"Grid Cell Size Reflective","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#grid_cell_size_reflective","value":"30.00"},{"fieldName":"Grid Cell Size Thermal","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#grid_cell_size_thermal","value":"30.00"},{"fieldName":"Bias Parameter File Name OLI","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#bpf_name_oli","value":"LO8BPF20200322095233_20200322113039.01"},{"fieldName":"Bias Parameter File Name TIRS","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#bpf_name_tirs","value":"LT8BPF20200310060739_20200324104153.01"},{"fieldName":"Calibration Parameter File","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#cpf_name","value":"LC08CPF_20200101_20200331_01.04"},{"fieldName":"RLUT File Name","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#rlut_file_name","value":"LC08RLUT_20150303_20431231_01_12.h5"},{"fieldName":"Center Latitude","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"51\\u0026deg;41\\u002735.34\\u0022N"},{"fieldName":"Center Longitude","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"12\\u0026deg;48\\u002715.73\\u0022E"},{"fieldName":"UL Corner Lat","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"52\\u0026deg;45\\u002750.58\\u0022N"},{"fieldName":"UL Corner Long","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"11\\u0026deg;49\\u002723.52\\u0022E"},{"fieldName":"UR Corner Lat","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"52\\u0026deg;17\\u002744.92\\u0022N"},{"fieldName":"UR Corner Long","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"14\\u0026deg;32\\u002732.78\\u0022E"},{"fieldName":"LL Corner Lat","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"51\\u0026deg;03\\u002753.57\\u0022N"},{"fieldName":"LL Corner Long","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"11\\u0026deg;06\\u002735.75\\u0022E"},{"fieldName":"LR Corner Lat","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"50\\u0026deg;36\\u002717.24\\u0022N"},{"fieldName":"LR Corner Long","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_degrees","value":"13\\u0026deg;43\\u002757.40\\u0022E"},{"fieldName":"Center Latitude dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"51.69315"},{"fieldName":"Center Longitude dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"12.80437"},{"fieldName":"UL Corner Lat dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"52.76405"},{"fieldName":"UL Corner Long dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"11.82320"},{"fieldName":"UR Corner Lat dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"52.29581"},{"fieldName":"UR Corner Long dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"14.54244"},{"fieldName":"LL Corner Lat dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"51.06488"},{"fieldName":"LL Corner Long dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"11.10993"},{"fieldName":"LR Corner Lat dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"50.60479"},{"fieldName":"LR Corner Long dec","descriptionLink":"https:\\/\\/lta.cr.usgs.gov\\/DD\\/landsat_dictionary.html#coordinates_decimal","value":"13.73261"}]}],"api_version":"1.4.1","access_level":"user","catalog_id":"EE","executionTime":0.46625709533691406}',
+        )
+        m.get(
+            "https://earthexplorer.usgs.gov/inventory/json/v/1.4.1/search",
+            content=b'{"errorCode":null,"error":"","data":{"numberReturned":3,"totalHits":3,"firstRecord":1,"lastRecord":3,"nextRecord":3,"results":[{"acquisitionDate":"2020-03-22","startTime":"2020-03-22","endTime":"2020-03-22","spatialFootprint":{"type":"Polygon","coordinates":[[[11.70075,52.48079],[14.40233,52.01085],[15.25803,53.69755],[12.45245,54.17681],[11.70075,52.48079]]]},"sceneBounds":"11.70075,52.01085,15.25803,54.17681","browseUrl":"https:\\/\\/ims.cr.usgs.gov\\/browse\\/landsat_8_c1\\/2020\\/193\\/023\\/LC08_L1TP_193023_20200322_20200326_01_T1.jpg","dataAccessUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/full\\/landsat_8_c1\\/LC81930232020082LGN00\\/","downloadUrl":"https:\\/\\/earthexplorer.usgs.gov\\/download\\/external\\/options\\/landsat_8_c1\\/LC81930232020082LGN00\\/M2M\\/","entityId":"LC81930232020082LGN00","displayId":"LC08_L1TP_193023_20200322_20200326_01_T1","cloudCover":"9.84","metadataUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/full\\/landsat_8_c1\\/LC81930232020082LGN00\\/?responseType=viewXml","fgdcMetadataUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/fgdc\\/landsat_8_c1\\/LC81930232020082LGN00\\/","modifiedDate":"2020-03-22 09:56:49","orderUrl":null,"bulkOrdered":false,"ordered":false,"summary":"ID: LC08_L1TP_193023_20200322_20200326_01_T1, Acquisition Date: 2020-03-22, Path: 193, Row: 23"},{"acquisitionDate":"2020-03-22","startTime":"2020-03-22","endTime":"2020-03-22","spatialFootprint":{"type":"Polygon","coordinates":[[[11.10993,51.06488],[13.73261,50.60479],[14.54244,52.29581],[11.8232,52.76405],[11.10993,51.06488]]]},"sceneBounds":"11.10993,50.60479,14.54244,52.76405","browseUrl":"https:\\/\\/ims.cr.usgs.gov\\/browse\\/landsat_8_c1\\/2020\\/193\\/024\\/LC08_L1TP_193024_20200322_20200326_01_T1.jpg","dataAccessUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/full\\/landsat_8_c1\\/LC81930242020082LGN00\\/","downloadUrl":"https:\\/\\/earthexplorer.usgs.gov\\/download\\/external\\/options\\/landsat_8_c1\\/LC81930242020082LGN00\\/M2M\\/","entityId":"LC81930242020082LGN00","displayId":"LC08_L1TP_193024_20200322_20200326_01_T1","cloudCover":"12.47","metadataUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/full\\/landsat_8_c1\\/LC81930242020082LGN00\\/?responseType=viewXml","fgdcMetadataUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/fgdc\\/landsat_8_c1\\/LC81930242020082LGN00\\/","modifiedDate":"2020-03-22 09:56:49","orderUrl":null,"bulkOrdered":false,"ordered":false,"summary":"ID: LC08_L1TP_193024_20200322_20200326_01_T1, Acquisition Date: 2020-03-22, Path: 193, Row: 24"},{"acquisitionDate":"2020-03-22","startTime":"2020-03-22","endTime":"2020-03-22","spatialFootprint":{"type":"Polygon","coordinates":[[[10.54741,49.647],[13.09668,49.19591],[13.86553,50.89076],[11.22651,51.34896],[10.54741,49.647]]]},"sceneBounds":"10.54741,49.19591,13.86553,51.34896","browseUrl":"https:\\/\\/ims.cr.usgs.gov\\/browse\\/landsat_8_c1\\/2020\\/193\\/025\\/LC08_L1TP_193025_20200322_20200326_01_T1.jpg","dataAccessUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/full\\/landsat_8_c1\\/LC81930252020082LGN00\\/","downloadUrl":"https:\\/\\/earthexplorer.usgs.gov\\/download\\/external\\/options\\/landsat_8_c1\\/LC81930252020082LGN00\\/M2M\\/","entityId":"LC81930252020082LGN00","displayId":"LC08_L1TP_193025_20200322_20200326_01_T1","cloudCover":"19.28","metadataUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/full\\/landsat_8_c1\\/LC81930252020082LGN00\\/?responseType=viewXml","fgdcMetadataUrl":"https:\\/\\/earthexplorer.usgs.gov\\/metadata\\/fgdc\\/landsat_8_c1\\/LC81930252020082LGN00\\/","modifiedDate":"2020-03-22 09:56:49","orderUrl":null,"bulkOrdered":false,"ordered":false,"summary":"ID: LC08_L1TP_193025_20200322_20200326_01_T1, Acquisition Date: 2020-03-22, Path: 193, Row: 25"}]},"api_version":"1.4.1","access_level":"user","catalog_id":"EE","executionTime":9.402753114700317}',
+        )
+        m.get(
+            "https://earthexplorer.usgs.gov/inventory/json/v/1.4.1/logout?jsonRequest=%7B%22apiKey%22%3A+%22mockKey%22%7D",
+            text='{"errorCode":null,"error":"","data":true,"api_version":"1.4.1","access_level":"user","catalog_id":"EE","executionTime":0.4}',
+        )
+
+        with Source(datahub=Datahub.EarthExplorer) as src:
+            meta = src.query_metadata_srcid(
+                platform=Platform.Landsat8,
+                srcid="LC08_L1TP_193024_20200322_20200326_01_T1",
+            )
+        item = meta.get_item("LC08_L1TP_193024_20200322_20200326_01_T1")
+        self.assertEqual(item.properties.get("srcuuid"), "LC81930242020082LGN00")
+        meta.normalize_hrefs(Path(gettempdir()).as_posix())
+        item.validate()
 
 
 if __name__ == "__main__":
