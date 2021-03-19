@@ -14,7 +14,7 @@ os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
 os.environ["SCIHUB_USER"] = "Tim"
 os.environ["SCIHUB_PW"] = "TheEnchanter"
 
-catalog_path = Path("./testfiles/catalog.json")
+catalog_path = Path(__file__).parents[0] / "testfiles/catalog.json"
 target_dir = Path(__file__).parents[0] / "testfiles"
 aoi_4326 = target_dir / "aoi_4326.geojson"
 aoi_3857 = target_dir / "aoi_3857.geojson"
