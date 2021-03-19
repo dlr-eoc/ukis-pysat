@@ -10,7 +10,7 @@
         },
         {
             "rel": "item",
-            "href": "./S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731/S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731.json",
+            "href": "./item/S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731.json",
             "type": "application/json"
         }
     ]
