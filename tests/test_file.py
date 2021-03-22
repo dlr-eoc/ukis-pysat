@@ -58,7 +58,8 @@ class FileTest(unittest.TestCase):
     def test_get_polarization_from_s1_filename_SDV(self):
         self.assertEqual(
             psf.get_polarization_from_s1_filename(
-                "MMM_BB_TTTR_1SDV_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip", True,
+                "MMM_BB_TTTR_1SDV_YYYYMMDDTHHMMSS_YYYYMMDDTHHMMSS_OOOOOO_DDDDDD_CCCC.SAFE.zip",
+                True,
             ),
             "VV,VH",
         )
@@ -66,7 +67,8 @@ class FileTest(unittest.TestCase):
     def test_get_ts_from_sentinel_filename_S1(self):
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
-                "S1M_BB_TTTR_LFPP_YYYYMMDDTHHMMSS_20200113T002219_OOOOOO_DDDDDD_CCCC.SAFE.zip", False,
+                "S1M_BB_TTTR_LFPP_YYYYMMDDTHHMMSS_20200113T002219_OOOOOO_DDDDDD_CCCC.SAFE.zip",
+                False,
             ),
             datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
@@ -115,14 +117,16 @@ class FileTest(unittest.TestCase):
 
     def test_get_origin_from_manifest(self):
         self.assertEqual(
-            psf.get_origin_from_manifest(path_testfiles.joinpath("manifest.safe")), "United Kingdom",
+            psf.get_origin_from_manifest(path_testfiles.joinpath("manifest.safe")),
+            "United Kingdom",
         )
         with self.assertRaises(KeyError, msg="Country of origin not found."):
             psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest_bad.safe"))
 
     def test_get_ipf_from_manifest(self):
         self.assertEqual(
-            psf.get_ipf_from_manifest(path_testfiles.joinpath("manifest.safe")), 2.82,
+            psf.get_ipf_from_manifest(path_testfiles.joinpath("manifest.safe")),
+            2.82,
         )
         with self.assertRaises(KeyError, msg="IPF Version not found."):
             psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest_bad.safe"))

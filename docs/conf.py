@@ -20,7 +20,9 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "ukis_pysat"
-copyright = "2020, German Aerospace Center (DLR) * German Remote Sensing Data Center * Department: Geo-Risks and Civil Security"
+copyright = (
+    "2020, German Aerospace Center (DLR) * German Remote Sensing Data Center * Department: Geo-Risks and Civil Security"
+)
 author = "Boehnke, Christian; Fichtner, Florian; Mandery, Nico; Wieland, Marc"
 
 # The full version, including alpha/beta/rc tags
@@ -28,8 +30,8 @@ version = str(subprocess.check_output(["git", "describe", "--always"]).strip())
 
 # -- General configuration ---------------------------------------------------
 
-master_doc = 'index'
-autoclass_content = 'both'
+master_doc = "index"
+autoclass_content = "both"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom

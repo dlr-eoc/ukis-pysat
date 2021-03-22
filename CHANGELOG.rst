@@ -13,9 +13,23 @@ Changed
 ^^^^^^^
 something was changed
 
-[1.0.2]  (2020-01-22)
-
+[master] (2021-**-**)
 ---------------------
+
+Changed
+^^^^^^^
+- ``data``: change default scihup endpoint `/dhus` to `/apihub`#110
+- ``data``: mocked all interaction with Hubs for unit testing #116
+- ``data``: EarthExplorer changed to new M2M API due to dependency update #120
+- split unit tests #110
+
+Added
+^^^^^
+- Github Action for black #111
+
+[1.0.2]  (2020-01-22)
+---------------------
+
 Changed
 ^^^^^^^
 - ``raster``: documentation clarification for `Image` initialization with `nodata` #105
@@ -26,6 +40,7 @@ Fixed
 
 [1.0.1]  (2020-01-20)
 ---------------------
+
 Changed
 ^^^^^^^
 - ``data``: make fiona and pyproj optional #104
