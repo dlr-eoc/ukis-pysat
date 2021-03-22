@@ -21,6 +21,7 @@ Changed
 - ``data``: change default scihup endpoint `/dhus` to `/apihub`#110
 - ``data``: mocked all interaction with Hubs for unit testing #116
 - ``data``: EarthExplorer changed to new M2M API due to dependency update #120
+- split unit tests #110
 
 Added
 ^^^^^
