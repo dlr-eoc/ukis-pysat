@@ -16,6 +16,12 @@ something was changed
 [master] (2021-**-**)
 ---------------------
 
+Changed
+^^^^^^^
+- ``data``: change default scihup endpoint `/dhus` to `/apihub`#110
+- ``data``: mocked all interaction with Hubs for unit testing #116
+- ``data``: EarthExplorer changed to new M2M API due to dependency update #120
+
 Added
 ^^^^^
 - Github Action for black #111
