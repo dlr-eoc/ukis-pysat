@@ -10,7 +10,7 @@
         },
         {
             "rel": "item",
-            "href": "item.json",
+            "href": "./item.json",
             "type": "application/json"
         }
     ]
