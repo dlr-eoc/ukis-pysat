@@ -16,6 +16,7 @@ try:
     import pystac
     import requests
     import sentinelsat
+    from landsatxplore.util import guess_dataset
     from PIL import Image
     from pylandsat import Product
     from pystac.extensions import sat
@@ -156,14 +157,14 @@ class Source:
             )
 
         elif self.src == Datahub.EarthExplorer:
-            # query Earthexplorer for metadata
+            # query EarthExplorer for metadata
             bbox = self.prep_aoi(aoi).bounds
             kwargs = {}
             if cloud_cover:
                 kwargs["max_cloud_cover"] = cloud_cover[1]
             products = self.api.search(
                 dataset=platform.value,
-                bbox=[bbox[1], bbox[0], bbox[3], bbox[2]],
+                bbox=bbox,
                 start_date=sentinelsat.format_query_date(date[0]),
                 end_date=sentinelsat.format_query_date(date[1]),
                 max_results=10000,
@@ -213,22 +214,12 @@ class Source:
             )
 
         elif self.src == Datahub.EarthExplorer:
-            # query EarthExplorer for metadata by srcid
-            # TODO: could not figure out how to directly query detailed metadata by srcid, therefore here we
-            # query first for scene acquisitiondate and footprint and use these to query detailed metadata.
-            meta_src = self.api.request(
-                "metadata",
-                **{"datasetName": platform.value, "entityIds": self.api.lookup(platform.value, srcid, inverse=True)},
-            )
-            date_from = meta_src[0]["acquisitionDate"].replace("-", "")
-            date_to = (datetime.datetime.strptime(date_from, "%Y%m%d") + datetime.timedelta(days=1)).strftime("%Y%m%d")
-            aoi = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
+            dataset = guess_dataset(srcid)
+            metadata = self.api.metadata(self.api.get_entity_id(srcid, dataset), dataset)
 
             # initialize empty catalog and add metadata items
             catalog = self._init_catalog()
-            for item in self.query_metadata(platform=platform, date=(date_from, date_to), aoi=aoi).get_all_items():
-                if item.id == srcid:
-                    catalog.add_item(item)
+            catalog.add_item(self.construct_metadata(meta=metadata, platform=platform))
             return catalog
 
         else:  # query Scihub for metadata by srcid
@@ -249,28 +240,25 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             item = pystac.Item(
-                id=meta["displayId"],
+                id=meta["display_id"],
                 datetime=datetime.datetime.now(),
-                geometry=meta["spatialFootprint"],
-                bbox=_get_bbox_from_geometry_string(meta["spatialFootprint"]),
+                geometry=meta["spatial_coverage"].__geo_interface__,
+                bbox=meta["spatial_bounds"],
                 properties={
                     "producttype": "L1TP",
-                    "srcurl": meta["dataAccessUrl"],
-                    "srcuuid": meta["entityId"],
-                    "acquisitiondate": parse(meta["acquisitionDate"], ignoretz=True, fuzzy=True).strftime("%Y-%m-%d"),
-                    "ingestiondate": parse(meta["modifiedDate"], ignoretz=True, fuzzy=True).strftime("%Y-%m-%d"),
+                    "srcuuid": meta["entity_id"],
+                    "acquisitiondate": meta["acquisition_date"].strftime("%Y-%m-%d"),
+                    "ingestiondate": meta["publish_date"].strftime("%Y-%m-%d"),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
 
             if "cloudCover" in meta:
-                item.ext.eo.cloud_cover = round(float(meta["cloudCover"]), 2)
+                item.ext.eo.cloud_cover = round(float(meta["cloud_cover"]), 2)
 
             item.common_metadata.platform = platform.value
 
-            relative_orbit = int(
-                meta["summary"][meta["summary"].find("Path: ") + len("Path: ") : meta["summary"].rfind(", Row: ")]
-            )
+            relative_orbit = int(f"{meta['wrs_path']}{meta['wrs_row']}")
             item.ext.sat.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
 
         else:  # Scihub
