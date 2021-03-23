@@ -22,6 +22,8 @@ Changed
 - ``data``: mocked all interaction with Hubs for unit testing #116
 - ``data``: EarthExplorer changed to new M2M API due to dependency update #120
 - split unit tests #110
+- ``data``: removed hard dependency for landsatxplore & pylandsat #104
+
 
 Added
 ^^^^^

@@ -11,14 +11,11 @@ from dateutil.parser import parse
 from ukis_pysat.stacapi import StacApi
 
 try:
-    import landsatxplore.api
     import numpy as np
     import pystac
     import requests
     import sentinelsat
-    from landsatxplore.util import guess_dataset
     from PIL import Image
-    from pylandsat import Product
     from pystac.extensions import sat
     from shapely import geometry, wkt, ops
 except ImportError as e:
@@ -75,6 +72,8 @@ class Source:
                 self.api = StacApi()
 
         elif self.src == Datahub.EarthExplorer:
+            import landsatxplore.api
+
             # connect to Earthexplorer
             self.user = env_get("EARTHEXPLORER_USER")
             self.pw = env_get("EARTHEXPLORER_PW")
@@ -214,6 +213,8 @@ class Source:
             )
 
         elif self.src == Datahub.EarthExplorer:
+            from landsatxplore.util import guess_dataset
+
             dataset = guess_dataset(srcid)
             metadata = self.api.metadata(self.api.get_entity_id(srcid, dataset), dataset)
 
@@ -322,6 +323,8 @@ class Source:
             product_srcid = meta_src[0]["displayId"]
 
             if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
+                from pylandsat import Product
+
                 # download data from AWS if file does not already exist
                 product = Product(product_srcid)
                 product.download(out_dir=target_dir, progressbar=False)

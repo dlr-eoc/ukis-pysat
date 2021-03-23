@@ -27,10 +27,8 @@ def get_version(rel_path):
 # please also update requirements.txt for testing. Make sure package versions are the same in each subset.
 extras_require = {
     "data": [
-        "landsatxplore>=0.13.0",
         "numpy",
         "pillow",
-        "pylandsat>=0.6.0",
         "pystac>=0.5.5",
         "python-dateutil",
         "requests",
@@ -51,7 +49,9 @@ extras_require["dev"] = sorted(
     + [
         "dask[array]",
         "fiona",
+        "landsatxplore>=0.13.0",
         "pandas",
+        "pylandsat>=0.6.0",
         "pyproj>=3.0.0",
         "requests_mock",
         "utm>=0.7.0",
