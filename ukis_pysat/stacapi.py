@@ -27,9 +27,7 @@ class StacApi:
         :param url: STAC Server endpoint, reads from STAC_API_URL environment variable by default
         """
         if url is None:
-            raise StacApiError(
-                "URL not provided, pass into StacApi or define STAC_API_URL environment variable"
-            )
+            raise StacApiError("URL not provided, pass into StacApi or define STAC_API_URL environment variable")
         self.url = url.rstrip("/") + "/"
 
     def _handle_query(self, url=None, headers=None, **kwargs):
@@ -71,11 +69,7 @@ class StacApi:
             if not res["links"]:
                 next_page = None
             else:
-                next_page = (
-                    res["links"][0]["href"]
-                    if res["links"][0]["rel"] == "next"
-                    else None
-                )
+                next_page = res["links"][0]["href"] if res["links"][0]["rel"] == "next" else None
 
             for f in res["features"]:
                 if len(items) == limit:
@@ -92,9 +86,7 @@ class StacApi:
         :param headers: headers (optional)
         :param kwargs: search parameters (optional)
         :returns list with pystac.collections"""
-        url = urljoin(
-            self.url, f"collections/{collection_id}" if collection_id else "collections"
-        )
+        url = urljoin(self.url, f"collections/{collection_id}" if collection_id else "collections")
         res = self._handle_query(url=url, headers=headers, **kwargs)
         if isinstance(res, dict):
             res = res.get("collections", [res])

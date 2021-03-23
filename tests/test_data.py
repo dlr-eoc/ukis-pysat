@@ -27,16 +27,13 @@ class DataTest(unittest.TestCase):
             self.assertTrue(isinstance(src.api, pystac.catalog.Catalog))
 
     def test_init_stac_url(self):
-        with Source(
-            datahub=Datahub.STAC_API, url=r"https://earth-search.aws.element84.com/v0/"
-        ) as src:
+        with Source(datahub=Datahub.STAC_API, url=r"https://earth-search.aws.element84.com/v0/") as src:
             self.assertEqual(src.api.url, r"https://earth-search.aws.element84.com/v0/")
 
     def test_init_exception_other_hub(self):
         with self.assertRaises(
             NotImplementedError,
-            msg=f"Hub is not supported [STAC_local, STAC_API, EarthExplorer, "
-            f"Scihub].",
+            msg=f"Hub is not supported [STAC_local, STAC_API, EarthExplorer, " f"Scihub].",
         ):
             Source(datahub="Hub")
 
@@ -46,14 +43,10 @@ class DataTest(unittest.TestCase):
 
     def test_exception_false_aoi(self):
         with Source(datahub=Datahub.STAC_local, catalog=catalog_path) as src:
-            with self.assertRaises(
-                TypeError, msg=f"aoi must be of type string or tuple"
-            ):
+            with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
                 src.prep_aoi(1)
 
-    @unittest.skip(
-        "Skip until we find a better test or this also runs with Github Actions"
-    )
+    @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
     def test_query_metadata_stac_local(self):
         with Source(datahub=Datahub.STAC_local, catalog=catalog_path) as src:
             meta = src.query_metadata(
@@ -62,12 +55,8 @@ class DataTest(unittest.TestCase):
                 aoi=aoi_3857,
                 cloud_cover=(90, 100),
             )
-            item = meta.get_item(
-                "S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731"
-            )
-            self.assertEqual(
-                item.properties.get("srcuuid"), "ae674e64-013d-4898-a6d7-096d7b02bdde"
-            )
+            item = meta.get_item("S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731")
+            self.assertEqual(item.properties.get("srcuuid"), "ae674e64-013d-4898-a6d7-096d7b02bdde")
             meta.normalize_hrefs(Path(gettempdir()).as_posix())
             meta.validate_all()
 
@@ -85,12 +74,8 @@ class DataTest(unittest.TestCase):
                 aoi=aoi_4326,
             )
 
-            item = meta.get_item(
-                "S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6"
-            )
-            self.assertEqual(
-                item.properties.get("srcuuid"), "8a611d5b-f9d9-437e-9f55-eca18cf79fd4"
-            )
+            item = meta.get_item("S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6")
+            self.assertEqual(item.properties.get("srcuuid"), "8a611d5b-f9d9-437e-9f55-eca18cf79fd4")
             meta.normalize_hrefs(Path(gettempdir()).as_posix())
             meta.validate_all()
 
@@ -133,12 +118,8 @@ class DataTest(unittest.TestCase):
                 platform=Platform.Sentinel1,
                 srcid="S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6",
             )
-        item = meta.get_item(
-            "S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6"
-        )
-        self.assertEqual(
-            item.properties.get("srcuuid"), "8a611d5b-f9d9-437e-9f55-eca18cf79fd4"
-        )
+        item = meta.get_item("S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6")
+        self.assertEqual(item.properties.get("srcuuid"), "8a611d5b-f9d9-437e-9f55-eca18cf79fd4")
         meta.normalize_hrefs(Path(gettempdir()).as_posix())
         item.validate()
 

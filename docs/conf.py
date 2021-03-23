@@ -20,7 +20,9 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "ukis_pysat"
-copyright = "2020, German Aerospace Center (DLR) * German Remote Sensing Data Center * Department: Geo-Risks and Civil Security"
+copyright = (
+    "2020, German Aerospace Center (DLR) * German Remote Sensing Data Center * Department: Geo-Risks and Civil Security"
+)
 author = "Boehnke, Christian; Fichtner, Florian; Mandery, Nico; Wieland, Marc"
 
 # The full version, including alpha/beta/rc tags

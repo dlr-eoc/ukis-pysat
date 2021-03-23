@@ -55,9 +55,7 @@ class Source:
 
         if self.src == Datahub.STAC_local:
             # connect to STAC Catalog
-            if isinstance(
-                catalog, (pystac.catalog.Catalog, pystac.collection.Collection)
-            ):
+            if isinstance(catalog, (pystac.catalog.Catalog, pystac.collection.Collection)):
                 self.api = catalog
             elif isinstance(catalog, (str, Path)):
                 href = Path(catalog).resolve().as_uri()
@@ -94,9 +92,7 @@ class Source:
             )
 
         else:
-            raise NotImplementedError(
-                f"{datahub} is not supported [STAC_local, STAC_API, EarthExplorer, Scihub]"
-            )
+            raise NotImplementedError(f"{datahub} is not supported [STAC_local, STAC_API, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
@@ -125,9 +121,7 @@ class Source:
                 self.api.add_item(item)
 
         else:
-            raise TypeError(
-                f"add_items_from_directory only works for Datahub.STAC_local and not with {self.src}."
-            )
+            raise TypeError(f"add_items_from_directory only works for Datahub.STAC_local and not with {self.src}.")
 
     def query_metadata(self, platform, date, aoi, cloud_cover=None):
         """Queries metadata from data source.
@@ -150,9 +144,7 @@ class Source:
                     platform.value == item.common_metadata.platform
                     and sentinelsat.format_query_date(date[0])
                     <= sentinelsat.format_query_date(
-                        parse(item.properties["acquisitiondate"]).strftime(
-                            "%Y%m%d %H:%M:%S"
-                        )
+                        parse(item.properties["acquisitiondate"]).strftime("%Y%m%d %H:%M:%S")
                     )
                     < sentinelsat.format_query_date(date[1])
                     and geometry.shape(item.geometry).intersects(geom)
@@ -225,9 +217,7 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             dataset = guess_dataset(srcid)
-            metadata = self.api.metadata(
-                self.api.get_entity_id(srcid, dataset), dataset
-            )
+            metadata = self.api.metadata(self.api.get_entity_id(srcid, dataset), dataset)
 
             # initialize empty catalog and add metadata items
             catalog = self._init_catalog()
@@ -235,12 +225,8 @@ class Source:
             return catalog
 
         else:  # query Scihub for metadata by srcid
-            catalog = (
-                self._init_catalog()
-            )  # initialize empty catalog and add metadata items
-            for meta in self.api.to_geojson(self.api.query(identifier=srcid))[
-                "features"
-            ]:
+            catalog = self._init_catalog()  # initialize empty catalog and add metadata items
+            for meta in self.api.to_geojson(self.api.query(identifier=srcid))["features"]:
                 catalog.add_item(self.construct_metadata(meta=meta, platform=platform))
             return catalog
 
@@ -252,9 +238,7 @@ class Source:
         :returns: PySTAC item
         """
         if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
-            raise NotImplementedError(
-                f"construct_metadata not supported for {self.src}."
-            )
+            raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
         elif self.src == Datahub.EarthExplorer:
             item = pystac.Item(
@@ -265,9 +249,7 @@ class Source:
                 properties={
                     "producttype": "L1TP",
                     "srcuuid": meta["entity_id"],
-                    "acquisitiondate": meta["acquisition_date"].strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    ),
+                    "acquisitiondate": meta["acquisition_date"].strftime("%Y-%m-%d %H:%M:%S"),
                     "ingestiondate": meta["publish_date"].strftime("%Y-%m-%d %H:%M:%S"),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
@@ -279,9 +261,7 @@ class Source:
             item.common_metadata.platform = platform.value
 
             relative_orbit = int(f"{meta['wrs_path']}{meta['wrs_row']}")
-            item.ext.sat.apply(
-                orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit
-            )
+            item.ext.sat.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
 
         else:  # Scihub
             item = pystac.Item(
@@ -294,27 +274,23 @@ class Source:
                     "size": meta["properties"]["size"],
                     "srcurl": meta["properties"]["link"],
                     "srcuuid": meta["properties"]["uuid"],
-                    "acquisitiondate": parse(
-                        meta["properties"]["beginposition"], ignoretz=True, fuzzy=True
-                    ).strftime("%Y-%m-%d %H:%M:%S"),
-                    "ingestiondate": parse(
-                        meta["properties"]["ingestiondate"], ignoretz=True, fuzzy=True
-                    ).strftime("%Y-%m-%d %H:%M:%S"),
+                    "acquisitiondate": parse(meta["properties"]["beginposition"], ignoretz=True, fuzzy=True).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
+                    "ingestiondate": parse(meta["properties"]["ingestiondate"], ignoretz=True, fuzzy=True).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
 
             if "cloudcoverpercentage" in meta["properties"]:
-                item.ext.eo.cloud_cover = round(
-                    float(meta["properties"]["cloudcoverpercentage"]), 2
-                )
+                item.ext.eo.cloud_cover = round(float(meta["properties"]["cloudcoverpercentage"]), 2)
 
             item.common_metadata.platform = platform.value
 
             item.ext.sat.apply(
-                orbit_state=sat.OrbitState[
-                    meta["properties"]["orbitdirection"].upper()
-                ],  # for enum key to work
+                orbit_state=sat.OrbitState[meta["properties"]["orbitdirection"].upper()],  # for enum key to work
                 relative_orbit=int(meta["properties"]["orbitnumber"]),
             )
 
@@ -407,25 +383,13 @@ class Source:
         quicklook = np.asarray(Image.open(BytesIO(response.content)))
         # use threshold of 50 to overcome noise in JPEG compression
         xs, ys, zs = np.where(quicklook >= 50)
-        quicklook = quicklook[
-            min(xs) : max(xs) + 1, min(ys) : max(ys) + 1, min(zs) : max(zs) + 1
-        ]
+        quicklook = quicklook[min(xs) : max(xs) + 1, min(ys) : max(ys) + 1, min(zs) : max(zs) + 1]
         Image.fromarray(quicklook).save(target_dir.joinpath(product_srcid + ".jpg"))
 
         # geocode quicklook
         quicklook_size = (quicklook.shape[1], quicklook.shape[0])
-        dist_x = (
-            geometry.Point(bounds[0], bounds[1]).distance(
-                geometry.Point(bounds[2], bounds[1])
-            )
-            / quicklook_size[0]
-        )
-        dist_y = (
-            geometry.Point(bounds[0], bounds[1]).distance(
-                geometry.Point(bounds[0], bounds[3])
-            )
-            / quicklook_size[1]
-        )
+        dist_x = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[2], bounds[1])) / quicklook_size[0]
+        dist_y = geometry.Point(bounds[0], bounds[1]).distance(geometry.Point(bounds[0], bounds[3])) / quicklook_size[1]
         ul_x, ul_y = bounds[0], bounds[3]
         with open(target_dir.joinpath(product_srcid + ".jpgw"), "w") as out_file:
             out_file.write(str(dist_x) + "\n")
@@ -451,9 +415,7 @@ class Source:
                     import fiona
                     import pyproj
                 except ImportError:
-                    raise ImportError(
-                        "if your AOI is a file optional dependencies [fiona, pyproj] are required."
-                    )
+                    raise ImportError("if your AOI is a file optional dependencies [fiona, pyproj] are required.")
                 with fiona.open(aoi, "r") as aoi:
                     # make sure crs is in epsg:4326
                     project = pyproj.Transformer.from_proj(
@@ -462,9 +424,7 @@ class Source:
                         skip_equivalent=True,
                         always_xy=True,
                     )
-                    aoi = ops.transform(
-                        project.transform, geometry.shape(aoi[0]["geometry"])
-                    )
+                    aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
             else:
                 aoi = wkt.loads(aoi)
 

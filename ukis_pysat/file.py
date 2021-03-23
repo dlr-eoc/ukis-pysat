@@ -93,9 +93,7 @@ def get_polarization_from_s1_filename(filename: str, dual: bool = False) -> str:
         return polarization
 
 
-def get_ts_from_sentinel_filename(
-    filename: str, start_date: bool = True, dformat: str = "%Y%m%dT%H%M%S"
-) -> datetime:
+def get_ts_from_sentinel_filename(filename: str, start_date: bool = True, dformat: str = "%Y%m%dT%H%M%S") -> datetime:
     """Get timestamp from the filename of a Sentinel scene, according to naming conventions.
     Currently works for S1, S2 & S3.
 
@@ -116,27 +114,17 @@ def get_ts_from_sentinel_filename(
     datetime.datetime(2020, 1, 13, 7, 46, 19, tzinfo=datetime.timezone.utc)
     """
     if filename.startswith("S2"):
-        return datetime.strptime(filename.split("_")[2], dformat).replace(
-            tzinfo=timezone.utc
-        )
+        return datetime.strptime(filename.split("_")[2], dformat).replace(tzinfo=timezone.utc)
     elif filename.startswith("S1"):
         if start_date:
-            return datetime.strptime(filename.split("_")[4], dformat).replace(
-                tzinfo=timezone.utc
-            )
+            return datetime.strptime(filename.split("_")[4], dformat).replace(tzinfo=timezone.utc)
         else:
-            return datetime.strptime(filename.split("_")[5], dformat).replace(
-                tzinfo=timezone.utc
-            )
+            return datetime.strptime(filename.split("_")[5], dformat).replace(tzinfo=timezone.utc)
     else:
         if start_date:
-            return datetime.strptime(filename[16:31], dformat).replace(
-                tzinfo=timezone.utc
-            )
+            return datetime.strptime(filename[16:31], dformat).replace(tzinfo=timezone.utc)
         else:
-            return datetime.strptime(filename[32:47], dformat).replace(
-                tzinfo=timezone.utc
-            )
+            return datetime.strptime(filename[32:47], dformat).replace(tzinfo=timezone.utc)
 
 
 def get_sat_ts_from_datetime(dt: datetime, dformat: str = "%Y%m%dT%H%M%S") -> str:
@@ -164,9 +152,7 @@ def get_footprint_from_manifest(xml_path: Union[str, Path]) -> Any:
     try:
         from shapely.geometry import Polygon  # type: ignore
     except ImportError:
-        raise ImportError(
-            "get_footprint_from_manifest requires optional dependency Shapely."
-        )
+        raise ImportError("get_footprint_from_manifest requires optional dependency Shapely.")
     tree: ET.ElementTree = ET.parse(xml_path)
     root: ET.Element = tree.getroot()
     for elem in root.iter("metadataSection"):
@@ -218,9 +204,7 @@ def get_ipf_from_manifest(xml_path: Union[str, Path]) -> float:
     raise KeyError("IPF Version not found.")
 
 
-def get_pixel_spacing(
-    scenedir: Union[str, Path], polarization: str = "HH"
-) -> Tuple[float, float]:
+def get_pixel_spacing(scenedir: Union[str, Path], polarization: str = "HH") -> Tuple[float, float]:
     """Get pixel spacing, tested for Sentinel-1.
 
     :param scenedir: path to unzipped SAFE-directory of scene
@@ -233,10 +217,7 @@ def get_pixel_spacing(
     if isinstance(scenedir, str):
         scenedir = Path(scenedir)
     for path_to_file in scenedir.joinpath("annotation").iterdir():
-        if (
-            path_to_file.suffix == ".xml"
-            and path_to_file.name.split("-")[3] == polarization.lower()
-        ):
+        if path_to_file.suffix == ".xml" and path_to_file.name.split("-")[3] == polarization.lower():
             tree: ET.ElementTree = ET.parse(path_to_file)
             root: ET.Element = tree.getroot()
             for elem in root.iter("imageInformation"):
@@ -244,9 +225,7 @@ def get_pixel_spacing(
                     if child.tag == "rangePixelSpacing":
                         assert child.text is not None, "Pixel Spacing not found."
                         pixel_spacing_meter = float(child.text)
-                        pixel_spacing_degree = (
-                            pixel_spacing_meter / 10.0
-                        ) * 8.983152841195215e-5
+                        pixel_spacing_degree = (pixel_spacing_meter / 10.0) * 8.983152841195215e-5
 
                         return pixel_spacing_meter, pixel_spacing_degree
     raise KeyError("Pixel Spacing not found.")
