@@ -49,11 +49,17 @@ class RasterTest(unittest.TestCase):
             Image(data=self.img.arr, crs=self.img.dataset.crs)
 
     def test_init_with_array(self):
-        with Image(self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform) as img:
+        with Image(
+            self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform
+        ) as img:
             self.assertTrue(np.array_equal(self.img.arr, img.arr))
 
     def test_init_2dim(self):
-        with Image(np.ones(shape=(385, 502)), crs=self.img.dataset.crs, transform=self.img.dataset.transform) as img:
+        with Image(
+            np.ones(shape=(385, 502)),
+            crs=self.img.dataset.crs,
+            transform=self.img.dataset.transform,
+        ) as img:
             self.assertEqual(img.arr.ndim, 3)
             self.assertEqual(len(img.arr), 1)
             self.assertEqual(img.arr.shape, (1, 385, 502))
@@ -118,20 +124,31 @@ class RasterTest(unittest.TestCase):
 
     def test_arr_dimorder_first(self):
         with Image(
-            np.ones((1, 385, 502)), dimorder="first", crs=self.img.dataset.crs, transform=self.img.dataset.transform
+            np.ones((1, 385, 502)),
+            dimorder="first",
+            crs=self.img.dataset.crs,
+            transform=self.img.dataset.transform,
         ) as img_first:
             self.assertEqual(img_first.arr.shape, (1, 385, 502))
 
     def test_arr_dimorder_last(self):
         with Image(
-            np.ones((385, 502, 1)), dimorder="last", crs=self.img.dataset.crs, transform=self.img.dataset.transform
+            np.ones((385, 502, 1)),
+            dimorder="last",
+            crs=self.img.dataset.crs,
+            transform=self.img.dataset.transform,
         ) as img_last:
             self.assertEqual(img_last.arr.shape, (385, 502, 1))
 
     def test_arr_nodata(self):
         array = np.ones((3, 385, 502))
 
-        with Image(array, crs=self.img.dataset.crs, transform=self.img.dataset.transform, nodata=0.0) as img_nodata:
+        with Image(
+            array,
+            crs=self.img.dataset.crs,
+            transform=self.img.dataset.transform,
+            nodata=0.0,
+        ) as img_nodata:
             self.assertEqual(img_nodata.dataset.nodata, 0.0)
             self.assertEqual(img_nodata.dataset.nodatavals, (0.0, 0.0, 0.0))
 
@@ -159,11 +176,18 @@ class RasterTest(unittest.TestCase):
     def test_get_valid_data_bbox(self):
         self.assertEqual(
             self.img.get_valid_data_bbox(nodata=0.0),
-            (11.898660522574374, 51.51158339584816, 11.900457153148748, 51.51338002642408),
+            (
+                11.898660522574374,
+                51.51158339584816,
+                11.900457153148748,
+                51.51338002642408,
+            ),
         )
 
     def test_mask_image(self):
-        with self.assertRaises(TypeError, msg="bbox must be of type tuple or Shapely Polygon"):
+        with self.assertRaises(
+            TypeError, msg="bbox must be of type tuple or Shapely Polygon"
+        ):
             self.img.mask([1, 2, 3])
 
         self.img.mask(
@@ -214,11 +238,16 @@ class RasterTest(unittest.TestCase):
         self.assertEqual(
             self.img.dataset.bounds,
             BoundingBox(
-                left=11.891923157920472, bottom=51.46639813686387, right=11.947798368783504, top=51.50098327545026
+                left=11.891923157920472,
+                bottom=51.46639813686387,
+                right=11.947798368783504,
+                top=51.50098327545026,
             ),
         )
 
-    @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
+    @unittest.skip(
+        "Skip until we find a better test or this also runs with Github Actions"
+    )
     def test_warp(self):
         self.img.warp("EPSG:3857")
         self.assertEqual(self.img.dataset.meta["crs"], "EPSG:3857")
@@ -234,35 +263,87 @@ class RasterTest(unittest.TestCase):
         source_img.warp("EPSG:3857", target_align=target_img)
         self.assertEqual(source_img.dataset.transform, target_img.dataset.transform)
 
-    @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
+    @unittest.skip(
+        "Skip until we find a better test or this also runs with Github Actions"
+    )
     def test_dn2toa(self):
         target_dir = Path(__file__).parents[0] / "testfiles" / "satellite_data"
         tests = [
             {
                 "platform": Platform.Landsat8,
-                "dn_file": target_dir.joinpath("LC08_L1TP_193024_20200509_20200509_01_RT.tif"),
-                "toa_file": target_dir.joinpath("LC08_L1TP_193024_20200509_20200509_01_RT_toa.tif"),
-                "mtl_file": target_dir.joinpath("LC08_L1TP_193024_20200509_20200509_01_RT_MTL.txt"),
-                "wavelengths": ["Aerosol", "Blue", "Green", "Red", "NIR", "SWIR1", "SWIR2", "Cirrus", "TIRS1", "TIRS2"],
+                "dn_file": target_dir.joinpath(
+                    "LC08_L1TP_193024_20200509_20200509_01_RT.tif"
+                ),
+                "toa_file": target_dir.joinpath(
+                    "LC08_L1TP_193024_20200509_20200509_01_RT_toa.tif"
+                ),
+                "mtl_file": target_dir.joinpath(
+                    "LC08_L1TP_193024_20200509_20200509_01_RT_MTL.txt"
+                ),
+                "wavelengths": [
+                    "Aerosol",
+                    "Blue",
+                    "Green",
+                    "Red",
+                    "NIR",
+                    "SWIR1",
+                    "SWIR2",
+                    "Cirrus",
+                    "TIRS1",
+                    "TIRS2",
+                ],
             },
             {
                 "platform": Platform.Landsat7,
-                "dn_file": target_dir.joinpath("LE07_L1TP_193024_20100420_20161215_01_T1.tif"),
-                "toa_file": target_dir.joinpath("LE07_L1TP_193024_20100420_20161215_01_T1_toa.tif"),
-                "mtl_file": target_dir.joinpath("LE07_L1TP_193024_20100420_20161215_01_T1_MTL.txt"),
-                "wavelengths": ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS1", "TIRS2", "SWIR2"],
+                "dn_file": target_dir.joinpath(
+                    "LE07_L1TP_193024_20100420_20161215_01_T1.tif"
+                ),
+                "toa_file": target_dir.joinpath(
+                    "LE07_L1TP_193024_20100420_20161215_01_T1_toa.tif"
+                ),
+                "mtl_file": target_dir.joinpath(
+                    "LE07_L1TP_193024_20100420_20161215_01_T1_MTL.txt"
+                ),
+                "wavelengths": [
+                    "Blue",
+                    "Green",
+                    "Red",
+                    "NIR",
+                    "SWIR1",
+                    "TIRS1",
+                    "TIRS2",
+                    "SWIR2",
+                ],
             },
             {
                 "platform": Platform.Landsat5,
-                "dn_file": target_dir.joinpath("LT05_L1TP_193024_20050516_20161127_01_T1.tif"),
-                "toa_file": target_dir.joinpath("LT05_L1TP_193024_20050516_20161127_01_T1_toa.tif"),
-                "mtl_file": target_dir.joinpath("LT05_L1TP_193024_20050516_20161127_01_T1_MTL.txt"),
-                "wavelengths": ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"],
+                "dn_file": target_dir.joinpath(
+                    "LT05_L1TP_193024_20050516_20161127_01_T1.tif"
+                ),
+                "toa_file": target_dir.joinpath(
+                    "LT05_L1TP_193024_20050516_20161127_01_T1_toa.tif"
+                ),
+                "mtl_file": target_dir.joinpath(
+                    "LT05_L1TP_193024_20050516_20161127_01_T1_MTL.txt"
+                ),
+                "wavelengths": [
+                    "Blue",
+                    "Green",
+                    "Red",
+                    "NIR",
+                    "SWIR1",
+                    "TIRS",
+                    "SWIR2",
+                ],
             },
             {
                 "platform": Platform.Sentinel2,
-                "dn_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159.tif"),
-                "toa_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_toa.tif"),
+                "dn_file": target_dir.joinpath(
+                    "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159.tif"
+                ),
+                "toa_file": target_dir.joinpath(
+                    "S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_toa.tif"
+                ),
                 "mtl_file": None,
                 "wavelengths": None,
             },
@@ -272,14 +353,19 @@ class RasterTest(unittest.TestCase):
             img_dn = Image(tests[i]["dn_file"])
             img_toa = Image(tests[i]["toa_file"])
             img_dn.dn2toa(
-                platform=tests[i]["platform"], mtl_file=tests[i]["mtl_file"], wavelengths=tests[i]["wavelengths"]
+                platform=tests[i]["platform"],
+                mtl_file=tests[i]["mtl_file"],
+                wavelengths=tests[i]["wavelengths"],
             )
 
             self.assertTrue(np.array_equal(img_dn.arr, img_toa.arr, equal_nan=True))
             img_dn.close()
             img_toa.close()
 
-        with self.assertRaises(AttributeError, msg=f"'mtl_file' has to be set if platform is {Platform.Landsat8}."):
+        with self.assertRaises(
+            AttributeError,
+            msg=f"'mtl_file' has to be set if platform is {Platform.Landsat8}.",
+        ):
             self.img.dn2toa(platform=Platform.Landsat8)
 
         with self.assertRaises(
@@ -303,7 +389,9 @@ class RasterTest(unittest.TestCase):
         for idx, each in enumerate(self.img.get_tiles(5, 5, 1)):
             self.assertIsInstance(each, windows.Window)
             if idx == 2578:
-                self.assertEqual(each, windows.Window(col_off=79, row_off=649, width=7, height=7))
+                self.assertEqual(
+                    each, windows.Window(col_off=79, row_off=649, width=7, height=7)
+                )
 
         self.assertEqual(idx, 20807)
 
@@ -311,11 +399,23 @@ class RasterTest(unittest.TestCase):
         for idx, each in enumerate(self.img.get_tiles(5, 5, 1)):
             if idx == 2578:
                 array, bounds = self.img.get_subset(each)
-                self.assertTrue(np.array_equal(array, np.zeros(shape=(7, 7), dtype=array.dtype)))
-                self.assertEqual(bounds, (11.903960582768779, 51.45624717410995, 11.904589403469808, 51.45687599481152))
+                self.assertTrue(
+                    np.array_equal(array, np.zeros(shape=(7, 7), dtype=array.dtype))
+                )
+                self.assertEqual(
+                    bounds,
+                    (
+                        11.903960582768779,
+                        51.45624717410995,
+                        11.904589403469808,
+                        51.45687599481152,
+                    ),
+                )
 
     def test_get_dask_array(self):
-        self.assertIsInstance(self.img.to_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array)
+        self.assertIsInstance(
+            self.img.to_dask_array(chunk_size=(1, 10, 10)), dask.array.core.Array
+        )
 
     def test_write_to_file(self):
         self.img.write_to_file(r"result.tif", np.uint16)
@@ -331,14 +431,18 @@ class RasterTest(unittest.TestCase):
 
         os.remove(r"result.tif")
 
-        self.img.write_to_file(r"result.tif", np.uint8, compress="packbits", kwargs={"tiled": True})
+        self.img.write_to_file(
+            r"result.tif", np.uint8, compress="packbits", kwargs={"tiled": True}
+        )
         with Image("result.tif") as img2:
             self.assertEqual(img2.arr.dtype, "uint8")
             self.assertEqual(img2.dataset.profile["tiled"], True)
 
         os.remove(r"result.tif")
 
-        with Image(self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform) as img3:
+        with Image(
+            self.img.arr, crs=self.img.dataset.crs, transform=self.img.dataset.transform
+        ) as img3:
             img3.write_to_file(r"result.tif", np.uint16)
 
         with Image("result.tif") as img4:

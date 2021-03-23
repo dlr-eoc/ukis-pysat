@@ -44,7 +44,9 @@ extras_require = {
         "shapely",
     ],
 }
-extras_require["complete"] = list(set([v for req in extras_require.values() for v in req]))
+extras_require["complete"] = list(
+    set([v for req in extras_require.values() for v in req])
+)
 
 extras_require["dev"] = sorted(
     extras_require["complete"]

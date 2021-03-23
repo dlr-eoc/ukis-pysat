@@ -28,7 +28,9 @@ class FileTest(unittest.TestCase):
             self.assertEqual("S1M_hello_from_inside", ident)
 
     def test_get_sentinel_scene_from_dir_joinpath(self):
-        with psf.get_sentinel_scene_from_dir(path_testfiles.joinpath("another_scene")) as (full_path, ident):
+        with psf.get_sentinel_scene_from_dir(
+            path_testfiles.joinpath("another_scene")
+        ) as (full_path, ident):
             self.assertEqual("S2__IN_FOLDER", ident)
 
     def test_get_polarization_from_s1_filename_SDH(self):
@@ -96,24 +98,32 @@ class FileTest(unittest.TestCase):
         )
         self.assertEqual(
             psf.get_ts_from_sentinel_filename(
-                "S3M_OL_L_TTTTTT_yyyymmddThhmmss_20200113T002219_YYYYMMDDTHHMMSS_i_GGG_c.SEN3", False
+                "S3M_OL_L_TTTTTT_yyyymmddThhmmss_20200113T002219_YYYYMMDDTHHMMSS_i_GGG_c.SEN3",
+                False,
             ),
             datetime(2020, 1, 13, 0, 22, 19, tzinfo=timezone.utc),
         )
 
     def test_get_ESA_date_from_datetime(self):
         self.assertEqual(
-            psf.get_sat_ts_from_datetime(datetime(2020, 1, 13, 7, 46, 19, tzinfo=timezone.utc)), "20200113T074619"
+            psf.get_sat_ts_from_datetime(
+                datetime(2020, 1, 13, 7, 46, 19, tzinfo=timezone.utc)
+            ),
+            "20200113T074619",
         )
 
     def test_get_footprint_from_manifest(self):
         self.assertEqual(
-            psf.get_footprint_from_manifest(path_testfiles.joinpath("manifest.safe")).wkt,
+            psf.get_footprint_from_manifest(
+                path_testfiles.joinpath("manifest.safe")
+            ).wkt,
             "POLYGON ((149.766922 -24.439564, 153.728622 -23.51771, 154.075058 -24.737713, 150.077042 "
             "-25.668921, 149.766922 -24.439564))",
         )
         with self.assertRaises(KeyError, msg="Footprint not found"):
-            psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest_bad.safe"))
+            psf.get_footprint_from_manifest(
+                os.path.join(path_testfiles, "manifest_bad.safe")
+            )
 
     def test_get_origin_from_manifest(self):
         self.assertEqual(
@@ -121,7 +131,9 @@ class FileTest(unittest.TestCase):
             "United Kingdom",
         )
         with self.assertRaises(KeyError, msg="Country of origin not found."):
-            psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest_bad.safe"))
+            psf.get_footprint_from_manifest(
+                os.path.join(path_testfiles, "manifest_bad.safe")
+            )
 
     def test_get_ipf_from_manifest(self):
         self.assertEqual(
@@ -129,10 +141,14 @@ class FileTest(unittest.TestCase):
             2.82,
         )
         with self.assertRaises(KeyError, msg="IPF Version not found."):
-            psf.get_footprint_from_manifest(os.path.join(path_testfiles, "manifest_bad.safe"))
+            psf.get_footprint_from_manifest(
+                os.path.join(path_testfiles, "manifest_bad.safe")
+            )
 
     def test_get_pixel_spacing(self):
-        self.assertEqual(psf.get_pixel_spacing(path_testfiles), (40.0, 0.0003593261136478086))
+        self.assertEqual(
+            psf.get_pixel_spacing(path_testfiles), (40.0, 0.0003593261136478086)
+        )
         with self.assertRaises(KeyError, msg="Pixel Spacing not found."):
             psf.get_pixel_spacing(path_testfiles, polarization="FF")
 
@@ -140,7 +156,11 @@ class FileTest(unittest.TestCase):
 
     def test_get_proj_string(self):
         self.assertEqual(
-            psf.get_proj_string(psf.get_footprint_from_manifest(path_testfiles.joinpath("manifest.safe"))),
+            psf.get_proj_string(
+                psf.get_footprint_from_manifest(
+                    path_testfiles.joinpath("manifest.safe")
+                )
+            ),
             r"+proj=utm +zone=56J, +ellps=WGS84 +datum=WGS84 +units=m +no_defs",
         )
 

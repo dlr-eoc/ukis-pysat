@@ -42,7 +42,9 @@ class Image:
         if dimorder in ("first", "last"):
             self.dimorder = dimorder
         else:
-            raise TypeError("dimorder for bands or channels must be either 'first' or 'last'.")
+            raise TypeError(
+                "dimorder for bands or channels must be either 'first' or 'last'."
+            )
 
         if isinstance(data, rasterio.io.DatasetReader):
             self.dataset = data
@@ -56,19 +58,25 @@ class Image:
             if crs is None:
                 raise TypeError("if dataset is of type np.ndarray crs must not be None")
             if transform is None:
-                raise TypeError("if dataset is of type np.ndarray transform must not be None")
+                raise TypeError(
+                    "if dataset is of type np.ndarray transform must not be None"
+                )
             if dimorder == "first":
                 self.__arr = data
             else:
                 self.__arr = rasterio.plot.reshape_as_raster(data)
 
             if self.__arr.ndim == 2:
-                self.__arr = np.expand_dims(self.__arr, 0)  # always return 3D for consistency
+                self.__arr = np.expand_dims(
+                    self.__arr, 0
+                )  # always return 3D for consistency
 
             self.dataset = None
             self.__update_dataset(crs, transform, nodata=nodata)
         else:
-            raise TypeError("dataset must be of type rasterio.io.DatasetReader, str or np.ndarray")
+            raise TypeError(
+                "dataset must be of type rasterio.io.DatasetReader, str or np.ndarray"
+            )
 
     def __enter__(self):
         return self
@@ -110,7 +118,9 @@ class Image:
         valid_data_window = rasterio.windows.get_data_window(self.__arr, nodata=nodata)
         return rasterio.windows.bounds(valid_data_window, self.dataset.transform)
 
-    def mask(self, bbox, crop=True, pad=False, fill=False, mode="constant", constant_values=0):
+    def mask(
+        self, bbox, crop=True, pad=False, fill=False, mode="constant", constant_values=0
+    ):
         """Mask raster to bbox.
 
         :param bbox: bounding box of type tuple or Shapely Polygon
@@ -124,7 +134,10 @@ class Image:
         if pad:
             from warnings import warn
 
-            warn("`pad` was renamed to `fill` in `mask()` and will be removed with version 0.7.0", DeprecationWarning)
+            warn(
+                "`pad` was renamed to `fill` in `mask()` and will be removed with version 0.7.0",
+                DeprecationWarning,
+            )
             fill = pad
 
         # TODO https://github.com/mapbox/rasterio/issues/995
@@ -137,7 +150,9 @@ class Image:
         if isinstance(bbox, shapely.geometry.polygon.Polygon):
             self.__arr, transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
         elif isinstance(bbox, tuple):
-            self.__arr, transform = rasterio.mask.mask(self.dataset, [shapely.geometry.box(*bbox)], crop=crop)
+            self.__arr, transform = rasterio.mask.mask(
+                self.dataset, [shapely.geometry.box(*bbox)], crop=crop
+            )
         else:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
@@ -161,7 +176,9 @@ class Image:
         max_diff_ll = np.max(np.subtract(tuple(self.dataset.bounds[:2]), bbox[:2]))
         max_diff = max(max_diff_ll, max_diff_ur)  # buffer in units
 
-        return math.ceil(max_diff / self.dataset.transform.to_gdal()[1])  # units / pixel_size
+        return math.ceil(
+            max_diff / self.dataset.transform.to_gdal()[1]
+        )  # units / pixel_size
 
     def pad(self, pad_width, mode="constant", constant_values=0):
         """Pad raster in all directions.
@@ -218,7 +235,15 @@ class Image:
         self.dataset = memfile.open()
         memfile.close()
 
-    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None, nodata=None, target_align=None):
+    def warp(
+        self,
+        dst_crs,
+        resampling_method=0,
+        num_threads=4,
+        resolution=None,
+        nodata=None,
+        target_align=None,
+    ):
         """Reproject a source raster to a destination raster.
 
         :param dst_crs: CRS or dict, Target coordinate reference system.
@@ -285,10 +310,14 @@ class Image:
             Platform.Landsat8,
         ]:
             if mtl_file is None:
-                raise AttributeError(f"'mtl_file' has to be set if platform is {platform}.")
+                raise AttributeError(
+                    f"'mtl_file' has to be set if platform is {platform}."
+                )
             else:
                 # get rescale factors from mtl file
-                mtl = toa_utils._load_mtl(str(mtl_file))  # no obvious reason not to call this
+                mtl = toa_utils._load_mtl(
+                    str(mtl_file)
+                )  # no obvious reason not to call this
                 metadata = mtl["L1_METADATA_FILE"]
                 sun_elevation = metadata["IMAGE_ATTRIBUTES"]["SUN_ELEVATION"]
                 toa = []
@@ -298,13 +327,25 @@ class Image:
                         platform != Platform.Landsat8 and b.startswith("6")
                     ):
                         if platform == Platform.Landsat8:
-                            thermal_conversion_constant1 = metadata["TIRS_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["TIRS_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata[
+                                "TIRS_THERMAL_CONSTANTS"
+                            ][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata[
+                                "TIRS_THERMAL_CONSTANTS"
+                            ][f"K2_CONSTANT_BAND_{b}"]
                         else:
-                            thermal_conversion_constant1 = metadata["THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
-                        multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"RADIANCE_MULT_BAND_{b}"]
-                        additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"RADIANCE_ADD_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata[
+                                "THERMAL_CONSTANTS"
+                            ][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata[
+                                "THERMAL_CONSTANTS"
+                            ][f"K2_CONSTANT_BAND_{b}"]
+                        multiplicative_rescaling_factors = metadata[
+                            "RADIOMETRIC_RESCALING"
+                        ][f"RADIANCE_MULT_BAND_{b}"]
+                        additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][
+                            f"RADIANCE_ADD_BAND_{b}"
+                        ]
 
                         # rescale thermal bands
                         toa.append(
@@ -319,8 +360,12 @@ class Image:
                         continue
 
                     # rescale reflectance bands
-                    multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_MULT_BAND_{b}"]
-                    additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
+                    multiplicative_rescaling_factors = metadata[
+                        "RADIOMETRIC_RESCALING"
+                    ][f"REFLECTANCE_MULT_BAND_{b}"]
+                    additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][
+                        f"REFLECTANCE_ADD_BAND_{b}"
+                    ]
                     toa.append(
                         reflectance.reflectance(
                             self.__arr[idx, :, :],
@@ -339,7 +384,9 @@ class Image:
                 f"Sentinel-2]. "
             )
 
-        self.__update_dataset(self.dataset.crs, self.dataset.transform, nodata=self.dataset.nodata)
+        self.__update_dataset(
+            self.dataset.crs, self.dataset.transform, nodata=self.dataset.nodata
+        )
 
     @staticmethod
     def _lookup_bands(platform, wavelengths):
@@ -398,7 +445,9 @@ class Image:
         rows = self.__arr.shape[-2]
         cols = self.__arr.shape[-1]
         offsets = product(range(0, cols, width), range(0, rows, height))
-        bounding_window = rasterio.windows.Window(col_off=0, row_off=0, width=cols, height=rows)
+        bounding_window = rasterio.windows.Window(
+            col_off=0, row_off=0, width=cols, height=rows
+        )
         for col_off, row_off in offsets:
             yield rasterio.windows.Window(
                 col_off=col_off - overlap,
@@ -418,7 +467,10 @@ class Image:
         """
         # access window bounds
         bounds = rasterio.windows.bounds(tile, self.dataset.transform)
-        return self.__arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
+        return (
+            self.__arr[(band,) + tile.toslices()],
+            bounds,
+        )  # Shape of array is announced with (bands, height, width)
 
     def to_dask_array(self, chunk_size=(1, 6000, 6000)):
         """transforms numpy to dask array
@@ -434,7 +486,15 @@ class Image:
         self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
-    def write_to_file(self, path_to_file, dtype, driver="GTiff", nodata=None, compress=None, kwargs=None):
+    def write_to_file(
+        self,
+        path_to_file,
+        dtype,
+        driver="GTiff",
+        nodata=None,
+        compress=None,
+        kwargs=None,
+    ):
         """
         Write a dataset to file.
         :param path_to_file: str, path to new file
