@@ -11,13 +11,14 @@ something was fixed
 
 Changed
 ^^^^^^^
-- ``data``: Added time to acquisitiondate and ingestiondate #109
+
 
 [master] (2021-**-**)
 ---------------------
 
 Changed
 ^^^^^^^
+- ``data``: Added time to acquisitiondate and ingestiondate #109
 - ``data``: change default scihup endpoint `/dhus` to `/apihub`#110
 - ``data``: mocked all interaction with Hubs for unit testing #116
 - ``data``: EarthExplorer changed to new M2M API due to dependency update #120
