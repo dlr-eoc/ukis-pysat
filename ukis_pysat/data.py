@@ -143,7 +143,7 @@ class Source:
                 if (
                     platform.value == item.common_metadata.platform
                     and sentinelsat.format_query_date(date[0])
-                    <= sentinelsat.format_query_date(parse(item.properties["acquisitiondate"]).strftime("%Y%m%d"))
+                    <= sentinelsat.format_query_date(parse(item.properties["acquisitiondate"]).strftime("%Y%m%d %H:%M:%S"))
                     < sentinelsat.format_query_date(date[1])
                     and geometry.shape(item.geometry).intersects(geom)
                 ):
