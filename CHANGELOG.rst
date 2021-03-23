@@ -11,7 +11,7 @@ something was fixed
 
 Changed
 ^^^^^^^
-something was changed
+- ``data``: Added time to acquisitiondate and ingestiondate #109
 
 [master] (2021-**-**)
 ---------------------
