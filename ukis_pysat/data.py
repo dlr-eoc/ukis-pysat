@@ -247,8 +247,8 @@ class Source:
                 properties={
                     "producttype": "L1TP",
                     "srcuuid": meta["entity_id"],
-                    "acquisitiondate": meta["acquisition_date"].strftime("%Y-%m-%d"),
-                    "ingestiondate": meta["publish_date"].strftime("%Y-%m-%d"),
+                    "acquisitiondate": meta["acquisition_date"].strftime("%Y-%m-%d %H:%M:%S"),
+                    "ingestiondate": meta["publish_date"].strftime("%Y-%m-%d %H:%M:%S"),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
@@ -273,10 +273,10 @@ class Source:
                     "srcurl": meta["properties"]["link"],
                     "srcuuid": meta["properties"]["uuid"],
                     "acquisitiondate": parse(meta["properties"]["beginposition"], ignoretz=True, fuzzy=True).strftime(
-                        "%Y-%m-%d"
+                        "%Y-%m-%d %H:%M:%S"
                     ),
                     "ingestiondate": parse(meta["properties"]["ingestiondate"], ignoretz=True, fuzzy=True).strftime(
-                        "%Y-%m-%d"
+                        "%Y-%m-%d %H:%M:%S"
                     ),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
