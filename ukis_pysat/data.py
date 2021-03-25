@@ -242,19 +242,15 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             item = pystac.Item(
                 id=meta["display_id"],
-                datetime={
-                    'datetime': parse(meta['startTime']['$']).isoformat(),
-                    'start_datetime': parse(meta['startTime']['$']).isoformat(),
-                    'end_datetime': parse(meta['stopTime']['$']).isoformat(),
-                },
+                datetime=parse(meta["properties"]['beginposition']).isoformat(),
                 # datetime=datetime.datetime.now(),
                 geometry=meta["spatial_coverage"].__geo_interface__,
                 bbox=meta["spatial_bounds"],
                 properties={
                     "producttype": "L1TP",
                     "srcuuid": meta["entity_id"],
-                    "acquisitiondate": meta["acquisition_date"].strftime("%Y-%m-%d"),
-                    "ingestiondate": meta["publish_date"].strftime("%Y-%m-%d"),
+                    "start_datetime": parse(meta["properties"]['beginposition']).isoformat(),
+                    "end_datetime": parse(meta['properties']['endposition']).isoformat(),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
@@ -270,12 +266,7 @@ class Source:
         else:  # Scihub
             item = pystac.Item(
                 id=meta["properties"]["identifier"],
-                datetime={
-                    'datetime': parse(meta['startTime']['$']).isoformat(),
-                    'start_datetime': parse(meta['startTime']['$']).isoformat(),
-                    'end_datetime': parse(meta['stopTime']['$']).isoformat(),
-                },
-                # datetime=datetime.datetime.now(),
+                datetime=parse(meta["properties"]['beginposition']).isoformat(),
                 geometry=meta["geometry"],
                 bbox=_get_bbox_from_geometry_string(meta["geometry"]),
                 properties={
@@ -283,12 +274,8 @@ class Source:
                     "size": meta["properties"]["size"],
                     "srcurl": meta["properties"]["link"],
                     "srcuuid": meta["properties"]["uuid"],
-                    "acquisitiondate": parse(meta["properties"]["beginposition"], ignoretz=True, fuzzy=True).strftime(
-                        "%Y-%m-%d"
-                    ),
-                    "ingestiondate": parse(meta["properties"]["ingestiondate"], ignoretz=True, fuzzy=True).strftime(
-                        "%Y-%m-%d"
-                    ),
+                    "start_datetime": parse(meta["properties"]['beginposition']).isoformat(),
+                    "end_datetime": parse(meta['properties']['endposition']).isoformat(),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
