@@ -242,15 +242,15 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             item = pystac.Item(
                 id=meta["display_id"],
-                datetime=parse(meta["properties"]['beginposition']).isoformat(),
+                datetime=parse(meta["properties"]["beginposition"]).isoformat(),
                 # datetime=datetime.datetime.now(),
                 geometry=meta["spatial_coverage"].__geo_interface__,
                 bbox=meta["spatial_bounds"],
                 properties={
                     "producttype": "L1TP",
                     "srcuuid": meta["entity_id"],
-                    "start_datetime": parse(meta["properties"]['beginposition']).isoformat(),
-                    "end_datetime": parse(meta['properties']['endposition']).isoformat(),
+                    "start_datetime": parse(meta["properties"]["beginposition"]).isoformat(),
+                    "end_datetime": parse(meta["properties"]["endposition"]).isoformat(),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
@@ -266,7 +266,7 @@ class Source:
         else:  # Scihub
             item = pystac.Item(
                 id=meta["properties"]["identifier"],
-                datetime=parse(meta["properties"]['beginposition']).isoformat(),
+                datetime=parse(meta["properties"]["beginposition"]).isoformat(),
                 geometry=meta["geometry"],
                 bbox=_get_bbox_from_geometry_string(meta["geometry"]),
                 properties={
@@ -274,8 +274,8 @@ class Source:
                     "size": meta["properties"]["size"],
                     "srcurl": meta["properties"]["link"],
                     "srcuuid": meta["properties"]["uuid"],
-                    "start_datetime": parse(meta["properties"]['beginposition']).isoformat(),
-                    "end_datetime": parse(meta['properties']['endposition']).isoformat(),
+                    "start_datetime": parse(meta["properties"]["beginposition"]).isoformat(),
+                    "end_datetime": parse(meta["properties"]["endposition"]).isoformat(),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
