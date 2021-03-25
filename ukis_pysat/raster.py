@@ -110,22 +110,16 @@ class Image:
         valid_data_window = rasterio.windows.get_data_window(self.__arr, nodata=nodata)
         return rasterio.windows.bounds(valid_data_window, self.dataset.transform)
 
-    def mask(self, bbox, crop=True, pad=False, fill=False, mode="constant", constant_values=0):
+    def mask(self, bbox, crop=True, fill=False, mode="constant", constant_values=0):
         """Mask raster to bbox.
 
         :param bbox: bounding box of type tuple or Shapely Polygon
         :param crop: bool, see rasterio.mask. Optional, (default: True)
-        :param pad: deprecated
         :param fill: enforce raster to cover bbox. if raster extent is smaller than bbox it will be filled according to
             mode and constant_values parameters. Optional (default: False)
         :param mode: str, how to fill, see rasterio.pad. Optional (default: 'constant')
         :param constant_values: nodata value, padding should be filled with, optional (default: 0)
         """
-        if pad:
-            from warnings import warn
-
-            warn("`pad` was renamed to `fill` in `mask()` and will be removed with version 0.7.0", DeprecationWarning)
-            fill = pad
 
         # TODO https://github.com/mapbox/rasterio/issues/995
         if fill:
