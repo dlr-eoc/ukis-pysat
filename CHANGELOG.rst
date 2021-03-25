@@ -23,7 +23,11 @@ Changed
 - ``data``: EarthExplorer changed to new M2M API due to dependency update #120
 - split unit tests #110
 - ``data``: removed hard dependency for landsatxplore & pylandsat #104
+- ``data``: `acquisitiondate` and `ingestiondate` have been removed #124
 
+Fixed
+^^^^^
+- ``data``: `datetime` is now the searchable time of the assets, `start_datetime` and `end_datetime` are introduced #124
 
 Added
 ^^^^^

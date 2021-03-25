@@ -242,15 +242,14 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             item = pystac.Item(
                 id=meta["display_id"],
-                datetime=parse(meta["properties"]["beginposition"]).isoformat(),
-                # datetime=datetime.datetime.now(),
+                datetime=meta["start_time"],
                 geometry=meta["spatial_coverage"].__geo_interface__,
                 bbox=meta["spatial_bounds"],
                 properties={
                     "producttype": "L1TP",
                     "srcuuid": meta["entity_id"],
-                    "start_datetime": parse(meta["properties"]["beginposition"]).isoformat(),
-                    "end_datetime": parse(meta["properties"]["endposition"]).isoformat(),
+                    "start_datetime": meta["start_time"].astimezone(tz=datetime.timezone.utc).isoformat(),
+                    "end_datetime": meta["stop_time"].astimezone(tz=datetime.timezone.utc).isoformat(),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
@@ -266,7 +265,7 @@ class Source:
         else:  # Scihub
             item = pystac.Item(
                 id=meta["properties"]["identifier"],
-                datetime=parse(meta["properties"]["beginposition"]).isoformat(),
+                datetime=parse(meta["properties"]["beginposition"]),
                 geometry=meta["geometry"],
                 bbox=_get_bbox_from_geometry_string(meta["geometry"]),
                 properties={
@@ -274,8 +273,12 @@ class Source:
                     "size": meta["properties"]["size"],
                     "srcurl": meta["properties"]["link"],
                     "srcuuid": meta["properties"]["uuid"],
-                    "start_datetime": parse(meta["properties"]["beginposition"]).isoformat(),
-                    "end_datetime": parse(meta["properties"]["endposition"]).isoformat(),
+                    "start_datetime": parse(meta["properties"]["beginposition"])
+                    .astimezone(tz=datetime.timezone.utc)
+                    .isoformat(),
+                    "end_datetime": parse(meta["properties"]["endposition"])
+                    .astimezone(tz=datetime.timezone.utc)
+                    .isoformat(),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
