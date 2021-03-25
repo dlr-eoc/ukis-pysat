@@ -242,7 +242,12 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             item = pystac.Item(
                 id=meta["display_id"],
-                datetime=datetime.datetime.now(),
+                datetime={
+                    'datetime': parse(meta['startTime']['$']).isoformat(),
+                    'start_datetime': parse(meta['startTime']['$']).isoformat(),
+                    'end_datetime': parse(meta['stopTime']['$']).isoformat(),
+                },
+                # datetime=datetime.datetime.now(),
                 geometry=meta["spatial_coverage"].__geo_interface__,
                 bbox=meta["spatial_bounds"],
                 properties={
@@ -265,7 +270,12 @@ class Source:
         else:  # Scihub
             item = pystac.Item(
                 id=meta["properties"]["identifier"],
-                datetime=datetime.datetime.now(),
+                datetime={
+                    'datetime': parse(meta['startTime']['$']).isoformat(),
+                    'start_datetime': parse(meta['startTime']['$']).isoformat(),
+                    'end_datetime': parse(meta['stopTime']['$']).isoformat(),
+                },
+                # datetime=datetime.datetime.now(),
                 geometry=meta["geometry"],
                 bbox=_get_bbox_from_geometry_string(meta["geometry"]),
                 properties={
