@@ -18,6 +18,7 @@ try:
     from PIL import Image
     from pystac.extensions import sat
     from shapely import geometry, wkt, ops
+    from shapely.geometry import shape, mapping
 except ImportError as e:
     msg = (
         "ukis_pysat.data dependencies are not installed.\n\n"
@@ -428,6 +429,9 @@ class Source:
                     aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
             else:
                 aoi = wkt.loads(aoi)
+
+        elif isinstance(aoi, dict):
+            aoi = shape(aoi)
 
         elif isinstance(aoi, tuple):
             aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
