@@ -162,16 +162,18 @@ class DataTest(unittest.TestCase):
 
     def test_geointerface(self):
         geom = Source.prep_aoi(
-            {'type': 'Polygon',
-             'coordinates':
-                 (((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)),
-                  ((0.1, 0.1), (0.1, 0.2), (0.2, 0.2), (0.2, 0.1), (0.1, 0.1)))}
+            {
+                "type": "Polygon",
+                "coordinates": (
+                    ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)),
+                    ((0.1, 0.1), (0.1, 0.2), (0.2, 0.2), (0.2, 0.1), (0.1, 0.1)),
+                ),
+            }
         )
         self.assertIsInstance(geom, Polygon)
-        self.assertEqual(
-            tuple(geom.exterior.coords),
-            ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)))
+        self.assertEqual(tuple(geom.exterior.coords), ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)))
         self.assertEqual(len(geom.interiors), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
