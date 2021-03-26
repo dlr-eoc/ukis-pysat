@@ -5,6 +5,7 @@ from tempfile import gettempdir
 
 import pystac
 import requests_mock
+from shapely.geometry import Polygon
 
 from ukis_pysat.data import Source
 from ukis_pysat.members import Datahub, Platform
@@ -159,6 +160,18 @@ class DataTest(unittest.TestCase):
         meta.normalize_hrefs(Path(gettempdir()).as_posix())
         item.validate()
 
+    def test_geointerface(self):
+        geom = Source.prep_aoi(
+            {'type': 'Polygon',
+             'coordinates':
+                 (((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)),
+                  ((0.1, 0.1), (0.1, 0.2), (0.2, 0.2), (0.2, 0.1), (0.1, 0.1)))}
+        )
+        self.assertIsInstance(geom, Polygon)
+        self.assertEqual(
+            tuple(geom.exterior.coords),
+            ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)))
+        self.assertEqual(len(geom.interiors), 1)
 
 if __name__ == "__main__":
     unittest.main()

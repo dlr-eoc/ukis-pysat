@@ -407,6 +407,7 @@ class Source:
 
         :param aoi: Area of interest as Geojson file, WKT string or bounding box in lat lon coordinates (String, Tuple)
         :return: Shapely Polygon
+        :checks and return the geointerface aoi
         """
         # check if handed object is a string
         # this could include both file paths and WKT strings
