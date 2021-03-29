@@ -16,15 +16,18 @@ something was changed
 [master] (2021-**-**)
 ---------------------
 
+[1.1.0] (2021-03-29)
+---------------------
+
 Changed
 ^^^^^^^
-- ``data``: created geointerface aoi and its test case #113
-- ``data``: change default scihup endpoint `/dhus` to `/apihub`#110
+- ``data``: prep_aoi() is not private and supports __geo_interface__ #113
+- ``data``: change default scihup endpoint `/dhus` to `/apihub` #110
 - ``data``: mocked all interaction with Hubs for unit testing #116
 - ``data``: EarthExplorer changed to new M2M API due to dependency update #120
-- split unit tests #110
-- ``data``: removed hard dependency for landsatxplore & pylandsat #104
+- ``data``: removed hard dependency for `landsatxplore` & `pylandsat` #104
 - ``data``: `acquisitiondate` and `ingestiondate` have been removed #124
+- split unit tests #110
 
 Fixed
 ^^^^^

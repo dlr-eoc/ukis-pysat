@@ -44,7 +44,21 @@ class DataTest(unittest.TestCase):
     def test_exception_false_aoi(self):
         with Source(datahub=Datahub.STAC_local, catalog=catalog_path) as src:
             with self.assertRaises(TypeError, msg=f"aoi must be of type string or tuple"):
-                src.prep_aoi(1)
+                src._prep_aoi(1)
+
+    def test_aoi_geointerface(self):
+        geom = Source._prep_aoi(
+            {
+                "type": "Polygon",
+                "coordinates": (
+                    ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)),
+                    ((0.1, 0.1), (0.1, 0.2), (0.2, 0.2), (0.2, 0.1), (0.1, 0.1)),
+                ),
+            }
+        )
+        self.assertIsInstance(geom, Polygon)
+        self.assertEqual(tuple(geom.exterior.coords), ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)))
+        self.assertEqual(len(geom.interiors), 1)
 
     @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
     def test_query_metadata_stac_local(self):
@@ -159,20 +173,6 @@ class DataTest(unittest.TestCase):
         self.assertEqual(item.properties.get("srcuuid"), "LC81930242020082LGN00")
         meta.normalize_hrefs(Path(gettempdir()).as_posix())
         item.validate()
-
-    def test_geointerface(self):
-        geom = Source.prep_aoi(
-            {
-                "type": "Polygon",
-                "coordinates": (
-                    ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)),
-                    ((0.1, 0.1), (0.1, 0.2), (0.2, 0.2), (0.2, 0.1), (0.1, 0.1)),
-                ),
-            }
-        )
-        self.assertIsInstance(geom, Polygon)
-        self.assertEqual(tuple(geom.exterior.coords), ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)))
-        self.assertEqual(len(geom.interiors), 1)
 
 
 if __name__ == "__main__":
