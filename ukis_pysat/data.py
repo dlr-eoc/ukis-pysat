@@ -18,6 +18,7 @@ try:
     from PIL import Image
     from pystac.extensions import sat
     from shapely import geometry, wkt, ops
+    from shapely.geometry import shape, mapping
 except ImportError as e:
     msg = (
         "ukis_pysat.data dependencies are not installed.\n\n"
@@ -134,7 +135,7 @@ class Source:
         if self.src == Datahub.STAC_local:
             # query STAC Catalog for metadata
             catalog = self._init_catalog()
-            geom = self.prep_aoi(aoi)
+            geom = self._prep_aoi(aoi)
             for item in self.api.get_all_items():
                 if item.ext.eo.cloud_cover and cloud_cover:
                     if not cloud_cover[0] <= item.ext.eo.cloud_cover < cloud_cover[1]:
@@ -157,7 +158,7 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for metadata
-            bbox = self.prep_aoi(aoi).bounds
+            bbox = self._prep_aoi(aoi).bounds
             kwargs = {}
             if cloud_cover:
                 kwargs["max_cloud_cover"] = cloud_cover[1]
@@ -176,7 +177,7 @@ class Source:
             if cloud_cover and platform != platform.Sentinel1:
                 kwargs["cloudcoverpercentage"] = cloud_cover
             products = self.api.query(
-                area=self.prep_aoi(aoi).wkt,
+                area=self._prep_aoi(aoi).wkt,
                 date=date,
                 platformname=platform.value,
                 **kwargs,
@@ -401,10 +402,11 @@ class Source:
             out_file.write(str(ul_y) + "\n")
 
     @staticmethod
-    def prep_aoi(aoi):
+    def _prep_aoi(aoi):
         """Converts aoi to Shapely Polygon and reprojects to WGS84.
 
-        :param aoi: Area of interest as Geojson file, WKT string or bounding box in lat lon coordinates (String, Tuple)
+        :param aoi: Area of interest as Geojson file, WKT string or bounding box in lat lon coordinates (String,
+        Tuple, __geo_interface__)
         :return: Shapely Polygon
         """
         # check if handed object is a string
@@ -429,11 +431,14 @@ class Source:
             else:
                 aoi = wkt.loads(aoi)
 
+        elif isinstance(aoi, dict):
+            aoi = shape(aoi)
+
         elif isinstance(aoi, tuple):
             aoi = geometry.box(aoi[0], aoi[1], aoi[2], aoi[3])
 
         else:
-            raise TypeError(f"aoi must be of type string, Path or tuple")
+            raise TypeError(f"aoi must be of type string, Path, tuple or __geo_interface__")
 
         return aoi
 

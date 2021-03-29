@@ -1,8 +1,6 @@
 ## data
-landsatxplore>=0.13.0
 numpy
 pillow
-pylandsat>=0.6.0
 pystac[validation]>=0.5.5
 python-dateutil
 requests
@@ -18,7 +16,9 @@ shapely
 ## dev
 dask[array]
 fiona
+landsatxplore>=0.13.0
 pandas
+pylandsat>=0.6.0
 pyproj>=3.0.0
 requests_mock
 utm>=0.7.0
