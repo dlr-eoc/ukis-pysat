@@ -341,6 +341,26 @@ class Source:
         else:
             self.api.download(product_uuid, target_dir, checksum=True)
 
+    def get_download_bytes(self, product_uuid):
+        """
+        Get download bytes for streaming them directly to e.g. S3.
+
+        :param product_uuid: UUID of the satellite image product (String).
+        :returns: raw socket response from the server
+        """
+        if self.src == Datahub.Scihub:
+            product_info = self.api.get_product_odata(product_uuid)
+            if not product_info["Online"]:
+                raise NotImplementedError("Product is offline, no retrieval implemented.")
+            r = requests.get(
+                product_info["url"],
+                stream=True,
+                auth=self.api.session.auth,
+            )
+            return r.raw
+        else:
+            raise NotImplementedError(f"Only implemented for {Datahub.Scihub.value}.")
+
     def download_quicklook(self, platform, product_uuid, target_dir):
         """Downloads a quicklook of the satellite image to a target directory for a specific product_id.
         It performs a very rough geocoding of the quicklooks by shifting the image to the location of the footprint.
