@@ -296,11 +296,10 @@ class Source:
 
         return item
 
-    def download_image(self, platform, product_uuid, target_dir):
+    def download_image(self, product_uuid, target_dir):
         """Downloads satellite image data to a target directory for a specific product_id.
         Incomplete downloads are continued and complete files are skipped.
 
-        :param platform: Image platform (<enum 'Platform'>).
         :param product_uuid: UUID of the satellite image product (String).
         :param target_dir: Target directory that holds the downloaded images (String, Path)
         """
@@ -317,7 +316,6 @@ class Source:
             meta_src = self.api.request(
                 "metadata",
                 **{
-                    "datasetName": platform.value,
                     "entityIds": [product_uuid],
                 },
             )
@@ -341,11 +339,10 @@ class Source:
         else:
             self.api.download(product_uuid, target_dir, checksum=True)
 
-    def download_quicklook(self, platform, product_uuid, target_dir):
+    def download_quicklook(self, product_uuid, target_dir):
         """Downloads a quicklook of the satellite image to a target directory for a specific product_id.
         It performs a very rough geocoding of the quicklooks by shifting the image to the location of the footprint.
 
-        :param platform: Image platform (<enum 'Platform'>).
         :param product_uuid: UUID of the satellite image product (String).
         :param target_dir: Target directory that holds the downloaded images (String, Path)
         """
@@ -363,7 +360,6 @@ class Source:
             meta_src = self.api.request(
                 "metadata",
                 **{
-                    "datasetName": platform.value,
                     "entityIds": [product_uuid],
                 },
             )
