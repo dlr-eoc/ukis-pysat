@@ -346,7 +346,7 @@ class Source:
         Get download bytes for streaming them directly to e.g. S3.
 
         :param product_uuid: UUID of the satellite image product (String).
-        :returns: raw socket response from the server
+        :returns: raw socket response from the server (Bytes), md5sum (String)
         """
         if self.src == Datahub.Scihub:
             product_info = self.api.get_product_odata(product_uuid)
@@ -357,7 +357,7 @@ class Source:
                 stream=True,
                 auth=self.api.session.auth,
             )
-            return r.raw
+            return r.raw, product_info["md5"]
         else:
             raise NotImplementedError(f"Only implemented for {Datahub.Scihub.value}.")
 
