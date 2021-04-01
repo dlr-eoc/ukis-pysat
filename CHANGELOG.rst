@@ -16,6 +16,10 @@ something was changed
 [master] (2021-**-**)
 ---------------------
 
+Changed
+^^^^^^^
+- ``data``: platform removed from download_image and download_quicklook #130
+
 [1.1.0] (2021-03-29)
 ---------------------
 
