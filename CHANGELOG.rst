@@ -21,6 +21,7 @@ something was changed
 
 Changed
 ^^^^^^^
+- ``data``: platform removed from download_image and download_quicklook #130
 - ``data``: prep_aoi() is not private and supports __geo_interface__ #113
 - ``data``: change default scihup endpoint `/dhus` to `/apihub` #110
 - ``data``: mocked all interaction with Hubs for unit testing #116

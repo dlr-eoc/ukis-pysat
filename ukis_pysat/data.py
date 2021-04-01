@@ -316,6 +316,7 @@ class Source:
             meta_src = self.api.request(
                 "metadata",
                 **{
+                    "datasetName": self.src.value,
                     "entityIds": [product_uuid],
                 },
             )
@@ -360,6 +361,7 @@ class Source:
             meta_src = self.api.request(
                 "metadata",
                 **{
+                    "datasetName": self.src.value,
                     "entityIds": [product_uuid],
                 },
             )
