@@ -130,7 +130,7 @@ class Source:
         :param date: Date from - to in format yyyyMMdd (String or Datetime tuple).
         :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
-        :generates: Metadata catalog of products that match query criteria (PySTAC Catalog).
+        :generates: Metadata item of products that match query criteria (PySTAC item).
         """
         if self.src == Datahub.STAC_local:
             # query STAC Catalog for metadata
@@ -185,14 +185,12 @@ class Source:
         for meta in products:
             yield self.construct_metadata(meta=meta, platform=platform)
 
-        # return catalog
-
     def query_metadata_srcid(self, platform, srcid):
         """Queries metadata from data source by srcid.
 
         :param platform: Image platform (<enum 'Platform'>).
         :param srcid: Srcid of a specific product (String).
-        :generates: Metadata of product that matches srcid (PySTAC Catalog).
+        :generates: Metadata of product that matches srcid (PySTAC item).
         """
         if self.src == Datahub.STAC_local:
             # query Spatio Temporal Asset Catalog for metadata by srcid
@@ -211,8 +209,6 @@ class Source:
 
             dataset = guess_dataset(srcid)
             metadata = self.api.metadata(self.api.get_entity_id(srcid, dataset), dataset)
-
-            # initialize empty catalog and add metadata items
             yield self.construct_metadata(meta=metadata, platform=platform)
 
         else:  # query Scihub for metadata by srcid
