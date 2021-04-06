@@ -18,7 +18,7 @@ something was changed
 
 Changed
 ^^^^^^^
-- ``data``: generator added to query_metadata and query_metadata_srcid #127
+- ``data``: generator instead of catalog return for query_metadata and query_metadata_srcid #127
 - ``data``: platform removed from download_image and download_quicklook #130
 
 [1.1.0] (2021-03-29)
