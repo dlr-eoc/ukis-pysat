@@ -18,6 +18,7 @@ something was changed
 
 Changed
 ^^^^^^^
+- ``data``: generator added to query_metadata and query_metadata_srcid #127
 - ``data``: platform removed from download_image and download_quicklook #130
 
 [1.1.0] (2021-03-29)
@@ -25,7 +26,6 @@ Changed
 
 Changed
 ^^^^^^^
-- ``data``: generator added to query_metadata and query_metadata_srcid #127
 - ``data``: prep_aoi() is not private and supports __geo_interface__ #113
 - ``data``: change default scihup endpoint `/dhus` to `/apihub` #110
 - ``data``: mocked all interaction with Hubs for unit testing #116
