@@ -123,13 +123,14 @@ class Source:
         else:
             raise TypeError(f"add_items_from_directory only works for Datahub.STAC_local and not with {self.src}.")
 
-    def query_metadata(self, platform, date, aoi, cloud_cover=None):
+    def query_metadata(self, platform, date, aoi, cloud_cover=None, kwargs=None):
         """Queries metadata from data source.
 
         :param platform: Image platform (<enum 'Platform'>).
         :param date: Date from - to in format yyyyMMdd (String or Datetime tuple).
         :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
+        :param kwargs: Dictionary of the additional requirements for the hub used.
         :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
         """
         if self.src == Datahub.STAC_local:
@@ -159,7 +160,6 @@ class Source:
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for metadata
             bbox = self._prep_aoi(aoi).bounds
-            kwargs = {}
             if cloud_cover:
                 kwargs["max_cloud_cover"] = cloud_cover[1]
             products = self.api.search(
@@ -173,7 +173,6 @@ class Source:
 
         else:
             # query Scihub for metadata
-            kwargs = {}
             if cloud_cover and platform != platform.Sentinel1:
                 kwargs["cloudcoverpercentage"] = cloud_cover
             products = self.api.query(

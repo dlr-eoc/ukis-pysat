@@ -18,6 +18,7 @@ something was changed
 
 Changed
 ^^^^^^^
+- ``data``: kwargs added as parameter for the query_metadata #27
 - ``data``: platform removed from download_image and download_quicklook #130
 
 [1.1.0] (2021-03-29)
