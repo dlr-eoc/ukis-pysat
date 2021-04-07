@@ -133,6 +133,8 @@ class Source:
         :param kwargs: Dictionary of the additional requirements for the hub used.
         :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
         """
+        if kwargs is None:
+            kwargs = {}
         if self.src == Datahub.STAC_local:
             # query STAC Catalog for metadata
             catalog = self._init_catalog()
