@@ -18,6 +18,7 @@ something was changed
 
 Changed
 ^^^^^^^
+- ``data``: kwargs added as parameter in query_metadata #27
 - ``data``: generator added to query_metadata and query_metadata_srcid #127
 - ``data``: platform removed from download_image and download_quicklook #130
 
