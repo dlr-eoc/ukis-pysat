@@ -16,9 +16,13 @@ something was changed
 [master] (2021-**-**)
 ---------------------
 
+[1.2.0]] (2021-04-07)
+---------------------
+
 Changed
 ^^^^^^^
-- ``data``: kwargs added as parameter for the query_metadata #27
+- ``data``: added option for additional parameter for query_metadata #27
+- ``data``: generator instead of catalog return for query_metadata and query_metadata_srcid #127
 - ``data``: platform removed from download_image and download_quicklook #130
 
 [1.1.0] (2021-03-29)

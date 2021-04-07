@@ -69,10 +69,13 @@ class DataTest(unittest.TestCase):
                 aoi=aoi_3857,
                 cloud_cover=(90, 100),
             )
-            item = meta.get_item("S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731")
+            cat = src._init_catalog()
+            for item in meta:
+                cat.add_item(item)
+            item = cat.get_item("S2A_MSIL1C_20200221T102041_N0209_R065_T32UPC_20200221T110731")
             self.assertEqual(item.properties.get("srcuuid"), "ae674e64-013d-4898-a6d7-096d7b02bdde")
-            meta.normalize_hrefs(Path(gettempdir()).as_posix())
-            meta.validate_all()
+            cat.normalize_hrefs(Path(gettempdir()).as_posix())
+            cat.validate_all()
 
     @requests_mock.Mocker(real_http=True)
     def test_query_metadata_scihub(self, m):
@@ -87,11 +90,13 @@ class DataTest(unittest.TestCase):
                 date=("20200224", "20200225"),
                 aoi=aoi_4326,
             )
-
-            item = meta.get_item("S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6")
+            cat = src._init_catalog()
+            for item in meta:
+                cat.add_item(item)
+            item = cat.get_item("S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6")
             self.assertEqual(item.properties.get("srcuuid"), "8a611d5b-f9d9-437e-9f55-eca18cf79fd4")
-            meta.normalize_hrefs(Path(gettempdir()).as_posix())
-            meta.validate_all()
+            cat.normalize_hrefs(Path(gettempdir()).as_posix())
+            cat.validate_all()
 
     @requests_mock.Mocker(real_http=True)
     def test_query_metadata_earth_explorer(self, m):
@@ -115,11 +120,13 @@ class DataTest(unittest.TestCase):
                 aoi=aoi_bbox,
                 cloud_cover=(0, 20),
             )
-
-            item = meta.get_item("LC08_L1TP_193024_20200322_20200326_01_T1")
+            cat = src._init_catalog()
+            for item in meta:
+                cat.add_item(item)
+            item = cat.get_item("LC08_L1TP_193024_20200322_20200326_01_T1")
             self.assertEqual(item.properties.get("srcuuid"), "LC81930242020082LGN00")
-            meta.normalize_hrefs(Path(gettempdir()).as_posix())
-            meta.validate_all()
+            cat.normalize_hrefs(Path(gettempdir()).as_posix())
+            cat.validate_all()
 
     @requests_mock.Mocker(real_http=True)
     def test_query_metadata_srcid_scihub(self, m):
@@ -132,9 +139,12 @@ class DataTest(unittest.TestCase):
                 platform=Platform.Sentinel1,
                 srcid="S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6",
             )
-        item = meta.get_item("S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6")
+            cat = src._init_catalog()
+            for item in meta:
+                cat.add_item(item)
+        item = cat.get_item("S1A_IW_SLC__1SDV_20200224T052528_20200224T052555_031390_039CF2_BEA6")
         self.assertEqual(item.properties.get("srcuuid"), "8a611d5b-f9d9-437e-9f55-eca18cf79fd4")
-        meta.normalize_hrefs(Path(gettempdir()).as_posix())
+        cat.normalize_hrefs(Path(gettempdir()).as_posix())
         item.validate()
 
     @requests_mock.Mocker(real_http=True)
@@ -169,9 +179,13 @@ class DataTest(unittest.TestCase):
                 platform=Platform.Landsat8,
                 srcid="LC08_L1TP_193024_20200322_20200326_01_T1",
             )
-        item = meta.get_item("LC08_L1TP_193024_20200322_20200326_01_T1")
+            cat = src._init_catalog()
+            for item in meta:
+                cat.add_item(item)
+
+        item = cat.get_item("LC08_L1TP_193024_20200322_20200326_01_T1")
         self.assertEqual(item.properties.get("srcuuid"), "LC81930242020082LGN00")
-        meta.normalize_hrefs(Path(gettempdir()).as_posix())
+        cat.normalize_hrefs(Path(gettempdir()).as_posix())
         item.validate()
 
 
