@@ -130,11 +130,10 @@ class Source:
         :param date: Date from - to in format yyyyMMdd (String or Datetime tuple).
         :param aoi: Area of interest as GeoJson file or bounding box tuple with lat lon coordinates (String, Tuple).
         :param cloud_cover: Percent cloud cover scene from - to (Integer tuple).
-        :returns: Metadata catalog of products that match query criteria (PySTAC Catalog).
+        :generates: Metadata item of products that match query criteria (PySTAC item).
         """
         if self.src == Datahub.STAC_local:
             # query STAC Catalog for metadata
-            catalog = self._init_catalog()
             geom = self._prep_aoi(aoi)
             for item in self.api.get_all_items():
                 if item.ext.eo.cloud_cover and cloud_cover:
@@ -147,8 +146,7 @@ class Source:
                     < sentinelsat.format_query_date(date[1])
                     and geometry.shape(item.geometry).intersects(geom)
                 ):
-                    catalog.add_item(item)
-            return catalog
+                    yield item
 
         elif self.src == Datahub.STAC_API:
             raise NotImplementedError(
@@ -184,28 +182,21 @@ class Source:
             )
             products = self.api.to_geojson(products)["features"]
 
-        # initialize empty catalog and add metadata items
-        catalog = self._init_catalog()
         for meta in products:
-            catalog.add_item(self.construct_metadata(meta=meta, platform=platform))
-
-        return catalog
+            yield self.construct_metadata(meta=meta, platform=platform)
 
     def query_metadata_srcid(self, platform, srcid):
         """Queries metadata from data source by srcid.
 
         :param platform: Image platform (<enum 'Platform'>).
         :param srcid: Srcid of a specific product (String).
-        :returns: Metadata of product that matches srcid (PySTAC Catalog).
+        :generates: Metadata of product that matches srcid (PySTAC item).
         """
         if self.src == Datahub.STAC_local:
             # query Spatio Temporal Asset Catalog for metadata by srcid
-            catalog = self._init_catalog()
             for item in self.api.get_all_items():
                 if item.id == srcid:
-                    catalog.add_item(item)
-                    continue
-            return catalog
+                    yield item
 
         elif self.src == Datahub.STAC_API:
             raise NotImplementedError(
@@ -218,17 +209,11 @@ class Source:
 
             dataset = guess_dataset(srcid)
             metadata = self.api.metadata(self.api.get_entity_id(srcid, dataset), dataset)
-
-            # initialize empty catalog and add metadata items
-            catalog = self._init_catalog()
-            catalog.add_item(self.construct_metadata(meta=metadata, platform=platform))
-            return catalog
+            yield self.construct_metadata(meta=metadata, platform=platform)
 
         else:  # query Scihub for metadata by srcid
-            catalog = self._init_catalog()  # initialize empty catalog and add metadata items
             for meta in self.api.to_geojson(self.api.query(identifier=srcid))["features"]:
-                catalog.add_item(self.construct_metadata(meta=meta, platform=platform))
-            return catalog
+                yield self.construct_metadata(meta=meta, platform=platform)
 
     def construct_metadata(self, meta, platform):
         """Constructs a STAC item that is harmonized across the different satellite image sources.
