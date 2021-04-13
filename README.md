@@ -35,7 +35,6 @@ from ukis_pysat.file import get_sentinel_scene_from_dir
 from ukis_pysat.members import Datahub, Platform
 from ukis_pysat.raster import Image
 
-
 # connect to Scihub and query metadata (returns MetadataCollection)
 src = Source(Datahub.Scihub)
 meta = src.query_metadata(
@@ -44,19 +43,22 @@ meta = src.query_metadata(
     aoi=(11.90, 51.46, 11.94, 51.50),
     cloud_cover=(0, 50),
 )
-
+cat = src._init_catalog()
+for item in meta:
+    cat.add_item(item)
+    
 # inspect MetadataCollection with Pandas
-meta_df = meta.to_pandas()
-print(meta_df[["srcid", "producttype", "cloudcoverpercentage", "size", "srcuuid"]])
+cat_df = cat.to_pandas()
+print(cat_df[["srcid", "producttype", "cloudcoverpercentage", "size", "srcuuid"]])
 
 # filter MetadataCollection by producttype
-meta.filter(filter_dict={"producttype": "S2MSI1C"})
+cat.filter(filter_dict={"producttype": "S2MSI1C"})
 
 # save Metadata items as GeoJSON
-meta.save(target_dir="target_dir/")
+cat.save(target_dir="target_dir/")
 
 # get product_uuid of first metadata item
-uuid = meta.items[0].to_dict()["srcuuid"]
+uuid = cat.items[0].to_dict()["srcuuid"]
 
 # download geocoded quicklook and image
 src.download_quicklook(platform=Platform.Sentinel2, product_uuid=uuid, target_dir="target_dir/")
