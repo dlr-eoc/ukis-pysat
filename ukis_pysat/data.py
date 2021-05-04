@@ -298,21 +298,20 @@ class Source:
             )
 
         elif self.src == Datahub.EarthExplorer:
-            # query EarthExplorer for srcid of product
-            if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
+            if not Path(target_dir.joinpath(product_uuid + ".zip")).is_file():
                 from pylandsat import Product
 
-                # download data from AWS if file does not already exist
-                product = Product(product_srcid)
+                # download data from GCS if file does not already exist
+                product = Product(product_uuid)
                 product.download(out_dir=target_dir, progressbar=False)
 
                 # compress download directory and remove original files
                 shutil.make_archive(
-                    target_dir.joinpath(product_srcid),
+                    target_dir.joinpath(product_uuid),
                     "zip",
-                    root_dir=target_dir.joinpath(product_srcid),
+                    root_dir=target_dir.joinpath(product_uuid),
                 )
-                shutil.rmtree(target_dir.joinpath(product_srcid))
+                shutil.rmtree(target_dir.joinpath(product_uuid))
 
         else:
             self.api.download(product_uuid, target_dir, checksum=True)
