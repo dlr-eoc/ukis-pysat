@@ -17,7 +17,7 @@ something was changed
 ---------------------
 - ``data``: fixed download error from EarthExplorer #140
 
-[1.2.0]] (2021-04-07)s
+[1.2.0]] (2021-04-07)
 ---------------------
 
 Changed
