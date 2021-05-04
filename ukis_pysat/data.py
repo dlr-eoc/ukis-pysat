@@ -299,15 +299,6 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for srcid of product
-            meta_src = self.api.request(
-                "metadata",
-                **{
-                    "datasetName": self.src.value,
-                    "entityIds": [product_uuid],
-                },
-            )
-            product_srcid = meta_src[0]["displayId"]
-
             if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
                 from pylandsat import Product
 
