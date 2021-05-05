@@ -15,6 +15,9 @@ something was changed
 
 [1.2.1] (2021-05-05)
 ---------------------
+
+Fixed
+^^^^^
 - ``data``: Copernicus Open Access Hub Url changed #142
 - ``data``: fixed download error from EarthExplorer #140
 
