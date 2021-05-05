@@ -13,8 +13,9 @@ Changed
 ^^^^^^^
 something was changed
 
-[master] (2021-**-**)
+[1.2.1] (2021-05-05)
 ---------------------
+- ``data``: Copernicus Open Access Hub Url changed #142
 - ``data``: fixed download error from EarthExplorer #140
 
 [1.2.0]] (2021-04-07)
