@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-
 import datetime
+import hashlib
+import json
+import os
 import shutil
 import uuid
+from datetime import datetime as dt
 from io import BytesIO
 from pathlib import Path
 
 from dateutil.parser import parse
+from pkg_resources import resource_string
+from tqdm import tqdm
 
 from ukis_pysat.stacapi import StacApi
 
@@ -29,6 +34,144 @@ except ImportError as e:
 
 from ukis_pysat.file import env_get
 from ukis_pysat.members import Datahub
+
+BASE_URL = (
+    "https://storage.googleapis.com/gcp-public-data-landsat/"
+    "{sensor}/{collection:02}/{path:03}/{row:03}/{product_id}/"
+)
+
+
+def meta_from_pid(product_id):
+    """Extract metadata contained in a Landsat Product Identifier."""
+    meta = {}
+    parts = product_id.split('_')
+    meta['product_id'] = product_id
+    meta['sensor'], meta['correction'] = parts[0], parts[1]
+    meta['path'], meta['row'] = int(parts[2][:3]), int(parts[2][3:])
+    meta['acquisition_date'] = dt.strptime(parts[3], '%Y%m%d')
+    meta['processing_date'] = dt.strptime(parts[4], '%Y%m%d')
+    meta['collection'], meta['tier'] = int(parts[5]), parts[6]
+    return meta
+
+
+def compute_md5(fpath):
+    """Get hexadecimal MD5 hash of a file."""
+    with open(fpath, 'rb') as f:
+        h = hashlib.md5(f.read())
+    return h.hexdigest()
+
+
+def download_files(url, outdir, progressbar=False, verify=False):
+    """Download a file from an URL into a given directory.
+
+    Parameters
+    ----------
+    url : str
+        File to download.
+    outdir : str
+        Path to output directory.
+    progressbar : bool, optional
+        Display a progress bar.
+    verify : bool, optional
+        Check that remote and local MD5 haches are equal.
+
+    Returns
+    -------
+    fpath : str
+        Path to downloaded file.
+    """
+    fname = url.split('/')[-1]
+    fpath = os.path.join(outdir, fname)
+    r = requests.get(url, stream=True)
+    remotesize = int(r.headers.get('Content-Length', 0))
+    etag = r.headers.get('ETag', '').replace('"', '')
+
+    if r.status_code != 200:
+        raise requests.exceptions.HTTPError(str(r.status_code))
+
+    if os.path.isfile(fpath) and os.path.getsize(fpath) == remotesize:
+        return fpath
+    if progressbar:
+        progress = tqdm(total=remotesize, unit='B', unit_scale=True)
+        progress.set_description(fname)
+    with open(fpath, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024 * 1024):
+            if chunk:
+                f.write(chunk)
+                if progressbar:
+                    progress.update(1024 * 1024)
+
+    r.close()
+    if progressbar:
+        progress.close()
+
+    if verify:
+        if not compute_md5(fpath) == etag:
+            raise requests.exceptions.HTTPError('Download corrupted.')
+
+    return fpath
+
+
+class Product:
+    """Landsat product to download."""
+
+    def __init__(self, product_id):
+        """Initialize a product download.
+
+        Attributes
+        ----------
+        product_id : str
+            Landsat product identifier.
+        out_dir : str
+            Path to output directory.
+        """
+        self.product_id = product_id
+        self.meta = meta_from_pid(product_id)
+        self.baseurl = BASE_URL.format(**self.meta)
+
+    @property
+    def available(self):
+        """List all available files."""
+        resource = resource_string(__name__, "files.json")
+        labels = json.loads(resource)
+        return labels[self.meta["sensor"]]
+
+    def _url(self, label):
+        """Get download URL of a given file according to its label."""
+        if "README" in label:
+            basename = label
+        else:
+            basename = self.product_id + "_" + label
+        return self.baseurl + basename
+
+    def download(self, out_dir, progressbar=True, files=None, verify=True):
+        """Download a Landsat product.
+
+        Parameters
+        ----------
+        out_dir : str
+            Path to output directory. A subdirectory named after the
+            product ID will automatically be created.
+        progressbar : bool, optional
+            Show a progress bar.
+        files : list of str, optional
+            Specify the files to download manually. By default, all available
+            files will be downloaded.
+        verify : bool, optional
+            Check downloaded files for corruption (True by default).
+        """
+        dst_dir = os.path.join(out_dir, self.product_id)
+        os.makedirs(dst_dir, exist_ok=True)
+        if not files:
+            files = self.available
+        else:
+            files = [f for f in files if f in self.available]
+
+        for label in files:
+            if ".tif" in label:
+                label = label.replace(".tif", ".TIF")
+            url = self._url(label)
+            download_files(url, dst_dir, progressbar=progressbar, verify=verify)
 
 
 class Source:
@@ -87,7 +230,7 @@ class Source:
             self.api = sentinelsat.SentinelAPI(
                 self.user,
                 self.pw,
-                "https://scihub.copernicus.eu/apihub",
+                "https://apihub.copernicus.eu/apihub",
                 show_progressbars=False,
             )
 
@@ -143,11 +286,11 @@ class Source:
                     if not cloud_cover[0] <= item.ext.eo.cloud_cover < cloud_cover[1]:
                         continue
                 if (
-                    platform.value == item.common_metadata.platform
-                    and sentinelsat.format_query_date(date[0])
-                    <= sentinelsat.format_query_date(parse(item.properties["acquisitiondate"]).strftime("%Y%m%d"))
-                    < sentinelsat.format_query_date(date[1])
-                    and geometry.shape(item.geometry).intersects(geom)
+                        platform.value == item.common_metadata.platform
+                        and sentinelsat.format_query_date(date[0])
+                        <= sentinelsat.format_query_date(parse(item.properties["acquisitiondate"]).strftime("%Y%m%d"))
+                        < sentinelsat.format_query_date(date[1])
+                        and geometry.shape(item.geometry).intersects(geom)
                 ):
                     yield item
 
@@ -261,11 +404,11 @@ class Source:
                     "srcurl": meta["properties"]["link"],
                     "srcuuid": meta["properties"]["uuid"],
                     "start_datetime": parse(meta["properties"]["beginposition"])
-                    .astimezone(tz=datetime.timezone.utc)
-                    .isoformat(),
+                        .astimezone(tz=datetime.timezone.utc)
+                        .isoformat(),
                     "end_datetime": parse(meta["properties"]["endposition"])
-                    .astimezone(tz=datetime.timezone.utc)
-                    .isoformat(),
+                        .astimezone(tz=datetime.timezone.utc)
+                        .isoformat(),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
@@ -299,10 +442,12 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             if not Path(target_dir.joinpath(product_uuid + ".zip")).is_file():
-                from pylandsat import Product
+                # from pylandsat import Product
 
                 # download data from GCS if file does not already exist
                 product = Product(product_uuid)
+                # url = f"{product.baseurl}/{product.product_id}.tif"
+                # download_files(url, target_dir, progressbar=False, verify=True)
                 product.download(out_dir=target_dir, progressbar=False)
 
                 # compress download directory and remove original files
@@ -359,7 +504,7 @@ class Source:
         quicklook = np.asarray(Image.open(BytesIO(response.content)))
         # use threshold of 50 to overcome noise in JPEG compression
         xs, ys, zs = np.where(quicklook >= 50)
-        quicklook = quicklook[min(xs) : max(xs) + 1, min(ys) : max(ys) + 1, min(zs) : max(zs) + 1]
+        quicklook = quicklook[min(xs): max(xs) + 1, min(ys): max(ys) + 1, min(zs): max(zs) + 1]
         Image.fromarray(quicklook).save(target_dir.joinpath(product_srcid + ".jpg"))
 
         # geocode quicklook
