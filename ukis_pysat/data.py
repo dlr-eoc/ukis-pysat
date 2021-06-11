@@ -44,19 +44,19 @@ BASE_URL = (
 def meta_from_pid(product_id):
     """Extract metadata contained in a Landsat Product Identifier."""
     meta = {}
-    parts = product_id.split('_')
-    meta['product_id'] = product_id
-    meta['sensor'], meta['correction'] = parts[0], parts[1]
-    meta['path'], meta['row'] = int(parts[2][:3]), int(parts[2][3:])
-    meta['acquisition_date'] = dt.strptime(parts[3], '%Y%m%d')
-    meta['processing_date'] = dt.strptime(parts[4], '%Y%m%d')
-    meta['collection'], meta['tier'] = int(parts[5]), parts[6]
+    parts = product_id.split("_")
+    meta["product_id"] = product_id
+    meta["sensor"], meta["correction"] = parts[0], parts[1]
+    meta["path"], meta["row"] = int(parts[2][:3]), int(parts[2][3:])
+    meta["acquisition_date"] = dt.strptime(parts[3], "%Y%m%d")
+    meta["processing_date"] = dt.strptime(parts[4], "%Y%m%d")
+    meta["collection"], meta["tier"] = int(parts[5]), parts[6]
     return meta
 
 
 def compute_md5(fpath):
     """Get hexadecimal MD5 hash of a file."""
-    with open(fpath, 'rb') as f:
+    with open(fpath, "rb") as f:
         h = hashlib.md5(f.read())
     return h.hexdigest()
 
@@ -80,11 +80,11 @@ def download_files(url, outdir, progressbar=False, verify=False):
     fpath : str
         Path to downloaded file.
     """
-    fname = url.split('/')[-1]
+    fname = url.split("/")[-1]
     fpath = os.path.join(outdir, fname)
     r = requests.get(url, stream=True)
-    remotesize = int(r.headers.get('Content-Length', 0))
-    etag = r.headers.get('ETag', '').replace('"', '')
+    remotesize = int(r.headers.get("Content-Length", 0))
+    etag = r.headers.get("ETag", "").replace('"', "")
 
     if r.status_code != 200:
         raise requests.exceptions.HTTPError(str(r.status_code))
@@ -92,9 +92,9 @@ def download_files(url, outdir, progressbar=False, verify=False):
     if os.path.isfile(fpath) and os.path.getsize(fpath) == remotesize:
         return fpath
     if progressbar:
-        progress = tqdm(total=remotesize, unit='B', unit_scale=True)
+        progress = tqdm(total=remotesize, unit="B", unit_scale=True)
         progress.set_description(fname)
-    with open(fpath, 'wb') as f:
+    with open(fpath, "wb") as f:
         for chunk in r.iter_content(chunk_size=1024 * 1024):
             if chunk:
                 f.write(chunk)
@@ -107,7 +107,7 @@ def download_files(url, outdir, progressbar=False, verify=False):
 
     if verify:
         if not compute_md5(fpath) == etag:
-            raise requests.exceptions.HTTPError('Download corrupted.')
+            raise requests.exceptions.HTTPError("Download corrupted.")
 
     return fpath
 
@@ -286,11 +286,11 @@ class Source:
                     if not cloud_cover[0] <= item.ext.eo.cloud_cover < cloud_cover[1]:
                         continue
                 if (
-                        platform.value == item.common_metadata.platform
-                        and sentinelsat.format_query_date(date[0])
-                        <= sentinelsat.format_query_date(parse(item.properties["acquisitiondate"]).strftime("%Y%m%d"))
-                        < sentinelsat.format_query_date(date[1])
-                        and geometry.shape(item.geometry).intersects(geom)
+                    platform.value == item.common_metadata.platform
+                    and sentinelsat.format_query_date(date[0])
+                    <= sentinelsat.format_query_date(parse(item.properties["acquisitiondate"]).strftime("%Y%m%d"))
+                    < sentinelsat.format_query_date(date[1])
+                    and geometry.shape(item.geometry).intersects(geom)
                 ):
                     yield item
 
@@ -404,11 +404,11 @@ class Source:
                     "srcurl": meta["properties"]["link"],
                     "srcuuid": meta["properties"]["uuid"],
                     "start_datetime": parse(meta["properties"]["beginposition"])
-                        .astimezone(tz=datetime.timezone.utc)
-                        .isoformat(),
+                    .astimezone(tz=datetime.timezone.utc)
+                    .isoformat(),
                     "end_datetime": parse(meta["properties"]["endposition"])
-                        .astimezone(tz=datetime.timezone.utc)
-                        .isoformat(),
+                    .astimezone(tz=datetime.timezone.utc)
+                    .isoformat(),
                 },
                 stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
@@ -504,7 +504,7 @@ class Source:
         quicklook = np.asarray(Image.open(BytesIO(response.content)))
         # use threshold of 50 to overcome noise in JPEG compression
         xs, ys, zs = np.where(quicklook >= 50)
-        quicklook = quicklook[min(xs): max(xs) + 1, min(ys): max(ys) + 1, min(zs): max(zs) + 1]
+        quicklook = quicklook[min(xs) : max(xs) + 1, min(ys) : max(ys) + 1, min(zs) : max(zs) + 1]
         Image.fromarray(quicklook).save(target_dir.joinpath(product_srcid + ".jpg"))
 
         # geocode quicklook
