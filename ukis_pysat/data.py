@@ -35,11 +35,6 @@ except ImportError as e:
 from ukis_pysat.file import env_get
 from ukis_pysat.members import Datahub
 
-BASE_URL = (
-    "https://storage.googleapis.com/gcp-public-data-landsat/"
-    "{sensor}/{collection:02}/{path:03}/{row:03}/{product_id}/"
-)
-
 
 def meta_from_pid(product_id):
     """Extract metadata contained in a Landsat Product Identifier."""
@@ -113,7 +108,10 @@ def download_files(url, outdir, progressbar=False, verify=False):
 
 
 class Product:
-    """Landsat product to download."""
+    """It provides methods for checking the list of the available Geotiff Landsat bands  and download them  by
+    using the product_id and BASE_URL"""
+
+    """Extracted from the pylandsat"""
 
     def __init__(self, product_id):
         """Initialize a product download.
@@ -125,6 +123,12 @@ class Product:
         out_dir : str
             Path to output directory.
         """
+
+        BASE_URL = (
+            "https://storage.googleapis.com/gcp-public-data-landsat/"
+            "{sensor}/{collection:02}/{path:03}/{row:03}/{product_id}/"
+        )
+
         self.product_id = product_id
         self.meta = meta_from_pid(product_id)
         self.baseurl = BASE_URL.format(**self.meta)
@@ -442,12 +446,9 @@ class Source:
 
         elif self.src == Datahub.EarthExplorer:
             if not Path(target_dir.joinpath(product_uuid + ".zip")).is_file():
-                # from pylandsat import Product
 
                 # download data from GCS if file does not already exist
                 product = Product(product_uuid)
-                # url = f"{product.baseurl}/{product.product_id}.tif"
-                # download_files(url, target_dir, progressbar=False, verify=True)
                 product.download(out_dir=target_dir, progressbar=False)
 
                 # compress download directory and remove original files

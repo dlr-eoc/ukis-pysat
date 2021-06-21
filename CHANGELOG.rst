@@ -16,7 +16,7 @@ something was changed
 [master] (2021-**-**)
 ---------------------
 - ``data``: fixed download error from EarthExplorer #140
-- ``data``: modified download functions in data module #106
+- ``data``: Removed pylandsat dependency and added methods for downloading landsat products from GCS in data module #106
 
 [1.2.0]] (2021-04-07)
 ---------------------
