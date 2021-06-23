@@ -544,7 +544,6 @@ class Source:
                     project = pyproj.Transformer.from_proj(
                         proj_from=pyproj.Proj(aoi.crs["init"]),
                         proj_to=pyproj.Proj("epsg:4326"),
-                        skip_equivalent=False,
                         always_xy=True,
                     )
                     aoi = ops.transform(project.transform, geometry.shape(aoi[0]["geometry"]))
