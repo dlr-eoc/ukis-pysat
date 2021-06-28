@@ -9,8 +9,8 @@ from datetime import datetime as dt
 from io import BytesIO
 from pathlib import Path
 
+from pydantic import BaseModel
 from dateutil.parser import parse
-from pkg_resources import resource_string
 from tqdm import tqdm
 
 from ukis_pysat.stacapi import StacApi
@@ -107,6 +107,74 @@ def download_files(url, outdir, progressbar=False, verify=False):
     return fpath
 
 
+class Dataset(BaseModel):
+    """List of the bands available from the Landsat Datasets"""
+
+    LC08: list
+    LE07: list
+    LT05: list
+    LM04: list
+    LM03: list
+    LM02: list
+    LM01: list
+
+
+m = Dataset(
+    LC08=[
+        "B1.TIF",
+        "B2.TIF",
+        "B3.TIF",
+        "B4.TIF",
+        "B5.TIF",
+        "B6.TIF",
+        "B7.TIF",
+        "B8.TIF",
+        "B9.TIF",
+        "B10.TIF",
+        "B11.TIF",
+        "BQA.TIF",
+        "MTL.txt",
+        "ANG.txt",
+    ],
+    LE07=[
+        "B1.TIF",
+        "B2.TIF",
+        "B3.TIF",
+        "B4.TIF",
+        "B5.TIF",
+        "B6_VCID_1.TIF",
+        "B6_VCID_2.TIF",
+        "B7.TIF",
+        "B8.TIF",
+        "BQA.TIF",
+        "GCP.txt",
+        "MTL.txt",
+        "ANG.txt",
+        "README.GTF",
+    ],
+    LT05=[
+        "B1.TIF",
+        "B2.TIF",
+        "B3.TIF",
+        "B4.TIF",
+        "B5.TIF",
+        "B6.TIF",
+        "B7.TIF",
+        "BQA.TIF",
+        "GCP.txt",
+        "MTL.txt",
+        "VER.txt",
+        "README.GTF",
+        "ANG.txt",
+    ],
+    LM04=["B1.TIF", "B2.TIF", "B3.TIF", "B4.TIF", "BQA.TIF", "GCP.txt", "MTL.txt", "VER.txt", "README.GTF"],
+    LM03=["B4.TIF", "B5.TIF", "B6.TIF", "B7.TIF", "BQA.TIF", "MTL.txt", "README.GTF"],
+    LM02=["B4.TIF", "B5.TIF", "B6.TIF", "B7.TIF", "BQA.TIF", "MTL.txt", "README.GTF"],
+    LM01=["B4.TIF", "B5.TIF", "B6.TIF", "B7.TIF", "BQA.TIF", "MTL.txt", "README.GTF"],
+)
+Landsat_bands = m.json()
+
+
 class Product:
     """It provides methods for checking the list of the available Geotiff Landsat bands  and download them  by
     using the product_id and BASE_URL"""
@@ -136,8 +204,8 @@ class Product:
     @property
     def available(self):
         """List all available files."""
-        resource = resource_string(__name__, "files.json")
-        labels = json.loads(resource)
+        # resource = resource_string(__dict__, a)#"files.json")
+        labels = json.loads(Landsat_bands)
         return labels[self.meta["sensor"]]
 
     def _url(self, label):
@@ -176,6 +244,7 @@ class Product:
                 label = label.replace(".tif", ".TIF")
             url = self._url(label)
             download_files(url, dst_dir, progressbar=progressbar, verify=verify)
+            r = requests.get(url, stream=True)
 
 
 class Source:

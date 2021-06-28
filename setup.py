@@ -34,6 +34,7 @@ extras_require = {
         "requests",
         "sentinelsat>=1.0.1",
         "shapely",
+        "pydantic",
     ],
     "raster": [
         "numpy",
