@@ -440,7 +440,7 @@ class Image:
         :param kwargs: driver specific keyword arguments, e.g. {'nbits': 1, 'tiled': True} for GTiff (default: None)
             for more keyword arguments see gdal driver specifications, e.g. https://gdal.org/drivers/raster/gtiff.html
         """
-        if type(dtype) == str and dtype == "min":
+        if type(dtype) is str and dtype == "min":
             dtype = rasterio.dtypes.get_minimum_dtype(self.__arr)
 
         profile = self.dataset.meta
