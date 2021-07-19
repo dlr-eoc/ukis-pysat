@@ -1,7 +1,7 @@
 ## data
 numpy
 pillow
-pystac[validation]>=0.5.6
+pystac[validation]==1.0.0
 python-dateutil
 requests
 sentinelsat>=0.14
