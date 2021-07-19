@@ -29,7 +29,7 @@ extras_require = {
     "data": [
         "numpy",
         "pillow",
-        "pystac>=0.5.5",
+        "pystac==0.5.6",
         "python-dateutil",
         "requests",
         "sentinelsat>=1.0.1",
