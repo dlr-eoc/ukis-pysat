@@ -18,6 +18,7 @@ class Datahub(Enum):
     Scihub = "Scihub"
     STAC_API = "STAC API"
 
+
 from typing import List
 from pydantic import BaseModel
 
@@ -78,5 +79,5 @@ class Bands(BaseModel):
 
 if __name__ == "__main__":
     m = Bands()
-    a=m.json()
+    a = m.json()
     print(a)

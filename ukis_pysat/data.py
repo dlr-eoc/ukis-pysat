@@ -36,7 +36,7 @@ except ImportError as e:
 
 from ukis_pysat.file import env_get
 from ukis_pysat.members import Datahub
-s
+
 
 def meta_from_pid(product_id):
     """Extract metadata contained in a Landsat Product Identifier."""
@@ -112,7 +112,6 @@ def download_files(url, outdir, progressbar=False, verify=False):
             raise requests.exceptions.HTTPError("Download corrupted.")
 
     return fpath
-
 
 
 class Product:
