@@ -9,11 +9,13 @@ from datetime import datetime as dt
 from io import BytesIO
 from pathlib import Path
 
+from pkg_resources import resource_string
 from pydantic import BaseModel
 from dateutil.parser import parse
 from tqdm import tqdm
 
 from ukis_pysat.stacapi import StacApi
+from ukis_pysat.members import Bands
 
 try:
     import numpy as np
@@ -34,10 +36,12 @@ except ImportError as e:
 
 from ukis_pysat.file import env_get
 from ukis_pysat.members import Datahub
-
+s
 
 def meta_from_pid(product_id):
     """Extract metadata contained in a Landsat Product Identifier."""
+    """Extracted from the pylandsat"""
+    """https://github.com/yannforget/pylandsat"""
     meta = {}
     parts = product_id.split("_")
     meta["product_id"] = product_id
@@ -75,6 +79,9 @@ def download_files(url, outdir, progressbar=False, verify=False):
     fpath : str
         Path to downloaded file.
     """
+    """Extracted from the pylandsat"""
+    """https://github.com/yannforget/pylandsat"""
+
     fname = url.split("/")[-1]
     fpath = os.path.join(outdir, fname)
     r = requests.get(url, stream=True)
@@ -107,79 +114,13 @@ def download_files(url, outdir, progressbar=False, verify=False):
     return fpath
 
 
-class Dataset(BaseModel):
-    """List of the bands available from the Landsat Datasets"""
-
-    LC08: list
-    LE07: list
-    LT05: list
-    LM04: list
-    LM03: list
-    LM02: list
-    LM01: list
-
-
-m = Dataset(
-    LC08=[
-        "B1.TIF",
-        "B2.TIF",
-        "B3.TIF",
-        "B4.TIF",
-        "B5.TIF",
-        "B6.TIF",
-        "B7.TIF",
-        "B8.TIF",
-        "B9.TIF",
-        "B10.TIF",
-        "B11.TIF",
-        "BQA.TIF",
-        "MTL.txt",
-        "ANG.txt",
-    ],
-    LE07=[
-        "B1.TIF",
-        "B2.TIF",
-        "B3.TIF",
-        "B4.TIF",
-        "B5.TIF",
-        "B6_VCID_1.TIF",
-        "B6_VCID_2.TIF",
-        "B7.TIF",
-        "B8.TIF",
-        "BQA.TIF",
-        "GCP.txt",
-        "MTL.txt",
-        "ANG.txt",
-        "README.GTF",
-    ],
-    LT05=[
-        "B1.TIF",
-        "B2.TIF",
-        "B3.TIF",
-        "B4.TIF",
-        "B5.TIF",
-        "B6.TIF",
-        "B7.TIF",
-        "BQA.TIF",
-        "GCP.txt",
-        "MTL.txt",
-        "VER.txt",
-        "README.GTF",
-        "ANG.txt",
-    ],
-    LM04=["B1.TIF", "B2.TIF", "B3.TIF", "B4.TIF", "BQA.TIF", "GCP.txt", "MTL.txt", "VER.txt", "README.GTF"],
-    LM03=["B4.TIF", "B5.TIF", "B6.TIF", "B7.TIF", "BQA.TIF", "MTL.txt", "README.GTF"],
-    LM02=["B4.TIF", "B5.TIF", "B6.TIF", "B7.TIF", "BQA.TIF", "MTL.txt", "README.GTF"],
-    LM01=["B4.TIF", "B5.TIF", "B6.TIF", "B7.TIF", "BQA.TIF", "MTL.txt", "README.GTF"],
-)
-Landsat_bands = m.json()
-
 
 class Product:
     """It provides methods for checking the list of the available Geotiff Landsat bands  and download them  by
     using the product_id and BASE_URL"""
 
     """Extracted from the pylandsat"""
+    """https://github.com/yannforget/pylandsat"""
 
     def __init__(self, product_id):
         """Initialize a product download.
@@ -204,8 +145,8 @@ class Product:
     @property
     def available(self):
         """List all available files."""
-        # resource = resource_string(__dict__, a)#"files.json")
-        labels = json.loads(Landsat_bands)
+        bands = Bands()
+        labels = bands.dict()
         return labels[self.meta["sensor"]]
 
     def _url(self, label):
@@ -244,7 +185,6 @@ class Product:
                 label = label.replace(".tif", ".TIF")
             url = self._url(label)
             download_files(url, dst_dir, progressbar=progressbar, verify=verify)
-            r = requests.get(url, stream=True)
 
 
 class Source:
