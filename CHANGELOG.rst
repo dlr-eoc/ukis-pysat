@@ -9,9 +9,12 @@ Fixed
 ^^^^^
 something was fixed
 
+[Master] (2021-**-**)
+---------------------
+
 Changed
 ^^^^^^^
-something was changed
+-``requirements``: Pystac version updated to 1.0.0 #147
 
 [1.2.1] (2021-05-05)
 ---------------------
