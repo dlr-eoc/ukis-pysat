@@ -29,11 +29,12 @@ extras_require = {
     "data": [
         "numpy",
         "pillow",
-        "pystac>=0.5.5",
+        "pystac==0.5.6",
         "python-dateutil",
         "requests",
-        "sentinelsat>=0.14",
+        "sentinelsat>=1.0.1",
         "shapely",
+        "pydantic",
     ],
     "raster": [
         "numpy",
@@ -51,7 +52,6 @@ extras_require["dev"] = sorted(
         "fiona",
         "landsatxplore>=0.13.0",
         "pandas",
-        "pylandsat>=0.6.0",
         "pyproj>=3.0.0",
         "requests_mock",
         "utm>=0.7.0",

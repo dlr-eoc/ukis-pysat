@@ -13,6 +13,14 @@ Changed
 ^^^^^^^
 something was changed
 
+[Master] (2021-**-**)
+---------------------
+
+Fixed
+^^^^^
+- ``data``: Removed pylandsat dependency and added methods for downloading landsat products from GCS in data module #106
+
+
 [1.2.1] (2021-05-05)
 ---------------------
 
