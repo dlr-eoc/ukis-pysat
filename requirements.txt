@@ -14,11 +14,15 @@ rio_toa>=0.3.0
 shapely
 
 ## dev
-dask[array]
+dask[array]~=2021.6.1
 fiona
 landsatxplore>=0.13.0
 pandas
-pylandsat>=0.6.0
 pyproj>=3.0.0
 requests_mock
 utm>=0.7.0
+geojson~=2.5.0
+setuptools~=52.0.0
+pydantic~=1.8.2
+tqdm~=4.59.0
+pylandsat~=0.6.0
