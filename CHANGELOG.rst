@@ -13,6 +13,14 @@ Changed
 ^^^^^^^
 something was changed
 
+[Master] (2021-**-**)
+---------------------
+
+Fixed
+^^^^^
+- ``data``: Removed pylandsat dependency and added methods for downloading landsat products from GCS in data module #106
+
+
 [1.2.1] (2021-05-05)
 ---------------------
 
@@ -20,7 +28,6 @@ Fixed
 ^^^^^
 - ``data``: Copernicus Open Access Hub Url changed #142
 - ``data``: fixed download error from EarthExplorer #140
-- ``data``: Removed pylandsat dependency and added methods for downloading landsat products from GCS in data module #106
 
 [1.2.0]] (2021-04-07)
 ---------------------
