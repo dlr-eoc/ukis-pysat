@@ -24,6 +24,8 @@ try:
     import sentinelsat
     from PIL import Image
     from pystac.extensions import sat
+    from pystac.extensions.eo import EOExtension
+    from pystac.extensions.sat import SatExtension
     from shapely import geometry, wkt, ops
     from shapely.geometry import shape, mapping
 except ImportError as e:
@@ -393,16 +395,19 @@ class Source:
                     "start_datetime": meta["start_time"].astimezone(tz=datetime.timezone.utc).isoformat(),
                     "end_datetime": meta["stop_time"].astimezone(tz=datetime.timezone.utc).isoformat(),
                 },
-                stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
+            EOExtension.add_to(item)
+            SatExtension.add_to(item)
+            eo_ext = EOExtension.ext(item)
+            sat_ext = SatExtension.ext(item)
 
             if "cloudCover" in meta:
-                item.ext.eo.cloud_cover = round(float(meta["cloud_cover"]), 2)
+                eo_ext.cloud_cover = round(float(meta["cloud_cover"]), 2)
 
             item.common_metadata.platform = platform.value
 
             relative_orbit = int(f"{meta['wrs_path']}{meta['wrs_row']}")
-            item.ext.sat.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
+            sat_ext.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
 
         else:  # Scihub
             item = pystac.Item(
@@ -422,15 +427,18 @@ class Source:
                     .astimezone(tz=datetime.timezone.utc)
                     .isoformat(),
                 },
-                stac_extensions=[pystac.Extensions.EO, pystac.Extensions.SAT],
             )
+            EOExtension.add_to(item)
+            SatExtension.add_to(item)
+            eo_ext = EOExtension.ext(item)
+            sat_ext = SatExtension.ext(item)
 
             if "cloudcoverpercentage" in meta["properties"]:
-                item.ext.eo.cloud_cover = round(float(meta["properties"]["cloudcoverpercentage"]), 2)
+                eo_ext.cloud_cover = round(float(meta["properties"]["cloudcoverpercentage"]), 2)
 
             item.common_metadata.platform = platform.value
 
-            item.ext.sat.apply(
+            sat_ext.apply(
                 orbit_state=sat.OrbitState[meta["properties"]["orbitdirection"].upper()],  # for enum key to work
                 relative_orbit=int(meta["properties"]["orbitnumber"]),
             )
