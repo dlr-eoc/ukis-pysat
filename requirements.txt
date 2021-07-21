@@ -1,11 +1,12 @@
 ## data
-numpy
-pillow
+numpy~=1.20.3
+pillow~=8.2.0
 pystac[validation]==1.0.0
-python-dateutil
-requests
-sentinelsat>=0.14
-shapely
+python-dateutil~=2.8.1
+requests~=2.25.1
+sentinelsat>=1.0.1
+shapely~=1.7.1
+pydantic
 
 ## raster
 # numpy
