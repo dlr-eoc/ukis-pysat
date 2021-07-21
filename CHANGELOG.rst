@@ -1,20 +1,12 @@
 Changelog
 =========
 
-Added
-^^^^^
-something was added
-
-Fixed
-^^^^^
-something was fixed
-
 [Master] (2021-**-**)
 ---------------------
 
 Changed
 ^^^^^^^
--``requirements``: Pystac version updated to 1.0.0 #147
+-``requirements``: Pystac version updated to 1.0.0, STAC version 1.0.0 #147
 
 Fixed
 ^^^^^

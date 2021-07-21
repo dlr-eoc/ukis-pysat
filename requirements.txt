@@ -1,9 +1,9 @@
 ## data
-numpy~=1.20.3
-pillow~=8.2.0
-pystac[validation]==1.0.0
-python-dateutil~=2.8.1
-requests~=2.25.1
+numpy
+pillow
+pystac[validation]>=1.0.0
+python-dateutil
+requests
 sentinelsat>=1.0.1
 shapely~=1.7.1
 pydantic
@@ -15,15 +15,13 @@ rio_toa>=0.3.0
 shapely
 
 ## dev
-dask[array]~=2021.6.1
+dask[array]
 fiona
 landsatxplore>=0.13.0
 pandas
-pyproj>=3.0.0
+pyproj
 requests_mock
 utm>=0.7.0
-geojson~=2.5.0
-setuptools~=52.0.0
-pydantic~=1.8.2
-tqdm~=4.59.0
-pylandsat~=0.6.0
+geojson
+setuptools
+tqdm
