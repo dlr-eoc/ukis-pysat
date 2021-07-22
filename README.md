@@ -28,14 +28,16 @@ Read the documentation for more details: [https://ukis-pysat.readthedocs.io](htt
 
 ## Example
 Here's an example about some basic features, it might also help to read through the [tests](https://github.com/dlr-eoc/ukis-pysat/blob/master/tests).
+###Sentinel Dataset
 
-````python
+```python
+# import all the required libraries
 from ukis_pysat.data import Source
 from ukis_pysat.file import get_sentinel_scene_from_dir
 from ukis_pysat.members import Datahub, Platform
 from ukis_pysat.raster import Image
 
-# connect to Scihub and query metadata (returns MetadataCollection)
+# connect to Copernicus Open Access Hub  and query metadata
 src = Source(Datahub.Scihub)
 meta = src.query_metadata(
     platform=Platform.Sentinel2,
@@ -43,33 +45,24 @@ meta = src.query_metadata(
     aoi=(11.90, 51.46, 11.94, 51.50),
     cloud_cover=(0, 50),
 )
-cat = src._init_catalog()
-for item in meta:
-    cat.add_item(item)
+for item in meta:  # item is now a PySTAC item
+    print(item.id)
+    uuid = item.properties["srcuuid"]
+
+    # download geocoded quicklook and image
+    src.download_quicklook(product_uuid=uuid, target_dir="/users/username/tmp")
+    src.download_image(product_uuid=uuid, target_dir="/users/username/tmp")
     
-# inspect MetadataCollection with Pandas
-cat_df = cat.to_pandas()
-print(cat_df[["srcid", "producttype", "cloudcoverpercentage", "size", "srcuuid"]])
-
-# filter MetadataCollection by producttype
-cat.filter(filter_dict={"producttype": "S2MSI1C"})
-
-# save Metadata items as GeoJSON
-cat.save(target_dir="target_dir/")
-
-# get product_uuid of first metadata item
-uuid = cat.items[0].to_dict()["srcuuid"]
-
-# download geocoded quicklook and image
-src.download_quicklook(platform=Platform.Sentinel2, product_uuid=uuid, target_dir="target_dir/")
-src.download_image(platform=Platform.Sentinel2, product_uuid=uuid, target_dir="target_dir/")
+    break
 
 # get sentinel scene from directory
-with get_sentinel_scene_from_dir(target_dir) as (full_path, ident):
-    with Image(full_path.join('pre_nrcs.tif')) as img:
-    # scale the image array, having one band
-      img.arr = img.arr * 0.3
-````
+with get_sentinel_scene_from_dir("/users/username/tmp") as (full_path, ident):
+    with Image(full_path.join("pre_nrcs.tif")) as img:
+        # scale the image array, having one band
+        img.arr = img.arr * 0.3
+```
+For working with the Landsat we need an item id for downloading the product
+Check [Pystac](https://pystac.readthedocs.io/en/1.0/) documentation for more functionality on [STAC](https://stacspec.org/).
 
 ### Environment variables to configure Datahub credentials
 To use ``ukis_pysat.data`` and to download from the respective Datahub you need to set the credentials as environment variables.
