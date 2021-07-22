@@ -31,15 +31,13 @@ Here's an example about some basic features, it might also help to read through 
 ###Sentinel Dataset
 
 ```python
-#Import all the required libraries
-
+# import all the required libraries
 from ukis_pysat.data import Source
-from ukis_pysat.raster import Image
 from ukis_pysat.file import get_sentinel_scene_from_dir
 from ukis_pysat.members import Datahub, Platform
+from ukis_pysat.raster import Image
 
-#connect to Scihub and query metadata (returns MetadataCollection)
-
+# connect to Copernicus Open Access Hub  and query metadata
 src = Source(Datahub.Scihub)
 meta = src.query_metadata(
     platform=Platform.Sentinel2,
@@ -47,29 +45,24 @@ meta = src.query_metadata(
     aoi=(11.90, 51.46, 11.94, 51.50),
     cloud_cover=(0, 50),
 )
-for item in meta:
-    # item is now a pystac.item.Item
+for item in meta:  # item is now a PySTAC item
     print(item.id)
     uuid = item.properties["srcuuid"]
+
+    # download geocoded quicklook and image
+    src.download_quicklook(product_uuid=uuid, target_dir="/users/username/tmp")
+    src.download_image(product_uuid=uuid, target_dir="/users/username/tmp")
+    
     break
 
-
-#download product using geocoded quicklook and image
-
-src.download_quicklook(product_uuid=uuid, target_dir="g:/dd")
-src.download_image(product_uuid=uuid, target_dir="g:/dd")
-
-#get sentinel scene from directory
-
-with get_sentinel_scene_from_dir("g:/dd") as (full_path, ident):
-    with Image(full_path.join('pre_nrcs.tif')) as img:
+# get sentinel scene from directory
+with get_sentinel_scene_from_dir("/users/username/tmp") as (full_path, ident):
+    with Image(full_path.join("pre_nrcs.tif")) as img:
         # scale the image array, having one band
         img.arr = img.arr * 0.3
 ```
-######For working with the Landsat we need an item id for downloading the product
-
-
-######Check [Pystac](https://pystac.readthedocs.io/en/1.0/) documentation for more functionality on [STAC](https://stacspec.org/).
+For working with the Landsat we need an item id for downloading the product
+Check [Pystac](https://pystac.readthedocs.io/en/1.0/) documentation for more functionality on [STAC](https://stacspec.org/).
 
 ### Environment variables to configure Datahub credentials
 To use ``ukis_pysat.data`` and to download from the respective Datahub you need to set the credentials as environment variables.
