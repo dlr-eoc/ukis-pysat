@@ -40,12 +40,13 @@ from ukis_pysat.file import env_get
 from ukis_pysat.members import Datahub
 
 
-def meta_from_pid(product_id):
+def meta_from_pid(product_id,product_uuid):
     """Extract metadata contained in a Landsat Product Identifier."""
     """Extracted from the pylandsat"""
     """https://github.com/yannforget/pylandsat"""
     meta = {}
     parts = product_id.split("_")
+    meta["product_uuid"]=product_uuid
     meta["product_id"] = product_id
     meta["sensor"], meta["correction"] = parts[0], parts[1]
     meta["path"], meta["row"] = int(parts[2][:3]), int(parts[2][3:])
@@ -123,7 +124,7 @@ class Product:
     """Extracted from the pylandsat"""
     """https://github.com/yannforget/pylandsat"""
 
-    def __init__(self, product_id):
+    def __init__(self, product_id,product_uuid):
         """Initialize a product download.
 
         Attributes
@@ -138,9 +139,9 @@ class Product:
             "https://storage.googleapis.com/gcp-public-data-landsat/"
             "{sensor}/{collection:02}/{path:03}/{row:03}/{product_id}/"
         )
-
+        self.product_uuid=product_uuid
         self.product_id = product_id
-        self.meta = meta_from_pid(product_id)
+        self.meta = meta_from_pid(product_id,product_uuid)
         self.baseurl = BASE_URL.format(**self.meta)
 
     @property
@@ -445,7 +446,7 @@ class Source:
 
         return item
 
-    def download_image(self, product_uuid, target_dir):
+    def download_image(self,product_id, product_uuid, target_dir):
         """Downloads satellite image data to a target directory for a specific product_id.
         Incomplete downloads are continued and complete files are skipped.
 
@@ -461,19 +462,19 @@ class Source:
             )
 
         elif self.src == Datahub.EarthExplorer:
-            if not Path(target_dir.joinpath(product_uuid + ".zip")).is_file():
+            if not Path(target_dir.joinpath(product_id + ".zip")).is_file():
 
                 # download data from GCS if file does not already exist
-                product = Product(product_uuid)
+                product = Product(product_id,product_uuid)
                 product.download(out_dir=target_dir, progressbar=False)
 
                 # compress download directory and remove original files
                 shutil.make_archive(
-                    target_dir.joinpath(product_uuid),
+                    target_dir.joinpath(product_id),
                     "zip",
-                    root_dir=target_dir.joinpath(product_uuid),
+                    root_dir=target_dir.joinpath(product_id),
                 )
-                shutil.rmtree(target_dir.joinpath(product_uuid))
+                shutil.rmtree(target_dir.joinpath(product_id))
 
         else:
             self.api.download(product_uuid, target_dir, checksum=True)
