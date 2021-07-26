@@ -1,18 +1,12 @@
 import unittest
 from pathlib import Path
 from tempfile import gettempdir
-
 import pystac
 import requests_mock
 from shapely.geometry import Polygon
-
 from datetime import datetime
 import os
-
-import requests
 from pkg_resources import resource_filename
-from tempfile import TemporaryDirectory
-import shutil
 
 from ukis_pysat._landsat import Product, meta_from_pid, compute_md5
 from ukis_pysat.data import Source
@@ -28,6 +22,7 @@ target_dir = Path(__file__).parents[0] / "testfiles"
 aoi_4326 = target_dir / "aoi_4326.geojson"
 aoi_3857 = target_dir / "aoi_3857.geojson"
 aoi_bbox = (11.90, 51.46, 11.94, 51.50)
+bands = Bands()
 
 
 class DataTest(unittest.TestCase):
@@ -212,12 +207,17 @@ class DataTest(unittest.TestCase):
         sample = resource_filename(__name__, "test.txt")
         self.assertEqual(compute_md5(sample), "4f3b92c1a86ad81d6f7e49a5e2e13ffa")
 
-    def test_landsat_url(self):
-        meta1 = meta_from_pid("LC08_L1GT_001002_20160817_20170322_01_T2")
-        base_url = "https://storage.googleapis.com/gcp-public-data-landsat/{sensor}/{collection:02}/{path:03}/{row:03}/{product_id}/"
+    def test_product_available(self):
+        product = Product("LC08_L1GT_001002_20160817_20170322_01_T2")
+        available_bands = product.available
+        required_bands = bands.LC08
+        self.assertListEqual(available_bands, required_bands, "All bands required are available")
+
+    def test_url(self):
+        product = Product("LC08_L1GT_001002_20160817_20170322_01_T2")
         self.assertEqual(
-            base_url.format(**meta1),
-            "https://storage.googleapis.com/gcp-public-data-landsat/LC08/01/001/002/LC08_L1GT_001002_20160817_20170322_01_T2/",
+            "https://storage.googleapis.com/gcp-public-data-landsat/LC08/01/001/002/LC08_L1GT_001002_20160817_20170322_01_T2/LC08_L1GT_001002_20160817_20170322_01_T2_B1.tif",
+            product._url("B1.tif"),
         )
 
 
