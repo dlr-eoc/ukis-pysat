@@ -1,5 +1,4 @@
-from enum import Enum, auto
-
+from enum import Enum
 from pydantic import BaseModel
 
 
@@ -17,9 +16,6 @@ class Datahub(Enum):
     EarthExplorer = "EarthExplorer"
     Scihub = "Scihub"
     STAC_API = "STAC API"
-
-
-from pydantic import BaseModel
 
 
 class Bands(BaseModel):
