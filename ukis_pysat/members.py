@@ -1,5 +1,4 @@
-from enum import Enum, auto
-
+from enum import Enum
 from pydantic import BaseModel
 
 
@@ -17,10 +16,6 @@ class Datahub(Enum):
     EarthExplorer = "EarthExplorer"
     Scihub = "Scihub"
     STAC_API = "STAC API"
-
-
-from typing import List
-from pydantic import BaseModel
 
 
 class Bands(BaseModel):
@@ -75,9 +70,3 @@ class Bands(BaseModel):
     LM03: list = ["B4.TIF", "B5.TIF", "B6.TIF", "B7.TIF", "BQA.TIF", "MTL.txt", "README.GTF"]
     LM02: list = ["B4.TIF", "B5.TIF", "B6.TIF", "B7.TIF", "BQA.TIF", "MTL.txt", "README.GTF"]
     LM01: list = ["B4.TIF", "B5.TIF", "B6.TIF", "B7.TIF", "BQA.TIF", "MTL.txt", "README.GTF"]
-
-
-if __name__ == "__main__":
-    m = Bands()
-    a = m.json()
-    print(a)
