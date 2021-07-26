@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
 import datetime
-import hashlib
-import json
-import os
 import shutil
 import uuid
-from datetime import datetime as dt
 from io import BytesIO
 from pathlib import Path
 
-from pkg_resources import resource_string
-from pydantic import BaseModel
 from dateutil.parser import parse
-from tqdm import tqdm
 
+from ukis_pysat._landsat import Product
 from ukis_pysat.stacapi import StacApi
-from ukis_pysat.members import Bands
 
 try:
     import numpy as np
@@ -38,155 +31,6 @@ except ImportError as e:
 
 from ukis_pysat.file import env_get
 from ukis_pysat.members import Datahub
-
-
-def meta_from_pid(product_id, product_uuid):
-    """Extract metadata contained in a Landsat Product Identifier."""
-    """Extracted from the pylandsat"""
-    """https://github.com/yannforget/pylandsat"""
-    meta = {}
-    parts = product_id.split("_")
-    meta["product_uuid"] = product_uuid
-    meta["product_id"] = product_id
-    meta["sensor"], meta["correction"] = parts[0], parts[1]
-    meta["path"], meta["row"] = int(parts[2][:3]), int(parts[2][3:])
-    meta["acquisition_date"] = dt.strptime(parts[3], "%Y%m%d")
-    meta["processing_date"] = dt.strptime(parts[4], "%Y%m%d")
-    meta["collection"], meta["tier"] = int(parts[5]), parts[6]
-    return meta
-
-
-def compute_md5(fpath):
-    """Get hexadecimal MD5 hash of a file."""
-    with open(fpath, "rb") as f:
-        h = hashlib.md5(f.read())
-    return h.hexdigest()
-
-
-def download_files(url, outdir, progressbar=False, verify=False):
-    """Download a file from an URL into a given directory.
-
-    Parameters
-    ----------
-    url : str
-        File to download.
-    outdir : str
-        Path to output directory.
-    progressbar : bool, optional
-        Display a progress bar.
-    verify : bool, optional
-        Check that remote and local MD5 haches are equal.
-
-    Returns
-    -------
-    fpath : str
-        Path to downloaded file.
-    """
-    """Extracted from the pylandsat"""
-    """https://github.com/yannforget/pylandsat"""
-
-    fname = url.split("/")[-1]
-    fpath = os.path.join(outdir, fname)
-    r = requests.get(url, stream=True)
-    remotesize = int(r.headers.get("Content-Length", 0))
-    etag = r.headers.get("ETag", "").replace('"', "")
-
-    if r.status_code != 200:
-        raise requests.exceptions.HTTPError(str(r.status_code))
-
-    if os.path.isfile(fpath) and os.path.getsize(fpath) == remotesize:
-        return fpath
-    if progressbar:
-        progress = tqdm(total=remotesize, unit="B", unit_scale=True)
-        progress.set_description(fname)
-    with open(fpath, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024 * 1024):
-            if chunk:
-                f.write(chunk)
-                if progressbar:
-                    progress.update(1024 * 1024)
-
-    r.close()
-    if progressbar:
-        progress.close()
-
-    if verify:
-        if not compute_md5(fpath) == etag:
-            raise requests.exceptions.HTTPError("Download corrupted.")
-
-    return fpath
-
-
-class Product:
-    """It provides methods for checking the list of the available Geotiff Landsat bands  and download them  by
-    using the product_id and BASE_URL"""
-
-    """Extracted from the pylandsat"""
-    """https://github.com/yannforget/pylandsat"""
-
-    def __init__(self, product_id, product_uuid):
-        """Initialize a product download.
-
-        Attributes
-        ----------
-        product_id : str
-            Landsat product identifier.
-        out_dir : str
-            Path to output directory.
-        """
-
-        BASE_URL = (
-            "https://storage.googleapis.com/gcp-public-data-landsat/"
-            "{sensor}/{collection:02}/{path:03}/{row:03}/{product_id}/"
-        )
-        self.product_uuid = product_uuid
-        self.product_id = product_id
-        self.meta = meta_from_pid(product_id, product_uuid)
-        self.baseurl = BASE_URL.format(**self.meta)
-
-    @property
-    def available(self):
-        """List all available files."""
-        bands = Bands()
-        labels = bands.dict()
-        return labels[self.meta["sensor"]]
-
-    def _url(self, label):
-        """Get download URL of a given file according to its label."""
-        if "README" in label:
-            basename = label
-        else:
-            basename = self.product_id + "_" + label
-        return self.baseurl + basename
-
-    def download(self, out_dir, progressbar=True, files=None, verify=True):
-        """Download a Landsat product.
-
-        Parameters
-        ----------
-        out_dir : str
-            Path to output directory. A subdirectory named after the
-            product ID will automatically be created.
-        progressbar : bool, optional
-            Show a progress bar.
-        files : list of str, optional
-            Specify the files to download manually. By default, all available
-            files will be downloaded.
-        verify : bool, optional
-            Check downloaded files for corruption (True by default).
-        """
-        dst_dir = os.path.join(out_dir, self.product_id)
-        os.makedirs(dst_dir, exist_ok=True)
-        if not files:
-            files = self.available
-        else:
-            files = [f for f in files if f in self.available]
-
-        for label in files:
-            if ".tif" in label:
-                label = label.replace(".tif", ".TIF")
-            url = self._url(label)
-            download_files(url, dst_dir, progressbar=progressbar, verify=verify)
 
 
 class Source:
@@ -446,7 +290,23 @@ class Source:
 
         return item
 
-    def download_image(self, product_id, product_uuid, target_dir):
+    def stream_image(self, product_uuid):
+        """
+        :param product_uuid: UUID of the satellite image product (String).
+
+        :returns: response
+        """
+
+        if self.src == Datahub.Scihub:
+            return self.api.get_stream(product_uuid)
+
+        else:
+            raise NotImplementedError(
+                f"stream_image not supported for {self.src}. "
+                f"It is much easier to stream the asset yourself now using `requests.get(url, stream=True)`"
+            )
+
+    def download_image(self, product_uuid, target_dir):
         """Downloads satellite image data to a target directory for a specific product_id.
         Incomplete downloads are continued and complete files are skipped.
 
@@ -462,19 +322,19 @@ class Source:
             )
 
         elif self.src == Datahub.EarthExplorer:
-            if not Path(target_dir.joinpath(product_id + ".zip")).is_file():
+            if not Path(target_dir.joinpath(product_uuid + ".zip")).is_file():
 
                 # download data from GCS if file does not already exist
-                product = Product(product_id, product_uuid)
+                product = Product(product_uuid)
                 product.download(out_dir=target_dir, progressbar=False)
 
                 # compress download directory and remove original files
                 shutil.make_archive(
-                    target_dir.joinpath(product_id),
+                    target_dir.joinpath(product_uuid),
                     "zip",
-                    root_dir=target_dir.joinpath(product_id),
+                    root_dir=target_dir.joinpath(product_uuid),
                 )
-                shutil.rmtree(target_dir.joinpath(product_id))
+                shutil.rmtree(target_dir.joinpath(product_uuid))
 
         else:
             self.api.download(product_uuid, target_dir, checksum=True)

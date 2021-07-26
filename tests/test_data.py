@@ -1,14 +1,16 @@
-import os
 import unittest
 from pathlib import Path
 from tempfile import gettempdir
-
 import pystac
 import requests_mock
 from shapely.geometry import Polygon
+from datetime import datetime
+import os
+from pkg_resources import resource_filename
 
+from ukis_pysat._landsat import Product, meta_from_pid, compute_md5
 from ukis_pysat.data import Source
-from ukis_pysat.members import Datahub, Platform
+from ukis_pysat.members import Datahub, Platform, Bands
 
 os.environ["EARTHEXPLORER_USER"] = "Tim"
 os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
@@ -20,6 +22,7 @@ target_dir = Path(__file__).parents[0] / "testfiles"
 aoi_4326 = target_dir / "aoi_4326.geojson"
 aoi_3857 = target_dir / "aoi_3857.geojson"
 aoi_bbox = (11.90, 51.46, 11.94, 51.50)
+bands = Bands()
 
 
 class DataTest(unittest.TestCase):
@@ -187,6 +190,35 @@ class DataTest(unittest.TestCase):
         self.assertEqual(item.properties.get("srcuuid"), "LC81930242020082LGN00")
         cat.normalize_hrefs(Path(gettempdir()).as_posix())
         item.validate()
+
+    def test_meta_from_pid(self):
+        meta = meta_from_pid("LC08_L1TP_193024_20200322_20200326_01_T1")
+        self.assertEqual(meta.get("product_id"), "LC08_L1TP_193024_20200322_20200326_01_T1")
+        self.assertEqual(meta.get("sensor"), "LC08")
+        self.assertEqual(meta.get("correction"), "L1TP")
+        self.assertEqual(meta.get("path"), 193)
+        self.assertEqual(meta.get("row"), 24)
+        self.assertEqual(meta.get("acquisition_date"), datetime(2020, 3, 22))
+        self.assertEqual(meta.get("processing_date"), datetime(2020, 3, 26))
+        self.assertEqual(meta.get("collection"), 1)
+        self.assertEqual(meta.get("tier"), "T1")
+
+    def test_compute_md5(self):
+        sample = resource_filename(__name__, "test.txt")
+        self.assertEqual(compute_md5(sample), "4f3b92c1a86ad81d6f7e49a5e2e13ffa")
+
+    def test_product_available(self):
+        product = Product("LC08_L1GT_001002_20160817_20170322_01_T2")
+        available_bands = product.available
+        required_bands = bands.LC08
+        self.assertListEqual(available_bands, required_bands, "All bands required are available")
+
+    def test_url(self):
+        product = Product("LC08_L1GT_001002_20160817_20170322_01_T2")
+        self.assertEqual(
+            "https://storage.googleapis.com/gcp-public-data-landsat/LC08/01/001/002/LC08_L1GT_001002_20160817_20170322_01_T2/LC08_L1GT_001002_20160817_20170322_01_T2_B1.tif",
+            product._url("B1.tif"),
+        )
 
 
 if __name__ == "__main__":
