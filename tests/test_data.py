@@ -1,4 +1,3 @@
-import os
 import unittest
 from pathlib import Path
 from tempfile import gettempdir
@@ -7,8 +6,17 @@ import pystac
 import requests_mock
 from shapely.geometry import Polygon
 
+from datetime import datetime
+import os
+
+import requests
+from pkg_resources import resource_filename
+from tempfile import TemporaryDirectory
+import shutil
+
+from ukis_pysat._landsat import Product, meta_from_pid, compute_md5
 from ukis_pysat.data import Source
-from ukis_pysat.members import Datahub, Platform
+from ukis_pysat.members import Datahub, Platform, Bands
 
 os.environ["EARTHEXPLORER_USER"] = "Tim"
 os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
@@ -187,6 +195,30 @@ class DataTest(unittest.TestCase):
         self.assertEqual(item.properties.get("srcuuid"), "LC81930242020082LGN00")
         cat.normalize_hrefs(Path(gettempdir()).as_posix())
         item.validate()
+
+    def test_meta_from_pid(self):
+        meta = meta_from_pid("LC08_L1TP_193024_20200322_20200326_01_T1")
+        self.assertEqual(meta.get("product_id"), "LC08_L1TP_193024_20200322_20200326_01_T1")
+        self.assertEqual(meta.get("sensor"), "LC08")
+        self.assertEqual(meta.get("correction"), "L1TP")
+        self.assertEqual(meta.get("path"), 193)
+        self.assertEqual(meta.get("row"), 24)
+        self.assertEqual(meta.get("acquisition_date"), datetime(2020, 3, 22))
+        self.assertEqual(meta.get("processing_date"), datetime(2020, 3, 26))
+        self.assertEqual(meta.get("collection"), 1)
+        self.assertEqual(meta.get("tier"), "T1")
+
+    def test_compute_md5(self):
+        sample = resource_filename(__name__, "test.txt")
+        self.assertEqual(compute_md5(sample), "4f3b92c1a86ad81d6f7e49a5e2e13ffa")
+
+    def test_landsat_url(self):
+        meta1 = meta_from_pid("LC08_L1GT_001002_20160817_20170322_01_T2")
+        base_url = "https://storage.googleapis.com/gcp-public-data-landsat/{sensor}/{collection:02}/{path:03}/{row:03}/{product_id}/"
+        self.assertEqual(
+            base_url.format(**meta1),
+            "https://storage.googleapis.com/gcp-public-data-landsat/LC08/01/001/002/LC08_L1GT_001002_20160817_20170322_01_T2/",
+        )
 
 
 if __name__ == "__main__":
