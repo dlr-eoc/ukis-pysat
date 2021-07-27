@@ -12,8 +12,8 @@ from ukis_pysat._landsat import Product, meta_from_pid, compute_md5
 from ukis_pysat.data import Source
 from ukis_pysat.members import Datahub, Platform, Bands
 
-os.environ["EARTHEXPLORER_USER"] = "pysat_test"
-os.environ["EARTHEXPLORER_PW"] = "gdKUUMaIJpyG5GvB8vQa"
+os.environ["EARTHEXPLORER_USER"] = "Tim"
+os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
 os.environ["SCIHUB_USER"] = "Tim"
 os.environ["SCIHUB_PW"] = "TheEnchanter"
 
