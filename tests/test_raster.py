@@ -218,7 +218,7 @@ class RasterTest(unittest.TestCase):
             ),
         )
 
-    @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
+    # @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
     def test_warp(self):
         self.img.warp("EPSG:3857")
         self.assertEqual(self.img.dataset.meta["crs"], "EPSG:3857")
@@ -234,7 +234,7 @@ class RasterTest(unittest.TestCase):
         source_img.warp("EPSG:3857", target_align=target_img)
         self.assertEqual(source_img.dataset.transform, target_img.dataset.transform)
 
-    @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
+    # @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
     def test_dn2toa(self):
         target_dir = Path(__file__).parents[0] / "testfiles" / "satellite_data"
         tests = [

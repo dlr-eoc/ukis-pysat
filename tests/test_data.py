@@ -63,7 +63,7 @@ class DataTest(unittest.TestCase):
         self.assertEqual(tuple(geom.exterior.coords), ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (2.0, -1.0), (0.0, 0.0)))
         self.assertEqual(len(geom.interiors), 1)
 
-    @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
+    # @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
     def test_query_metadata_stac_local(self):
         with Source(datahub=Datahub.STAC_local, catalog=catalog_path) as src:
             meta = src.query_metadata(
