@@ -7,10 +7,11 @@ Changelog
 Changed
 ^^^^^^^
 -``requirements``: Pystac version updated to 1.0.0, STAC version 1.0.0 #147
+- ``data``: Removed pylandsat dependency and added methods for downloading landsat products from GCS in data module #106
 
 Fixed
 ^^^^^
-- ``data``: Removed pylandsat dependency and added methods for downloading landsat products from GCS in data module #106
+- ``data``: Consistency for Landsat & Sentinel #151
 
 Added
 ^^^^^

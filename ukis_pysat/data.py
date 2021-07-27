@@ -306,6 +306,20 @@ class Source:
                 f"It is much easier to stream the asset yourself now using `requests.get(url, stream=True)`"
             )
 
+    def _get_srcid_from_product_uuid_ee(self, product_uuid):
+        """
+        query EarthExplorer for srcid and meta (e.g. for url and bounds of product)
+        :param product_uuid: UUID of the satellite image product (String).
+
+        :return: product_uuid, meta_src of product
+        """
+        from landsatxplore.util import parse_scene_id, landsat_dataset
+
+        meta = parse_scene_id(product_uuid)
+        metadata = self.api.metadata(product_uuid, landsat_dataset(int(meta["satellite"])))
+
+        return metadata["display_id"], metadata
+
     def download_image(self, product_uuid, target_dir):
         """Downloads satellite image data to a target directory for a specific product_id.
         Incomplete downloads are continued and complete files are skipped.
@@ -322,19 +336,19 @@ class Source:
             )
 
         elif self.src == Datahub.EarthExplorer:
-            if not Path(target_dir.joinpath(product_uuid + ".zip")).is_file():
-
+            product_srcid, _ = self._get_srcid_from_product_uuid_ee(product_uuid)
+            if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
                 # download data from GCS if file does not already exist
-                product = Product(product_uuid)
+                product = Product(product_srcid)
                 product.download(out_dir=target_dir, progressbar=False)
 
                 # compress download directory and remove original files
                 shutil.make_archive(
-                    target_dir.joinpath(product_uuid),
+                    target_dir.joinpath(product_srcid),
                     "zip",
-                    root_dir=target_dir.joinpath(product_uuid),
+                    root_dir=target_dir.joinpath(product_srcid),
                 )
-                shutil.rmtree(target_dir.joinpath(product_uuid))
+                shutil.rmtree(target_dir.joinpath(product_srcid))
 
         else:
             self.api.download(product_uuid, target_dir, checksum=True)
@@ -356,17 +370,9 @@ class Source:
             )
 
         elif self.src == Datahub.EarthExplorer:
-            # query EarthExplorer for url, srcid and bounds of product
-            meta_src = self.api.request(
-                "metadata",
-                **{
-                    "datasetName": self.src.value,
-                    "entityIds": [product_uuid],
-                },
-            )
+            product_srcid, meta_src = self._get_srcid_from_product_uuid_ee(product_uuid)
             url = meta_src[0]["browseUrl"]
             bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
-            product_srcid = meta_src[0]["displayId"]
 
         else:
             # query Scihub for url, srcid and bounds of product
