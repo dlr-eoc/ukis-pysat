@@ -141,8 +141,9 @@ class Source:
             # query STAC Catalog for metadata
             geom = self._prep_aoi(aoi)
             for item in self.api.get_all_items():
-                if item.ext.eo.cloud_cover and cloud_cover:
-                    if not cloud_cover[0] <= item.ext.eo.cloud_cover < cloud_cover[1]:
+                eo_ext = EOExtension.ext(item)
+                if eo_ext.cloud_cover and cloud_cover:
+                    if not cloud_cover[0] <= eo_ext.cloud_cover < cloud_cover[1]:
                         continue
                 if (
                     platform.value == item.common_metadata.platform
@@ -172,6 +173,8 @@ class Source:
                 max_results=10000,
                 **kwargs,
             )
+            for meta in products:
+                yield self.construct_metadata(meta=meta, platform=platform)
 
         else:
             # query Scihub for metadata
@@ -185,8 +188,8 @@ class Source:
             )
             products = self.api.to_geojson(products)["features"]
 
-        for meta in products:
-            yield self.construct_metadata(meta=meta, platform=platform)
+            for meta in products:
+                yield self.construct_metadata(meta=meta, platform=platform)
 
     def query_metadata_srcid(self, platform, srcid):
         """Queries metadata from data source by srcid.
