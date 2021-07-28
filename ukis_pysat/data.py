@@ -144,7 +144,6 @@ class Source:
                 eo_ext = EOExtension.ext(item)
                 if eo_ext.cloud_cover and cloud_cover:
                     if not cloud_cover[0] <= eo_ext.cloud_cover < cloud_cover[1]:
-                        print(eo_ext.cloud_cover)
                         continue
                 if (
                     platform.value == item.common_metadata.platform
