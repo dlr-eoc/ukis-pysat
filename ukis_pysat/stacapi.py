@@ -21,7 +21,6 @@ class StacApiError(Exception):
 
 
 class StacApi:
-    # TODO be aware of https://github.com/azavea/franklin/issues/471
     def __init__(self, url=os.getenv("STAC_API_URL", None)):
         """API to query STAC as part of ukis-pysat.data
         :param url: STAC Server endpoint, reads from STAC_API_URL environment variable by default
@@ -40,8 +39,16 @@ class StacApi:
     @staticmethod
     def _query(url, kwargs, headers):
         if {"intersects", "bbox"}.intersection(kwargs):
-            # TODO intersects will be deprecated with v1.0.0-beta.2 and replaced with OGC CQL
-            return requests.post(url, json=kwargs, headers=headers)
+            r = requests.post(url, json=kwargs, headers=headers)
+            if r.status_code == 405:
+                if "intersects" in kwargs:
+                    kwargs["intersects"] = str(kwargs["intersects"])
+                if "bbox" in kwargs:
+                    kwargs["bbox"] = str(kwargs["bbox"])
+                r_get = requests.get(url, kwargs, headers=headers)
+                return r_get
+            else:
+                return r
         else:
             return requests.get(url, kwargs, headers=headers)
 

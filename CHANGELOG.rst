@@ -1,6 +1,12 @@
 Changelog
 =========
 
+[Unreleased] (**-*-*)
+---------------------
+Added
+^^^^^
+- ``data``: allow `get` on item-search with geometry if `post` is not allowed
+
 [1.3.1] (2021-08-02)
 ---------------------
 Fixed
