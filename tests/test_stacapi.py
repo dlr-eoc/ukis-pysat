@@ -58,6 +58,11 @@ class StacApiTest(unittest.TestCase):
         items = self.api.get_items(collection="sentinel-s2-l2a", intersects=self.aoi, limit=limit)
         self.assertEqual(limit, len(items))
 
+    def test_get_items_aoi_GET(self):
+        new_api = StacApi("https://tamn.snapplanet.io/")  # based on resto, no post enabled for "intersects"
+        items = new_api.get_items(collection="L8", intersects=self.aoi)
+        self.assertEqual(items[0].id, "99b32d9d-0ded-5f57-9698-357bc89c6097")
+
 
 if __name__ == "__main__":
     unittest.main()

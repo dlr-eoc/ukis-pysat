@@ -40,7 +40,7 @@ class StacApi:
     def _query(url, kwargs, headers):
         if {"intersects", "bbox"}.intersection(kwargs):
             r = requests.post(url, json=kwargs, headers=headers)
-            if r.status_code == 405:
+            if r.status_code == 405:  # Method Not Allowed, fallback to GET
                 if "intersects" in kwargs:
                     kwargs["intersects"] = str(kwargs["intersects"])
                 if "bbox" in kwargs:
