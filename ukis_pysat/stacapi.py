@@ -60,14 +60,13 @@ class StacApi:
         res = self._handle_query(headers=headers, **kwargs)
         return res["context"]["matched"]
 
-    def get_items(self, limit=100, headers=None, **kwargs):
+    def get_items(self, headers=None, **kwargs):
         """get items or single item
-        :param limit: max number of items returned (default 100)
         :param headers: headers (optional)
         :param kwargs: search parameters (optional) See: https://github.com/radiantearth/stac-api-spec/tree/master/item-search#query-parameter-table
-        :returns list with pystac.items"""
+        :returns list with pystac.Items"""
         next_page = urljoin(self.url, "search")
-        limit = kwargs.get("limit", limit)
+        limit = kwargs.get("limit", 100)
         items = []
 
         while next_page:
