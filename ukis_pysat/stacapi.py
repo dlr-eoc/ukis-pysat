@@ -21,7 +21,6 @@ class StacApiError(Exception):
 
 
 class StacApi:
-    # TODO be aware of https://github.com/azavea/franklin/issues/471
     def __init__(self, url=os.getenv("STAC_API_URL", None)):
         """API to query STAC as part of ukis-pysat.data
         :param url: STAC Server endpoint, reads from STAC_API_URL environment variable by default
@@ -40,8 +39,16 @@ class StacApi:
     @staticmethod
     def _query(url, kwargs, headers):
         if {"intersects", "bbox"}.intersection(kwargs):
-            # TODO intersects will be deprecated with v1.0.0-beta.2 and replaced with OGC CQL
-            return requests.post(url, json=kwargs, headers=headers)
+            r = requests.post(url, json=kwargs, headers=headers)
+            if r.status_code == 405:  # Method Not Allowed, fallback to GET
+                if "intersects" in kwargs:
+                    kwargs["intersects"] = str(kwargs["intersects"])
+                if "bbox" in kwargs:
+                    kwargs["bbox"] = str(kwargs["bbox"])
+                r_get = requests.get(url, kwargs, headers=headers)
+                return r_get
+            else:
+                return r
         else:
             return requests.get(url, kwargs, headers=headers)
 
@@ -53,14 +60,13 @@ class StacApi:
         res = self._handle_query(headers=headers, **kwargs)
         return res["context"]["matched"]
 
-    def get_items(self, limit=100, headers=None, **kwargs):
+    def get_items(self, headers=None, **kwargs):
         """get items or single item
-        :param limit: max number of items returned (default 100)
         :param headers: headers (optional)
         :param kwargs: search parameters (optional) See: https://github.com/radiantearth/stac-api-spec/tree/master/item-search#query-parameter-table
-        :returns list with pystac.items"""
+        :returns list with pystac.Items"""
         next_page = urljoin(self.url, "search")
-        limit = kwargs.get("limit", limit)
+        limit = kwargs.get("limit", 100)
         items = []
 
         while next_page:
