@@ -6,7 +6,7 @@
 ![Upload Python Package](https://github.com/dlr-eoc/ukis-pysat/workflows/Upload%20Python%20Package/badge.svg)
 [![PyPI version](https://img.shields.io/pypi/v/ukis-pysat)](https://pypi.python.org/pypi/ukis-pysat/)
 [![Documentation Status](https://readthedocs.org/projects/ukis-pysat/badge/?version=latest)](https://ukis-pysat.readthedocs.io/en/latest/?badge=latest)
-[![GitHub license](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![GitHub license](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE.txt)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://black.readthedocs.io/en/stable/)
 [![DOI](https://zenodo.org/badge/259635994.svg)](https://zenodo.org/badge/latestdoi/259635994)
 
@@ -113,7 +113,7 @@ The UKIS team creates and adapts libraries which simplify the usage of satellite
 German Aerospace Center (DLR)
 
 ## Licenses
-This software is licensed under the [Apache 2.0 License](https://github.com/dlr-eoc/ukis-pysat/blob/master/LICENSE).
+This software is licensed under the [Apache 2.0 License](https://github.com/dlr-eoc/ukis-pysat/blob/master/LICENSE.txt).
 
 Copyright (c) 2020 German Aerospace Center (DLR) * German Remote Sensing Data Center * Department: Geo-Risks and Civil Security
 
@@ -129,4 +129,4 @@ The DLR project Environmental and Crisis Information System (the German abbrevia
 
 UKIS is intended to ease and standardize the process of setting up specific information systems and thus bridging the gap from EO product generation and information fusion to the delivery of products and information to end users.
 
-Furthermore the intention is to save and broaden know-how that was and is invested and earned in the development of information systems and components in several ongoing and future DFD projects.
+Furthermore, the intention is to save and broaden know-how that was and is invested and earned in the development of information systems and components in several ongoing and future DFD projects.
