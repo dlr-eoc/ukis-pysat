@@ -1,5 +1,10 @@
 import os
+
+import warnings
+
 from urllib.parse import urljoin
+
+import Exception as Exception
 
 try:
     import requests
@@ -22,6 +27,7 @@ class StacApiError(Exception):
 
 class StacApi:
     def __init__(self, url=os.getenv("STAC_API_URL", None)):
+        warnings.warn("In the future the psystac-client is going to be used.", DeprecationWarning)
         """API to query STAC as part of ukis-pysat.data
         :param url: STAC Server endpoint, reads from STAC_API_URL environment variable by default
         """
