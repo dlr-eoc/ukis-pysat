@@ -1,8 +1,11 @@
 from pystac import Item
 
+import warnings
+
 
 class STACAPI_IO:
     def default_item_method(feature):
+        warnings.warn("This feature is going to be deleted. Please use the pystac-client.", DeprecationWarning)
         return Item.from_dict(feature)
 
     read_item_method = default_item_method

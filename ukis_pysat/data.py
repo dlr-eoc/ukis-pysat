@@ -155,10 +155,7 @@ class Source:
                     yield item
 
         elif self.src == Datahub.STAC_API:
-            raise NotImplementedError(
-                f"Do this directly with our StacApi functionalities, see "
-                f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html."
-            )
+            raise NotImplementedError(f"Do this directly with the pystac-client functionalities.")
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for metadata
@@ -205,10 +202,7 @@ class Source:
                     yield item
 
         elif self.src == Datahub.STAC_API:
-            raise NotImplementedError(
-                f"Do this directly with our StacApi functionalities, see "
-                f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html."
-            )
+            raise NotImplementedError(f"Do this directly with the pystac-client functionalities.")
 
         elif self.src == Datahub.EarthExplorer:
             from landsatxplore.util import guess_dataset
