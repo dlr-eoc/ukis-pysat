@@ -8,7 +8,7 @@ from pathlib import Path
 from dateutil.parser import parse
 
 from ukis_pysat._landsat import Product
-from ukis_pysat.stacapi import StacApi
+
 
 try:
     import numpy as np
@@ -67,12 +67,6 @@ class Source:
                     f"{catalog} is not a valid STAC Catalog [catalog.json, pystac.catalog.Catalog, "
                     f"pystac.collection.Collection, None] "
                 )
-
-        elif self.src == Datahub.STAC_API:
-            if url:
-                self.api = StacApi(url=url)
-            else:
-                self.api = StacApi()
 
         elif self.src == Datahub.EarthExplorer:
             import landsatxplore.api
