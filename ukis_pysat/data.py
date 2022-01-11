@@ -156,8 +156,7 @@ class Source:
 
         elif self.src == Datahub.STAC_API:
             raise NotImplementedError(
-                f"Do this directly with our StacApi functionalities, see "
-                f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html."
+                f"Do this directly with the pystac-client functionalities."
             )
 
         elif self.src == Datahub.EarthExplorer:
@@ -206,8 +205,7 @@ class Source:
 
         elif self.src == Datahub.STAC_API:
             raise NotImplementedError(
-                f"Do this directly with our StacApi functionalities, see "
-                f"https://ukis-pysat.readthedocs.io/en/latest/api/stacapi.html."
+                f"Do this directly with the pystac-client functionalities."
             )
 
         elif self.src == Datahub.EarthExplorer:

@@ -1,10 +1,14 @@
 Changelog
 =========
-[1.3.4] (2022-01-10)
+[1.4.0] (2022-01-11)
 ---------------------
 Added
 ^^^^^
 - added deprecation warnings in stacapi.py and stacapi_io.py
+
+Changed
+^^^^^^^
+- changed NotImplementedErrors in data.py
 
 [1.3.3] (2021-10-11)
 ---------------------

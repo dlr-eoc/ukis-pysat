@@ -27,7 +27,7 @@ class StacApiError(Exception):
 
 class StacApi:
     def __init__(self, url=os.getenv("STAC_API_URL", None)):
-        warnings.warn("In the future the psystac-client is going to be used.", DeprecationWarning)
+        warnings.warn("This script is going to be deleted. Please use the pystac-client.", DeprecationWarning)
         """API to query STAC as part of ukis-pysat.data
         :param url: STAC Server endpoint, reads from STAC_API_URL environment variable by default
         """
