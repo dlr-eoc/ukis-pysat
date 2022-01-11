@@ -4,8 +4,6 @@ import warnings
 
 from urllib.parse import urljoin
 
-import Exception as Exception
-
 try:
     import requests
     from pystac import Item, Collection
@@ -27,7 +25,7 @@ class StacApiError(Exception):
 
 class StacApi:
     def __init__(self, url=os.getenv("STAC_API_URL", None)):
-        warnings.warn("This script is going to be deleted. Please use the pystac-client.", DeprecationWarning)
+        warnings.warn("This feature is going to be deleted. Please use the pystac-client.", DeprecationWarning)
         """API to query STAC as part of ukis-pysat.data
         :param url: STAC Server endpoint, reads from STAC_API_URL environment variable by default
         """
