@@ -30,10 +30,6 @@ class DataTest(unittest.TestCase):
         with Source(datahub=Datahub.STAC_local, catalog=catalog_path) as src:
             self.assertTrue(isinstance(src.api, pystac.catalog.Catalog))
 
-    def test_init_stac_url(self):
-        with Source(datahub=Datahub.STAC_API, url=r"https://earth-search.aws.element84.com/v0/") as src:
-            self.assertEqual(src.api.url, r"https://earth-search.aws.element84.com/v0/")
-
     def test_init_exception_other_hub(self):
         with self.assertRaises(
             NotImplementedError, msg=f"Hub is not supported [STAC_local, STAC_API, EarthExplorer, " f"Scihub]."
