@@ -32,7 +32,7 @@ class DataTest(unittest.TestCase):
 
     def test_init_exception_other_hub(self):
         with self.assertRaises(
-            NotImplementedError, msg=f"Hub is not supported [STAC_local, STAC_API, EarthExplorer, " f"Scihub]."
+            NotImplementedError, msg=f"Hub is not supported [STAC_local, EarthExplorer, " f"Scihub]."
         ):
             Source(datahub="Hub")
 

@@ -39,16 +39,13 @@ class Source:
     Remote APIs and local data directories that hold metadata files are supported.
     """
 
-    def __init__(self, datahub, catalog=None, url=None):
+    def __init__(self, datahub, catalog=None):
         """
         :param datahub: Data source (<enum 'Datahub'>).
         :param catalog: Only applicable if datahub is 'STAC_local'. Can be one of the following types:
                         Path to STAC Catalog file catalog.json (String, Path).
                         Pystac Catalog or Collection object (pystac.catalog.Catalog, pystac.collection.Collection).
                         None initializes an empty catalog.
-                        (default: None)
-        :param url: Only applicable if datahub is 'STAC_API'. STAC Server endpoint, reads from STAC_API_URL environment
-                        variable by default
                         (default: None)
         """
         self.src = datahub
@@ -88,7 +85,7 @@ class Source:
             )
 
         else:
-            raise NotImplementedError(f"{datahub} is not supported [STAC_local, STAC_API, EarthExplorer, Scihub]")
+            raise NotImplementedError(f"{datahub} is not supported [STAC_local, EarthExplorer, Scihub]")
 
     def __enter__(self):
         return self
@@ -148,8 +145,6 @@ class Source:
                 ):
                     yield item
 
-        elif self.src == Datahub.STAC_API:
-            raise NotImplementedError(f"Do this directly with the pystac-client functionalities.")
 
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for metadata
@@ -195,8 +190,8 @@ class Source:
                 if item.id == srcid:
                     yield item
 
-        elif self.src == Datahub.STAC_API:
-            raise NotImplementedError(f"Do this directly with the pystac-client functionalities.")
+
+
 
         elif self.src == Datahub.EarthExplorer:
             from landsatxplore.util import guess_dataset
@@ -216,10 +211,9 @@ class Source:
         :param platform: Image platform (<enum 'Platform'>).
         :returns: PySTAC item
         """
-        if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
-            raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
-        elif self.src == Datahub.EarthExplorer:
+
+        if self.src == Datahub.EarthExplorer:
             item = pystac.Item(
                 id=meta["display_id"],
                 datetime=meta["start_time"],
@@ -321,12 +315,10 @@ class Source:
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
 
-        if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
-            raise NotImplementedError(
-                f"download_image not supported for {self.src}. It is much easier to get the asset yourself now."
-            )
 
-        elif self.src == Datahub.EarthExplorer:
+
+
+        if self.src == Datahub.EarthExplorer:
             product_srcid, _ = self._get_srcid_from_product_uuid_ee(product_uuid)
             if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
                 # download data from GCS if file does not already exist
@@ -354,13 +346,9 @@ class Source:
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
 
-        if self.src == Datahub.STAC_local or self.src == Datahub.STAC_API:
-            raise NotImplementedError(
-                f"download_quicklook not supported for {self.src}. It is much easier to get the asset yourself now, "
-                f"when it is a COG you can read in an overview."
-            )
 
-        elif self.src == Datahub.EarthExplorer:
+
+        if self.src == Datahub.EarthExplorer:
             product_srcid, meta_src = self._get_srcid_from_product_uuid_ee(product_uuid)
             url = meta_src[0]["browseUrl"]
             bounds = geometry.shape(meta_src[0]["spatialFootprint"]).bounds
