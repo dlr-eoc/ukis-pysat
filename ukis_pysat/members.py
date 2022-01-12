@@ -15,7 +15,6 @@ class Datahub(Enum):
     STAC_local = "STAC Catalog/Collection"
     EarthExplorer = "EarthExplorer"
     Scihub = "Scihub"
-    STAC_API = "STAC API"
 
 
 class Bands(BaseModel):
