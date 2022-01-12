@@ -207,8 +207,10 @@ class Source:
         :param platform: Image platform (<enum 'Platform'>).
         :returns: PySTAC item
         """
+        if self.src == Datahub.STAC_local:
+            raise NotImplementedError(f"construct_metadata not supported for {self.src}.")
 
-        if self.src == Datahub.EarthExplorer:
+        elif self.src == Datahub.EarthExplorer:
             item = pystac.Item(
                 id=meta["display_id"],
                 datetime=meta["start_time"],
@@ -310,7 +312,12 @@ class Source:
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
 
-        if self.src == Datahub.EarthExplorer:
+        if self.src == Datahub.STAC_local:
+            raise NotImplementedError(
+                f"download_image not supported for {self.src}. It is much easier to get the asset yourself now."
+            )
+
+        elif self.src == Datahub.EarthExplorer:
             product_srcid, _ = self._get_srcid_from_product_uuid_ee(product_uuid)
             if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
                 # download data from GCS if file does not already exist
