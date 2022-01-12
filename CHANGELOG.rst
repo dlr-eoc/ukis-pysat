@@ -1,10 +1,10 @@
 Changelog
 =========
-[1.4.0] (2022-01-11)
+[] ()
 ---------------------
 Deleted
 ^^^^^
-- deleted stacapi.py, stacapi_io.py and test_stacapi.py (pystac-client should be used from now on)
+- removed own stac api client (pystac-client should be used from now on)
 - deleted the StacApi reference in data.py
 
 [1.3.4] (2022-01-11)
