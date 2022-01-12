@@ -145,7 +145,6 @@ class Source:
                 ):
                     yield item
 
-
         elif self.src == Datahub.EarthExplorer:
             # query EarthExplorer for metadata
             bbox = self._prep_aoi(aoi).bounds
@@ -190,9 +189,6 @@ class Source:
                 if item.id == srcid:
                     yield item
 
-
-
-
         elif self.src == Datahub.EarthExplorer:
             from landsatxplore.util import guess_dataset
 
@@ -211,7 +207,6 @@ class Source:
         :param platform: Image platform (<enum 'Platform'>).
         :returns: PySTAC item
         """
-
 
         if self.src == Datahub.EarthExplorer:
             item = pystac.Item(
@@ -315,9 +310,6 @@ class Source:
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
 
-
-
-
         if self.src == Datahub.EarthExplorer:
             product_srcid, _ = self._get_srcid_from_product_uuid_ee(product_uuid)
             if not Path(target_dir.joinpath(product_srcid + ".zip")).is_file():
@@ -345,8 +337,6 @@ class Source:
         """
         if isinstance(target_dir, str):
             target_dir = Path(target_dir)
-
-
 
         if self.src == Datahub.EarthExplorer:
             product_srcid, meta_src = self._get_srcid_from_product_uuid_ee(product_uuid)
