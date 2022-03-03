@@ -4,7 +4,6 @@ import os
 
 from setuptools import setup, find_packages
 
-
 with open(r"README.md", encoding="utf8") as f:
     long_description = f.read()
 
@@ -55,7 +54,7 @@ extras_require["dev"] = sorted(
         "pyproj>=3.0.0",
         "requests_mock",
         "utm>=0.7.0",
-        "sphinx >= 1.3",
+        "sphinx>=1.3",
         "sphinx_rtd_theme",
     ]
 )
