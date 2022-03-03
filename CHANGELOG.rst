@@ -1,11 +1,16 @@
 Changelog
 =========
-[] ()
+[1.4.0] (2022-03-**)
 ---------------------
+Changed
+^^^^^^^
+- Sentinel items closer to standards of stactools #155
+
 Deleted
 ^^^^^
 - removed own stac api client (pystac-client should be used from now on)
 - deleted the StacApi reference in data.py
+- Sentinel-3 not supported anymore
 
 [1.3.4] (2022-01-11)
 ---------------------

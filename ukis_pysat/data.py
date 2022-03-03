@@ -227,7 +227,7 @@ class Source:
                 },
             )
             # extensions
-            proj_ext = ProjectionExtension.ext(item, add_if_missing=True)
+            # proj_ext = ProjectionExtension.ext(item, add_if_missing=True)
             # TODO can we know anything?
 
             sat_ext = SatExtension.ext(item, add_if_missing=True)
