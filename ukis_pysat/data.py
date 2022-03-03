@@ -6,9 +6,12 @@ from io import BytesIO
 from pathlib import Path
 
 from dateutil.parser import parse
+from pystac.extensions.projection import ProjectionExtension
+from pystac.extensions.sar import SarExtension
 
+from ukis_pysat import utils
 from ukis_pysat._landsat import Product
-
+from ukis_pysat.utils import SENTINEL_PROVIDER
 
 try:
     import numpy as np
@@ -18,7 +21,7 @@ try:
     from PIL import Image
     from pystac.extensions import sat
     from pystac.extensions.eo import EOExtension
-    from pystac.extensions.sat import SatExtension
+    from pystac.extensions.sat import SatExtension, OrbitState
     from shapely import geometry, wkt, ops
     from shapely.geometry import shape, mapping
 except ImportError as e:
@@ -254,21 +257,32 @@ class Source:
                     .astimezone(tz=datetime.timezone.utc)
                     .isoformat(),
                 },
+                stac_extensions=[],
             )
-            EOExtension.add_to(item)
-            SatExtension.add_to(item)
-            eo_ext = EOExtension.ext(item)
-            sat_ext = SatExtension.ext(item)
 
+            # extensions
+            proj_ext = ProjectionExtension.ext(item, add_if_missing=True)
+            proj_ext.apply(
+                epsg=4326,
+            )
+
+            sat_ext = SatExtension.ext(item, add_if_missing=True)
+            sat_ext.apply(
+                orbit_state=OrbitState[meta["properties"]["orbitdirection"].upper()],  # for enum key to work
+                relative_orbit=int(meta["properties"]["orbitnumber"]),
+            )
+
+            eo_ext = EOExtension.ext(item, add_if_missing=True)
             if "cloudcoverpercentage" in meta["properties"]:
                 eo_ext.cloud_cover = round(float(meta["properties"]["cloudcoverpercentage"]), 2)
 
-            item.common_metadata.platform = platform.value
+            if platform == platform.Sentinel1:
+                utils.fill_sar_ext(SarExtension.ext(item, add_if_missing=True), meta=meta)
 
-            sat_ext.apply(
-                orbit_state=sat.OrbitState[meta["properties"]["orbitdirection"].upper()],  # for enum key to work
-                relative_orbit=int(meta["properties"]["orbitnumber"]),
-            )
+            # common
+            item.common_metadata.providers = [SENTINEL_PROVIDER]
+            item.common_metadata.platform = platform.value
+            # TODO constellation, but info already in platform
 
         return item
 
