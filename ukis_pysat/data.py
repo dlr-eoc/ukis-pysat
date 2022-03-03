@@ -226,18 +226,19 @@ class Source:
                     "end_datetime": meta["stop_time"].astimezone(tz=datetime.timezone.utc).isoformat(),
                 },
             )
-            EOExtension.add_to(item)
-            SatExtension.add_to(item)
-            eo_ext = EOExtension.ext(item)
-            sat_ext = SatExtension.ext(item)
+            # extensions
+            proj_ext = ProjectionExtension.ext(item, add_if_missing=True)
+            # TODO can we know anything?
 
+            sat_ext = SatExtension.ext(item, add_if_missing=True)
+            relative_orbit = int(f"{meta['wrs_path']}{meta['wrs_row']}")
+            sat_ext.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
+
+            eo_ext = EOExtension.ext(item, add_if_missing=True)
             if "cloudCover" in meta:
                 eo_ext.cloud_cover = round(float(meta["cloud_cover"]), 2)
 
             item.common_metadata.platform = platform.value
-
-            relative_orbit = int(f"{meta['wrs_path']}{meta['wrs_row']}")
-            sat_ext.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
 
         else:  # Scihub
             item = pystac.Item(
