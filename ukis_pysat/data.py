@@ -6,9 +6,12 @@ from io import BytesIO
 from pathlib import Path
 
 from dateutil.parser import parse
+from pystac.extensions.projection import ProjectionExtension
+from pystac.extensions.sar import SarExtension
 
+from ukis_pysat import utils
 from ukis_pysat._landsat import Product
-
+from ukis_pysat.utils import SENTINEL_PROVIDER, LANDSAT_PROVIDER
 
 try:
     import numpy as np
@@ -18,7 +21,7 @@ try:
     from PIL import Image
     from pystac.extensions import sat
     from pystac.extensions.eo import EOExtension
-    from pystac.extensions.sat import SatExtension
+    from pystac.extensions.sat import SatExtension, OrbitState
     from shapely import geometry, wkt, ops
     from shapely.geometry import shape, mapping
 except ImportError as e:
@@ -223,18 +226,17 @@ class Source:
                     "end_datetime": meta["stop_time"].astimezone(tz=datetime.timezone.utc).isoformat(),
                 },
             )
-            EOExtension.add_to(item)
-            SatExtension.add_to(item)
-            eo_ext = EOExtension.ext(item)
-            sat_ext = SatExtension.ext(item)
+            # extensions
+            sat_ext = SatExtension.ext(item, add_if_missing=True)
+            relative_orbit = int(f"{meta['wrs_path']}{meta['wrs_row']}")
+            sat_ext.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
 
+            eo_ext = EOExtension.ext(item, add_if_missing=True)
             if "cloudCover" in meta:
                 eo_ext.cloud_cover = round(float(meta["cloud_cover"]), 2)
 
-            item.common_metadata.platform = platform.value
-
-            relative_orbit = int(f"{meta['wrs_path']}{meta['wrs_row']}")
-            sat_ext.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
+            # common
+            item.common_metadata.providers = [LANDSAT_PROVIDER]
 
         else:  # Scihub
             item = pystac.Item(
@@ -254,21 +256,24 @@ class Source:
                     .astimezone(tz=datetime.timezone.utc)
                     .isoformat(),
                 },
+                stac_extensions=[],
             )
-            EOExtension.add_to(item)
-            SatExtension.add_to(item)
-            eo_ext = EOExtension.ext(item)
-            sat_ext = SatExtension.ext(item)
 
+            # extensions
+            sat_ext = SatExtension.ext(item, add_if_missing=True)
+            sat_ext.apply(
+                orbit_state=OrbitState[meta["properties"]["orbitdirection"].upper()],  # for enum key to work
+                relative_orbit=int(meta["properties"]["orbitnumber"]),
+            )
+
+            eo_ext = EOExtension.ext(item, add_if_missing=True)
             if "cloudcoverpercentage" in meta["properties"]:
                 eo_ext.cloud_cover = round(float(meta["properties"]["cloudcoverpercentage"]), 2)
 
-            item.common_metadata.platform = platform.value
+            # common
+            item.common_metadata.providers = [SENTINEL_PROVIDER]
 
-            sat_ext.apply(
-                orbit_state=sat.OrbitState[meta["properties"]["orbitdirection"].upper()],  # for enum key to work
-                relative_orbit=int(meta["properties"]["orbitnumber"]),
-            )
+        item.common_metadata.platform = platform.value
 
         return item
 

@@ -5,7 +5,7 @@ pystac[validation]>=1.0.0
 python-dateutil
 requests
 sentinelsat>=1.0.1
-shapely~=1.7.1
+shapely
 pydantic
 
 ## raster

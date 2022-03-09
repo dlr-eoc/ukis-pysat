@@ -1,21 +1,21 @@
 import unittest
+from datetime import datetime
 from pathlib import Path
 from tempfile import gettempdir
+
 import pystac
 import requests_mock
-from shapely.geometry import Polygon
-from datetime import datetime
-import os
 from pkg_resources import resource_filename
+from shapely.geometry import Polygon
 
 from ukis_pysat._landsat import Product, meta_from_pid, compute_md5
 from ukis_pysat.data import Source
 from ukis_pysat.members import Datahub, Platform, Bands
 
-os.environ["EARTHEXPLORER_USER"] = "Tim"
-os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
-os.environ["SCIHUB_USER"] = "Tim"
-os.environ["SCIHUB_PW"] = "TheEnchanter"
+# os.environ["EARTHEXPLORER_USER"] = "Tim"
+# os.environ["EARTHEXPLORER_PW"] = "TheEnchanter"
+# os.environ["SCIHUB_USER"] = "Tim"
+# os.environ["SCIHUB_PW"] = "TheEnchanter"
 
 catalog_path = Path(__file__).parents[0] / "testfiles" / "catalog.json"
 target_dir = Path(__file__).parents[0] / "testfiles"

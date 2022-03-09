@@ -1,7 +1,11 @@
 Changelog
 =========
-[] ()
+[1.4.0] (2022-03-09)
 ---------------------
+Changed
+^^^^^^^
+- Sentinel items closer to standards of stactools #155
+
 Deleted
 ^^^^^
 - removed own stac api client (pystac-client should be used from now on)
