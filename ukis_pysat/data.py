@@ -11,7 +11,7 @@ from pystac.extensions.sar import SarExtension
 
 from ukis_pysat import utils
 from ukis_pysat._landsat import Product
-from ukis_pysat.utils import SENTINEL_PROVIDER
+from ukis_pysat.utils import SENTINEL_PROVIDER, LANDSAT_PROVIDER
 
 try:
     import numpy as np
@@ -238,7 +238,8 @@ class Source:
             if "cloudCover" in meta:
                 eo_ext.cloud_cover = round(float(meta["cloud_cover"]), 2)
 
-            item.common_metadata.platform = platform.value
+            # common
+            item.common_metadata.providers = [LANDSAT_PROVIDER]
 
         else:  # Scihub
             item = pystac.Item(
@@ -282,8 +283,9 @@ class Source:
 
             # common
             item.common_metadata.providers = [SENTINEL_PROVIDER]
-            item.common_metadata.platform = platform.value
             # TODO constellation, but info already in platform
+
+        item.common_metadata.platform = platform.value
 
         return item
 

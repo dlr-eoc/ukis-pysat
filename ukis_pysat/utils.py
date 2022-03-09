@@ -28,3 +28,13 @@ SENTINEL_PROVIDER = pystac.Provider(
     ],
     url="https://earth.esa.int/web/guest/home",
 )
+
+LANDSAT_PROVIDER = pystac.Provider(
+    name="USGS",
+    roles=[
+        ProviderRole.PRODUCER,
+        ProviderRole.PROCESSOR,
+        ProviderRole.LICENSOR,
+    ],
+    url="https://earthexplorer.usgs.gov/",
+)
