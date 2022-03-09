@@ -227,9 +227,6 @@ class Source:
                 },
             )
             # extensions
-            # proj_ext = ProjectionExtension.ext(item, add_if_missing=True)
-            # TODO can we know anything?
-
             sat_ext = SatExtension.ext(item, add_if_missing=True)
             relative_orbit = int(f"{meta['wrs_path']}{meta['wrs_row']}")
             sat_ext.apply(orbit_state=sat.OrbitState.DESCENDING, relative_orbit=relative_orbit)
@@ -263,11 +260,6 @@ class Source:
             )
 
             # extensions
-            proj_ext = ProjectionExtension.ext(item, add_if_missing=True)
-            proj_ext.apply(
-                epsg=4326,
-            )
-
             sat_ext = SatExtension.ext(item, add_if_missing=True)
             sat_ext.apply(
                 orbit_state=OrbitState[meta["properties"]["orbitdirection"].upper()],  # for enum key to work
@@ -278,12 +270,8 @@ class Source:
             if "cloudcoverpercentage" in meta["properties"]:
                 eo_ext.cloud_cover = round(float(meta["properties"]["cloudcoverpercentage"]), 2)
 
-            if platform == platform.Sentinel1:
-                utils.fill_sar_ext(SarExtension.ext(item, add_if_missing=True), meta=meta)
-
             # common
             item.common_metadata.providers = [SENTINEL_PROVIDER]
-            # TODO constellation, but info already in platform
 
         item.common_metadata.platform = platform.value
 
