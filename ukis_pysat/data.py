@@ -6,10 +6,7 @@ from io import BytesIO
 from pathlib import Path
 
 from dateutil.parser import parse
-from pystac.extensions.projection import ProjectionExtension
-from pystac.extensions.sar import SarExtension
 
-from ukis_pysat import utils
 from ukis_pysat._landsat import Product
 from ukis_pysat.utils import SENTINEL_PROVIDER, LANDSAT_PROVIDER
 
