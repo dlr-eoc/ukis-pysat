@@ -7,6 +7,7 @@ from pathlib import Path
 from ukis_pysat.members import Platform
 
 try:
+    import xmltodict
     import numpy as np
     import rasterio
     import rasterio.dtypes
@@ -265,12 +266,13 @@ class Image:
 
         self.__update_dataset(dst_crs, transform, nodata=nodata)
 
-    def dn2toa(self, platform, mtl_file=None, wavelengths=None):
+    def dn2toa(self, platform, mtl_file=None, mtd_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
         https://www.usgs.gov/land-resources/nli/landsat/using-usgs-landsat-level-1-data-product
 
         :param platform: image platform, possible Platform.Landsat[5, 7, 8] or Platform.Sentinel2 (<enum 'Platform'>).
         :param mtl_file: path to Landsat MTL file that holds the band specific rescale factors (str).
+        :param mtd_file: path to Sentinel-2 MTD file that holds the band specific rescale factors (str).
         :param wavelengths: like ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"] for Landsat-5 (list of str).
         """
         if platform in [
@@ -326,7 +328,24 @@ class Image:
 
                 self.__arr = np.array(np.stack(toa, axis=0))
         elif platform == Platform.Sentinel2:
-            self.__arr = self.__arr.astype(np.float32) / 10000.0
+            if mtd_file is None:
+                raise AttributeError(f"'mtd_file' has to be set if platform is {platform}.")
+            else:
+                # get rescale factors from mtd file
+                with open(str(mtd_file), "r") as f:
+                    mtd = xmltodict.parse(f.read())
+                pb_baseline = float(mtd["n1:Level-1C_User_Product"]["n1:General_Info"]["Product_Info"]["PROCESSING_BASELINE"])
+                product_image_characteristics = mtd["n1:Level-1C_User_Product"]["n1:General_Info"]["Product_Image_Characteristics"]
+                quantification_value = float(product_image_characteristics["QUANTIFICATION_VALUE"]["#text"])
+                toa = []
+                if pb_baseline >= 4.0:
+                    for idx, r in enumerate(product_image_characteristics["Radiometric_Offset_List"]["RADIO_ADD_OFFSET"]):
+                        toa.append(
+                            (self.__arr[idx, :, :].astype(np.float32) + float(r["#text"])) / quantification_value
+                        )
+                    self.__arr = np.array(np.stack(toa, axis=0))
+                else:
+                    self.__arr = self.__arr.astype(np.float32) / quantification_value
         else:
             raise AttributeError(
                 f"Cannot convert dn2toa. Platform {platform} not supported [Landsat-5, Landsat-7, Landsat-8, "
