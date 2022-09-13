@@ -238,7 +238,7 @@ class RasterTest(unittest.TestCase):
     # @unittest.skip("Skip until we find a better test or this also runs with Github Actions")
     def test_dn2toa(self):
         target_dir = Path(__file__).parents[0] / "testfiles" / "satellite_data"
-        tests = [
+        tests_landsat = [
             {
                 "platform": Platform.Landsat8,
                 "dn_file": target_dir.joinpath("LC08_L1TP_193024_20200509_20200509_01_RT.tif"),
@@ -259,21 +259,43 @@ class RasterTest(unittest.TestCase):
                 "toa_file": target_dir.joinpath("LT05_L1TP_193024_20050516_20161127_01_T1_toa.tif"),
                 "mtl_file": target_dir.joinpath("LT05_L1TP_193024_20050516_20161127_01_T1_MTL.txt"),
                 "wavelengths": ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"],
-            },
-            {
+            }
+        ]
+
+        tests_sentinel = [
+            {   # pre product upgrades, see https://github.com/dlr-eoc/ukis-pysat/issues/165
                 "platform": Platform.Sentinel2,
                 "dn_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159.tif"),
                 "toa_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_toa.tif"),
-                "mtl_file": None,
+                "mtd_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_MTD.xml"),
+                "wavelengths": None,
+            },
+            {   # post product upgrades, see https://github.com/dlr-eoc/ukis-pysat/issues/165
+                "platform": Platform.Sentinel2,
+                "dn_file": target_dir.joinpath("S2B_MSIL1C_20220615T101559_N0400_R065_T32UPC_20220615T122549.tif"),
+                "toa_file": target_dir.joinpath("S2B_MSIL1C_20220615T101559_N0400_R065_T32UPC_20220615T122549_toa.tif"),
+                "mtd_file": target_dir.joinpath("S2B_MSIL1C_20220615T101559_N0400_R065_T32UPC_20220615T122549_MTD.xml"),
                 "wavelengths": None,
             },
         ]
 
-        for i in range(len(tests)):
-            img_dn = Image(tests[i]["dn_file"])
-            img_toa = Image(tests[i]["toa_file"])
+        for i in range(len(tests_landsat)):
+            img_dn = Image(tests_landsat[i]["dn_file"])
+            img_toa = Image(tests_landsat[i]["toa_file"])
             img_dn.dn2toa(
-                platform=tests[i]["platform"], mtl_file=tests[i]["mtl_file"], wavelengths=tests[i]["wavelengths"]
+                platform=tests_landsat[i]["platform"], mtl_file=tests_landsat[i]["mtl_file"], wavelengths=tests_landsat[i]["wavelengths"]
+            )
+
+            # np.array_equal did not work on Github Runner environment
+            self.assertTrue(np.allclose(img_dn.arr, img_toa.arr, equal_nan=True))
+            img_dn.close()
+            img_toa.close()
+
+        for i in range(len(tests_sentinel)):
+            img_dn = Image(tests_sentinel[i]["dn_file"])
+            img_toa = Image(tests_sentinel[i]["toa_file"])
+            img_dn.dn2toa(
+                platform=tests_sentinel[i]["platform"], mtd_file=tests_sentinel[i]["mtd_file"], wavelengths=tests_sentinel[i]["wavelengths"]
             )
 
             # np.array_equal did not work on Github Runner environment
@@ -283,6 +305,9 @@ class RasterTest(unittest.TestCase):
 
         with self.assertRaises(AttributeError, msg=f"'mtl_file' has to be set if platform is {Platform.Landsat8}."):
             self.img.dn2toa(platform=Platform.Landsat8)
+
+        with self.assertRaises(AttributeError, msg=f"'mtd_file' has to be set if platform is {Platform.Sentinel2}."):
+            self.img.dn2toa(platform=Platform.Sentinel2)
 
         with self.assertRaises(
             AttributeError,
