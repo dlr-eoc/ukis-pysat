@@ -40,7 +40,7 @@ extras_require = {
         "rasterio>=1.1.8",
         "rio_toa>=0.3.0",
         "shapely",
-        "xmltodict"
+        "xmltodict",
     ],
 }
 extras_require["complete"] = list(set([v for req in extras_require.values() for v in req]))

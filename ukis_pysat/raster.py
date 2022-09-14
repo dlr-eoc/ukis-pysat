@@ -331,21 +331,31 @@ class Image:
             if mtd_file is None:
                 raise AttributeError(f"'mtd_file' has to be set if platform is {platform}.")
             else:
-                # get rescale factors from mtd file
+                # read metadata
                 with open(str(mtd_file), "r") as f:
                     mtd = xmltodict.parse(f.read())
-                pb_baseline = float(mtd["n1:Level-1C_User_Product"]["n1:General_Info"]["Product_Info"]["PROCESSING_BASELINE"])
-                product_image_characteristics = mtd["n1:Level-1C_User_Product"]["n1:General_Info"]["Product_Image_Characteristics"]
+
+                pb_baseline = float(
+                    mtd["n1:Level-1C_User_Product"]["n1:General_Info"]["Product_Info"]["PROCESSING_BASELINE"]
+                )
+                product_image_characteristics = mtd["n1:Level-1C_User_Product"]["n1:General_Info"][
+                    "Product_Image_Characteristics"
+                ]
                 quantification_value = float(product_image_characteristics["QUANTIFICATION_VALUE"]["#text"])
                 toa = []
+
                 if pb_baseline >= 4.0:
-                    for idx, r in enumerate(product_image_characteristics["Radiometric_Offset_List"]["RADIO_ADD_OFFSET"]):
-                        toa.append(
-                            (self.__arr[idx, :, :].astype(np.float32) + float(r["#text"])) / quantification_value
-                        )
-                    self.__arr = np.array(np.stack(toa, axis=0))
+                    radio_offsets = product_image_characteristics["Radiometric_Offset_List"]["RADIO_ADD_OFFSET"]
+                    for b in self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths):
+                        radio_offset = float([i for i in radio_offsets if i["@band_id"] == b][0]["#text"])
+
+                        # rescale reflectance bands
+                        toa.append((self.__arr[int(b), :, :].astype(np.float32) + radio_offset) / quantification_value)
                 else:
-                    self.__arr = self.__arr.astype(np.float32) / quantification_value
+                    for b in self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths):
+                        toa.append(self.__arr[int(b), :, :].astype(np.float32) / quantification_value)
+
+                self.__arr = np.array(np.stack(toa, axis=0))
         else:
             raise AttributeError(
                 f"Cannot convert dn2toa. Platform {platform} not supported [Landsat-5, Landsat-7, Landsat-8, "
@@ -395,6 +405,21 @@ class Image:
                 "cirrus": "9",
                 "tirs1": "10",
                 "tirs2": "11",
+            },
+            Platform.Sentinel2: {
+                "b1": "0",
+                "b2": "1",
+                "b3": "2",
+                "b4": "3",
+                "b5": "4",
+                "b6": "5",
+                "b7": "6",
+                "b8": "7",
+                "b8a": "8",
+                "b9": "9",
+                "b10": "10",
+                "b11": "11",
+                "b12": "12",
             },
         }
 
