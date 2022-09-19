@@ -7,6 +7,7 @@ from pathlib import Path
 from ukis_pysat.members import Platform
 
 try:
+    import xmltodict
     import numpy as np
     import rasterio
     import rasterio.dtypes
@@ -265,12 +266,13 @@ class Image:
 
         self.__update_dataset(dst_crs, transform, nodata=nodata)
 
-    def dn2toa(self, platform, mtl_file=None, wavelengths=None):
+    def dn2toa(self, platform, mtl_file=None, mtd_file=None, wavelengths=None):
         """This method converts digital numbers to top of atmosphere reflectance, like described here:
         https://www.usgs.gov/land-resources/nli/landsat/using-usgs-landsat-level-1-data-product
 
         :param platform: image platform, possible Platform.Landsat[5, 7, 8] or Platform.Sentinel2 (<enum 'Platform'>).
         :param mtl_file: path to Landsat MTL file that holds the band specific rescale factors (str).
+        :param mtd_file: path to Sentinel-2 MTD file that holds the band specific rescale factors (str).
         :param wavelengths: like ["Blue", "Green", "Red", "NIR", "SWIR1", "TIRS", "SWIR2"] for Landsat-5 (list of str).
         """
         if platform in [
@@ -326,7 +328,34 @@ class Image:
 
                 self.__arr = np.array(np.stack(toa, axis=0))
         elif platform == Platform.Sentinel2:
-            self.__arr = self.__arr.astype(np.float32) / 10000.0
+            if mtd_file is None:
+                raise AttributeError(f"'mtd_file' has to be set if platform is {platform}.")
+            else:
+                # read metadata
+                with open(str(mtd_file), "r") as f:
+                    mtd = xmltodict.parse(f.read())
+
+                pb_baseline = float(
+                    mtd["n1:Level-1C_User_Product"]["n1:General_Info"]["Product_Info"]["PROCESSING_BASELINE"]
+                )
+                product_image_characteristics = mtd["n1:Level-1C_User_Product"]["n1:General_Info"][
+                    "Product_Image_Characteristics"
+                ]
+                quantification_value = float(product_image_characteristics["QUANTIFICATION_VALUE"]["#text"])
+                toa = []
+
+                if pb_baseline >= 4.0:
+                    radio_offsets = product_image_characteristics["Radiometric_Offset_List"]["RADIO_ADD_OFFSET"]
+                    for b in self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths):
+                        radio_offset = float([i for i in radio_offsets if i["@band_id"] == b][0]["#text"])
+
+                        # rescale reflectance bands
+                        toa.append((self.__arr[int(b), :, :].astype(np.float32) + radio_offset) / quantification_value)
+                else:
+                    for b in self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths):
+                        toa.append(self.__arr[int(b), :, :].astype(np.float32) / quantification_value)
+
+                self.__arr = np.array(np.stack(toa, axis=0))
         else:
             raise AttributeError(
                 f"Cannot convert dn2toa. Platform {platform} not supported [Landsat-5, Landsat-7, Landsat-8, "
@@ -376,6 +405,21 @@ class Image:
                 "cirrus": "9",
                 "tirs1": "10",
                 "tirs2": "11",
+            },
+            Platform.Sentinel2: {
+                "b1": "0",
+                "b2": "1",
+                "b3": "2",
+                "b4": "3",
+                "b5": "4",
+                "b6": "5",
+                "b7": "6",
+                "b8": "7",
+                "b8a": "8",
+                "b9": "9",
+                "b10": "10",
+                "b11": "11",
+                "b12": "12",
             },
         }
 
