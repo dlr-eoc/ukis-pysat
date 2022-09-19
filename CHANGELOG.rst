@@ -1,5 +1,12 @@
 Changelog
 =========
+
+[1.4.1] (2022-09-19)
+---------------------
+Changed
+^^^^^^^
+- Adapt to new ESA Sentinel-2 processing baseline #165
+
 [1.4.0] (2022-03-09)
 ---------------------
 Changed
