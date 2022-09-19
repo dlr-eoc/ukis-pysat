@@ -346,14 +346,14 @@ class Image:
 
                 if pb_baseline >= 4.0:
                     radio_offsets = product_image_characteristics["Radiometric_Offset_List"]["RADIO_ADD_OFFSET"]
-                    for b in self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths):
+                    for idx, b in enumerate(self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths)):
                         radio_offset = float([i for i in radio_offsets if i["@band_id"] == b][0]["#text"])
 
                         # rescale reflectance bands
-                        toa.append((self.__arr[int(b), :, :].astype(np.float32) + radio_offset) / quantification_value)
+                        toa.append((self.__arr[idx, :, :].astype(np.float32) + radio_offset) / quantification_value)
                 else:
-                    for b in self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths):
-                        toa.append(self.__arr[int(b), :, :].astype(np.float32) / quantification_value)
+                    for idx, _ in enumerate(self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths)):
+                        toa.append(self.__arr[idx, :, :].astype(np.float32) / quantification_value)
 
                 self.__arr = np.array(np.stack(toa, axis=0))
         else:
