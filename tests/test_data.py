@@ -76,7 +76,7 @@ class DataTest(unittest.TestCase):
             cat.normalize_hrefs(Path(gettempdir()).as_posix())
             cat.validate_all()
 
-    @unittest.skip()
+    @unittest.skip("Does not work on Actions anymore")
     @requests_mock.Mocker(real_http=True)
     def test_query_metadata_scihub(self, m):
         m.get(
@@ -128,7 +128,7 @@ class DataTest(unittest.TestCase):
             cat.normalize_hrefs(Path(gettempdir()).as_posix())
             cat.validate_all()
 
-    @unittest.skip()
+    @unittest.skip("Does not work on Actions anymore")
     @requests_mock.Mocker(real_http=True)
     def test_query_metadata_srcid_scihub(self, m):
         m.get(
