@@ -268,14 +268,42 @@ class RasterTest(unittest.TestCase):
                 "dn_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159.tif"),
                 "toa_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_toa.tif"),
                 "mtd_file": target_dir.joinpath("S2B_MSIL1C_20200406T101559_N0209_R065_T32UPC_20200406T130159_MTD.xml"),
-                "wavelengths": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B8A", "B9", "B10", "B11", "B12"],
+                "wavelengths": [
+                    "Aerosol",
+                    "Blue",
+                    "Green",
+                    "Red",
+                    "Rededge1",
+                    "Rededge2",
+                    "Rededge3",
+                    "NIR",
+                    "Rededge4",
+                    "Watervapor",
+                    "Cirrus",
+                    "Swir1",
+                    "Swir2",
+                ],
             },
             {  # post product upgrades, see https://github.com/dlr-eoc/ukis-pysat/issues/165
                 "platform": Platform.Sentinel2,
                 "dn_file": target_dir.joinpath("S2B_MSIL1C_20220615T101559_N0400_R065_T32UPC_20220615T122549.tif"),
                 "toa_file": target_dir.joinpath("S2B_MSIL1C_20220615T101559_N0400_R065_T32UPC_20220615T122549_toa.tif"),
                 "mtd_file": target_dir.joinpath("S2B_MSIL1C_20220615T101559_N0400_R065_T32UPC_20220615T122549_MTD.xml"),
-                "wavelengths": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B8A", "B9", "B10", "B11", "B12"],
+                "wavelengths": [
+                    "Aerosol",
+                    "Blue",
+                    "Green",
+                    "Red",
+                    "Rededge1",
+                    "Rededge2",
+                    "Rededge3",
+                    "NIR",
+                    "Rededge4",
+                    "Watervapor",
+                    "Cirrus",
+                    "Swir1",
+                    "Swir2",
+                ],
             },
         ]
 
@@ -329,7 +357,7 @@ class RasterTest(unittest.TestCase):
             ["8", "10", "11"],
             self.img._lookup_bands(Platform.Landsat8, ["PAN", "Tirs1", "Tirs2"]),
         )
-        self.assertEqual(["1", "2", "3"], self.img._lookup_bands(Platform.Sentinel2, ["B2", "B3", "B4"]))
+        self.assertEqual(["1", "2", "3"], self.img._lookup_bands(Platform.Sentinel2, ["Blue", "Green", "Red"]))
 
     def test_get_tiles(self):
         for idx, each in enumerate(self.img.get_tiles(5, 5, 1)):
