@@ -1,16 +1,16 @@
 ## data
 numpy
 pillow
-pystac[validation]>=1.6
+pystac[validation]>=1.0.0
 python-dateutil
 requests
-sentinelsat>=1.1
+sentinelsat>=1.0.1
 shapely
 pydantic
 
 ## raster
 # numpy
-rasterio>=1.3
+rasterio>=1.1.8
 rio_toa>=0.3.0
 shapely
 xmltodict
