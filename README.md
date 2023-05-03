@@ -11,10 +11,7 @@
 [![DOI](https://zenodo.org/badge/259635994.svg)](https://zenodo.org/badge/latestdoi/259635994)
 
 
-The UKIS-pysat package provides generic classes and functions to query, access and process multi-spectral and SAR satellite images.
-
-### data
-Download satellites data from different sources (currently Earth Explorer, SciHub, STAC), deal with and structure metadata.
+The UKIS-pysat package provides generic classes and functions to access and process multi-spectral and SAR satellite images.
 
 
 ### file
@@ -33,28 +30,9 @@ Here's an example about some basic features, it might also help to read through 
 
 ```python
 # import all the required libraries
-from ukis_pysat.data import Source
 from ukis_pysat.file import get_sentinel_scene_from_dir
-from ukis_pysat.members import Datahub, Platform
 from ukis_pysat.raster import Image
 
-# connect to Copernicus Open Access Hub  and query metadata
-src = Source(Datahub.Scihub)
-meta = src.query_metadata(
-    platform=Platform.Sentinel2,
-    date=("20200101", "NOW"),
-    aoi=(11.90, 51.46, 11.94, 51.50),
-    cloud_cover=(0, 50),
-)
-for item in meta:  # item is now a PySTAC item
-    print(item.id)
-    uuid = item.properties["srcuuid"]
-
-    # download geocoded quicklook and image
-    src.download_quicklook(product_uuid=uuid, target_dir="/users/username/tmp")
-    src.download_image(product_uuid=uuid, target_dir="/users/username/tmp")
-    
-    break
 
 # get sentinel scene from directory
 with get_sentinel_scene_from_dir("/users/username/tmp") as (full_path, ident):
@@ -65,19 +43,9 @@ with get_sentinel_scene_from_dir("/users/username/tmp") as (full_path, ident):
 For working with the Landsat we need an item id for downloading the product
 Check [Pystac](https://pystac.readthedocs.io/en/1.0/) documentation for more functionality on [STAC](https://stacspec.org/).
 
-### Environment variables to configure Datahub credentials
-To use ``ukis_pysat.data`` and to download from the respective Datahub you need to set the credentials as environment variables.
-
-For EarthExplorer that's: \
-``EARTHEXPLORER_USER=your_username`` \
-``EARTHEXPLORER_PW=your_password``
-
-For SciHub that's: \
-``SCIHUB_USER=your_username`` \
-``SCIHUB_PW=your_password``
 
 ## Installation
-The easiest way to install `pysat` is through pip. Be aware, that Rasterio requires GDAL >= 1.11, < 3.1.
+The easiest way to install `ukis-pysat` is through pip. Be aware, that Rasterio requires GDAL >= 1.11, < 3.1.
 
 Most users will want to do this:
 ```shell
