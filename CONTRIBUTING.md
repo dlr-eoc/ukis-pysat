@@ -51,7 +51,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 1. Make your changes in a new git branch:
 
      ```shell
-     git checkout -b my-fix-branch master
+     git checkout -b my-fix-branch main
      ```
 
 1. Create your patch, **including appropriate test cases**.
@@ -68,14 +68,14 @@ Before you submit your Pull Request (PR) consider the following guidelines:
     git push origin my-fix-branch
     ```
 
-1. In GitHub, send a pull request to `master`.
+1. In GitHub, send a pull request to `main`.
 * If we suggest changes then:
   * Make the required updates.
   * Re-run the tests to ensure they are still passing.
   * Rebase your branch and force push to your GitHub repository (this will update your Pull Request):
 
     ```shell
-    git rebase master -i
+    git rebase main -i
     git push -f
     ```
 
