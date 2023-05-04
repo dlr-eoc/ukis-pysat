@@ -16,8 +16,6 @@ There's also some lighter versions with less dependencies:
 
     pip install ukis-pysat  # only install core dependencies (ukis_pysat.file can be used)
 
-    pip install ukis-pysat[data]  # also install dependencies for ukis_pysat.data
-
     pip install ukis-pysat[raster]  # also install dependencies for ukis_pysat.raster
 
 Some helper functions might need additional dependencies like `pandas`, `dask[array]` or `utm`. If this is the case you will receive an `ImportError`.
@@ -29,7 +27,7 @@ If you're having troubles installing GDAL and Rasterio use conda and/or follow t
 
 Tests
 -----
-To run the tests set the Environment variables and then:
+To run the tests:
 
 .. code-block:: console
 

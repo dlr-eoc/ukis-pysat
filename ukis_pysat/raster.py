@@ -28,7 +28,6 @@ except ImportError as e:
 
 
 class Image:
-
     da_arr = None
 
     def __init__(self, data, dimorder="first", crs=None, transform=None, nodata=None):
