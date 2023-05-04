@@ -2,7 +2,7 @@
 ==============
 
 ![ukis-pysat](https://github.com/dlr-eoc/ukis-pysat/workflows/ukis-pysat/badge.svg)
-[![codecov](https://codecov.io/gh/dlr-eoc/ukis-pysat/branch/master/graph/badge.svg)](https://codecov.io/gh/dlr-eoc/ukis-pysat)
+[![codecov](https://codecov.io/gh/dlr-eoc/ukis-pysat/branch/main/graph/badge.svg)](https://codecov.io/gh/dlr-eoc/ukis-pysat)
 ![Upload Python Package](https://github.com/dlr-eoc/ukis-pysat/workflows/Upload%20Python%20Package/badge.svg)
 [![PyPI version](https://img.shields.io/pypi/v/ukis-pysat)](https://pypi.python.org/pypi/ukis-pysat/)
 [![Documentation Status](https://readthedocs.org/projects/ukis-pysat/badge/?version=latest)](https://ukis-pysat.readthedocs.io/en/latest/?badge=latest)
