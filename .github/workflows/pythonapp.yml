@@ -30,11 +30,6 @@ jobs:
         python3 -m unittest discover tests
         coverage run -m unittest discover tests
         coverage xml
-      env:
-        EARTHEXPLORER_USER: ${{ secrets.EARTHEXPLORER_USER }}
-        EARTHEXPLORER_PW: ${{ secrets.EARTHEXPLORER_PW }}
-        SCIHUB_USER: ${{ secrets.SCIHUB_USER }}
-        SCIHUB_PW: ${{ secrets.SCIHUB_PW }}
     - name: Upload coverage to Codecov  
       uses: codecov/codecov-action@v3
       with:
