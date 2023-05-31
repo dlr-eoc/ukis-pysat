@@ -284,7 +284,7 @@ class Image:
             else:
                 # get rescale factors from mtl file
                 mtl = toa_utils._load_mtl(str(mtl_file))  # no obvious reason not to call this
-                metadata = mtl["L1_METADATA_FILE"]
+                metadata = mtl["LANDSAT_METADATA_FILE"]
                 sun_elevation = metadata["IMAGE_ATTRIBUTES"]["SUN_ELEVATION"]
                 toa = []
 
@@ -293,13 +293,13 @@ class Image:
                         platform != Platform.Landsat8 and b.startswith("6")
                     ):
                         if platform == Platform.Landsat8:
-                            thermal_conversion_constant1 = metadata["TIRS_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["TIRS_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata["LEVEL1_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata["LEVEL1_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
                         else:
-                            thermal_conversion_constant1 = metadata["THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
-                        multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"RADIANCE_MULT_BAND_{b}"]
-                        additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"RADIANCE_ADD_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata["LEVEL1_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata["LEVEL1_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
+                        multiplicative_rescaling_factors = metadata["LEVEL1_RADIOMETRIC_RESCALING"][f"RADIANCE_MULT_BAND_{b}"]
+                        additive_rescaling_factors = metadata["LEVEL1_RADIOMETRIC_RESCALING"][f"RADIANCE_ADD_BAND_{b}"]
 
                         # rescale thermal bands
                         toa.append(
@@ -314,8 +314,8 @@ class Image:
                         continue
 
                     # rescale reflectance bands
-                    multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_MULT_BAND_{b}"]
-                    additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
+                    multiplicative_rescaling_factors = metadata["LEVEL1_RADIOMETRIC_RESCALING"][f"REFLECTANCE_MULT_BAND_{b}"]
+                    additive_rescaling_factors = metadata["LEVEL1_RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
                     toa.append(
                         reflectance.reflectance(
                             self.__arr[idx, :, :],
