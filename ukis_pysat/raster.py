@@ -42,7 +42,9 @@ class Image:
         if dimorder in ("first", "last"):
             self.dimorder = dimorder
         else:
-            raise TypeError("dimorder for bands or channels must be either 'first' or 'last'.")
+            raise TypeError(
+                "dimorder for bands or channels must be either 'first' or 'last'."
+            )
 
         if isinstance(data, rasterio.io.DatasetReader):
             self.dataset = data
@@ -56,19 +58,25 @@ class Image:
             if crs is None:
                 raise TypeError("if dataset is of type np.ndarray crs must not be None")
             if transform is None:
-                raise TypeError("if dataset is of type np.ndarray transform must not be None")
+                raise TypeError(
+                    "if dataset is of type np.ndarray transform must not be None"
+                )
             if dimorder == "first":
                 self.__arr = data
             else:
                 self.__arr = rasterio.plot.reshape_as_raster(data)
 
             if self.__arr.ndim == 2:
-                self.__arr = np.expand_dims(self.__arr, 0)  # always return 3D for consistency
+                self.__arr = np.expand_dims(
+                    self.__arr, 0
+                )  # always return 3D for consistency
 
             self.dataset = None
             self.__update_dataset(crs, transform, nodata=nodata)
         else:
-            raise TypeError("dataset must be of type rasterio.io.DatasetReader, str or np.ndarray")
+            raise TypeError(
+                "dataset must be of type rasterio.io.DatasetReader, str or np.ndarray"
+            )
 
     def __enter__(self):
         return self
@@ -131,7 +139,9 @@ class Image:
         if isinstance(bbox, shapely.geometry.polygon.Polygon):
             self.__arr, transform = rasterio.mask.mask(self.dataset, [bbox], crop=crop)
         elif isinstance(bbox, tuple):
-            self.__arr, transform = rasterio.mask.mask(self.dataset, [shapely.geometry.box(*bbox)], crop=crop)
+            self.__arr, transform = rasterio.mask.mask(
+                self.dataset, [shapely.geometry.box(*bbox)], crop=crop
+            )
         else:
             raise TypeError(f"bbox must be of type tuple or Shapely Polygon")
 
@@ -155,7 +165,9 @@ class Image:
         max_diff_ll = np.max(np.subtract(tuple(self.dataset.bounds[:2]), bbox[:2]))
         max_diff = max(max_diff_ll, max_diff_ur)  # buffer in units
 
-        return math.ceil(max_diff / self.dataset.transform.to_gdal()[1])  # units / pixel_size
+        return math.ceil(
+            max_diff / self.dataset.transform.to_gdal()[1]
+        )  # units / pixel_size
 
     def pad(self, pad_width, mode="constant", constant_values=0):
         """Pad raster in all directions.
@@ -212,7 +224,15 @@ class Image:
         self.dataset = memfile.open()
         memfile.close()
 
-    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None, nodata=None, target_align=None):
+    def warp(
+        self,
+        dst_crs,
+        resampling_method=0,
+        num_threads=4,
+        resolution=None,
+        nodata=None,
+        target_align=None,
+    ):
         """Reproject a source raster to a destination raster.
 
         :param dst_crs: CRS or dict, Target coordinate reference system.
@@ -280,40 +300,79 @@ class Image:
             Platform.Landsat8,
         ]:
             if mtl_file is None:
-                raise AttributeError(f"'mtl_file' has to be set if platform is {platform}.")
+                raise AttributeError(
+                    f"'mtl_file' has to be set if platform is {platform}."
+                )
             else:
                 # get rescale factors from mtl file
-                mtl = toa_utils._load_mtl(str(mtl_file))  # no obvious reason not to call this
-                try:
-                    collection_number = mtl.get('LANDSAT_METADATA_FILE').get('PRODUCT_CONTENTS').get('COLLECTION_NUMBER')
-                except:
-                    collection_number = []         
-                if collection_number:
-                    # use MTL group names according to Landsat collection 2
-                    mtl_group_main = "LANDSAT_METADATA_FILE"
-                    mtl_group_thermal_constants = "LEVEL1_THERMAL_CONSTANTS"
-                    mtl_group_radiometric_rescaling = "LEVEL1_RADIOMETRIC_RESCALING"
-                else:
-                    # use MTL group names according to Landsat collection 1
+                mtl = toa_utils._load_mtl(
+                    str(mtl_file)
+                )  # no obvious reason not to call this
+
+                # search for collection number in MTL metadata file
+                def iterate_mtl(mtl_obj):
+                    for key, value in mtl_obj.items():
+                        if isinstance(value, dict):
+                            for pair in iterate_mtl(value):
+                                yield (key, *pair)
+                        else:
+                            yield (key, value)
+
+                for pair in iterate_mtl(mtl):
+                    if "COLLECTION_NUMBER" in pair:
+                        COLLECTION_NUMBER = pair[pair.index("COLLECTION_NUMBER") + 1]
+                if "COLLECTION_NUMBER" not in locals():
+                    raise AttributeError(
+                        "Cannot find COLLECTION_NUMBER in MTL metadata file"
+                    )
+
+                # define collection specific group names
+                if COLLECTION_NUMBER == 1:
+                    # Landsat collection 1 naming convention
                     mtl_group_main = "L1_METADATA_FILE"
-                    mtl_group_thermal_constants = "TIRS_THERMAL_CONSTANTS"
                     mtl_group_radiometric_rescaling = "RADIOMETRIC_RESCALING"
+                    if platform == Platform.Landsat8:
+                        mtl_group_thermal_constants = "TIRS_THERMAL_CONSTANTS"
+                    else:
+                        mtl_group_thermal_constants = "THERMAL_CONSTANTS"
+                elif COLLECTION_NUMBER == 2:
+                    # Landsat collection 2 naming convention
+                    mtl_group_main = "LANDSAT_METADATA_FILE"
+                    mtl_group_radiometric_rescaling = "LEVEL1_RADIOMETRIC_RESCALING"
+                    mtl_group_thermal_constants = "LEVEL1_THERMAL_CONSTANTS"
+                else:
+                    raise AttributeError(
+                        f"COLLECTION_NUMBER {COLLECTION_NUMBER} in metadata file is not supported"
+                    )
+
                 metadata = mtl[mtl_group_main]
                 sun_elevation = metadata["IMAGE_ATTRIBUTES"]["SUN_ELEVATION"]
                 toa = []
-                
+
                 for idx, b in enumerate(self._lookup_bands(platform, wavelengths)):
                     if (platform == Platform.Landsat8 and b in ["10", "11"]) or (
                         platform != Platform.Landsat8 and b.startswith("6")
                     ):
                         if platform == Platform.Landsat8:
-                            thermal_conversion_constant1 = metadata[mtl_group_thermal_constants][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata[mtl_group_thermal_constants][f"K2_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata[
+                                mtl_group_thermal_constants
+                            ][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata[
+                                mtl_group_thermal_constants
+                            ][f"K2_CONSTANT_BAND_{b}"]
                         else:
-                            thermal_conversion_constant1 = metadata[mtl_group_thermal_constants][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata[mtl_group_thermal_constants][f"K2_CONSTANT_BAND_{b}"]
-                        multiplicative_rescaling_factors = metadata[mtl_group_radiometric_rescaling][f"RADIANCE_MULT_BAND_{b}"]
-                        additive_rescaling_factors = metadata[mtl_group_radiometric_rescaling][f"RADIANCE_ADD_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata[
+                                mtl_group_thermal_constants
+                            ][f"K1_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant2 = metadata[
+                                mtl_group_thermal_constants
+                            ][f"K2_CONSTANT_BAND_{b}"]
+                        multiplicative_rescaling_factors = metadata[
+                            mtl_group_radiometric_rescaling
+                        ][f"RADIANCE_MULT_BAND_{b}"]
+                        additive_rescaling_factors = metadata[
+                            mtl_group_radiometric_rescaling
+                        ][f"RADIANCE_ADD_BAND_{b}"]
 
                         # rescale thermal bands
                         toa.append(
@@ -328,8 +387,12 @@ class Image:
                         continue
 
                     # rescale reflectance bands
-                    multiplicative_rescaling_factors = metadata[mtl_group_radiometric_rescaling][f"REFLECTANCE_MULT_BAND_{b}"]
-                    additive_rescaling_factors = metadata[mtl_group_radiometric_rescaling][f"REFLECTANCE_ADD_BAND_{b}"]
+                    multiplicative_rescaling_factors = metadata[
+                        mtl_group_radiometric_rescaling
+                    ][f"REFLECTANCE_MULT_BAND_{b}"]
+                    additive_rescaling_factors = metadata[
+                        mtl_group_radiometric_rescaling
+                    ][f"REFLECTANCE_ADD_BAND_{b}"]
                     toa.append(
                         reflectance.reflectance(
                             self.__arr[idx, :, :],
@@ -342,31 +405,55 @@ class Image:
                 self.__arr = np.array(np.stack(toa, axis=0))
         elif platform == Platform.Sentinel2:
             if mtd_file is None:
-                raise AttributeError(f"'mtd_file' has to be set if platform is {platform}.")
+                raise AttributeError(
+                    f"'mtd_file' has to be set if platform is {platform}."
+                )
             else:
                 # read metadata
                 with open(str(mtd_file), "r") as f:
                     mtd = xmltodict.parse(f.read())
 
                 pb_baseline = float(
-                    mtd["n1:Level-1C_User_Product"]["n1:General_Info"]["Product_Info"]["PROCESSING_BASELINE"]
+                    mtd["n1:Level-1C_User_Product"]["n1:General_Info"]["Product_Info"][
+                        "PROCESSING_BASELINE"
+                    ]
                 )
-                product_image_characteristics = mtd["n1:Level-1C_User_Product"]["n1:General_Info"][
-                    "Product_Image_Characteristics"
-                ]
-                quantification_value = float(product_image_characteristics["QUANTIFICATION_VALUE"]["#text"])
+                product_image_characteristics = mtd["n1:Level-1C_User_Product"][
+                    "n1:General_Info"
+                ]["Product_Image_Characteristics"]
+                quantification_value = float(
+                    product_image_characteristics["QUANTIFICATION_VALUE"]["#text"]
+                )
                 toa = []
 
                 if pb_baseline >= 4.0:
-                    radio_offsets = product_image_characteristics["Radiometric_Offset_List"]["RADIO_ADD_OFFSET"]
-                    for idx, b in enumerate(self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths)):
-                        radio_offset = float([i for i in radio_offsets if i["@band_id"] == b][0]["#text"])
+                    radio_offsets = product_image_characteristics[
+                        "Radiometric_Offset_List"
+                    ]["RADIO_ADD_OFFSET"]
+                    for idx, b in enumerate(
+                        self._lookup_bands(
+                            platform=Platform.Sentinel2, wavelengths=wavelengths
+                        )
+                    ):
+                        radio_offset = float(
+                            [i for i in radio_offsets if i["@band_id"] == b][0]["#text"]
+                        )
 
                         # rescale reflectance bands
-                        toa.append((self.__arr[idx, :, :].astype(np.float32) + radio_offset) / quantification_value)
+                        toa.append(
+                            (self.__arr[idx, :, :].astype(np.float32) + radio_offset)
+                            / quantification_value
+                        )
                 else:
-                    for idx, _ in enumerate(self._lookup_bands(platform=Platform.Sentinel2, wavelengths=wavelengths)):
-                        toa.append(self.__arr[idx, :, :].astype(np.float32) / quantification_value)
+                    for idx, _ in enumerate(
+                        self._lookup_bands(
+                            platform=Platform.Sentinel2, wavelengths=wavelengths
+                        )
+                    ):
+                        toa.append(
+                            self.__arr[idx, :, :].astype(np.float32)
+                            / quantification_value
+                        )
 
                 self.__arr = np.array(np.stack(toa, axis=0))
         else:
@@ -375,7 +462,9 @@ class Image:
                 f"Sentinel-2]. "
             )
 
-        self.__update_dataset(self.dataset.crs, self.dataset.transform, nodata=self.dataset.nodata)
+        self.__update_dataset(
+            self.dataset.crs, self.dataset.transform, nodata=self.dataset.nodata
+        )
 
     @staticmethod
     def _lookup_bands(platform, wavelengths):
@@ -449,7 +538,9 @@ class Image:
         rows = self.__arr.shape[-2]
         cols = self.__arr.shape[-1]
         offsets = product(range(0, cols, width), range(0, rows, height))
-        bounding_window = rasterio.windows.Window(col_off=0, row_off=0, width=cols, height=rows)
+        bounding_window = rasterio.windows.Window(
+            col_off=0, row_off=0, width=cols, height=rows
+        )
         for col_off, row_off in offsets:
             yield rasterio.windows.Window(
                 col_off=col_off - overlap,
@@ -469,7 +560,10 @@ class Image:
         """
         # access window bounds
         bounds = rasterio.windows.bounds(tile, self.dataset.transform)
-        return self.__arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
+        return (
+            self.__arr[(band,) + tile.toslices()],
+            bounds,
+        )  # Shape of array is announced with (bands, height, width)
 
     def to_dask_array(self, chunk_size=(1, 6000, 6000)):
         """transforms numpy to dask array
@@ -485,7 +579,15 @@ class Image:
         self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
-    def write_to_file(self, path_to_file, dtype, driver="GTiff", nodata=None, compress=None, kwargs=None):
+    def write_to_file(
+        self,
+        path_to_file,
+        dtype,
+        driver="GTiff",
+        nodata=None,
+        compress=None,
+        kwargs=None,
+    ):
         """
         Write a dataset to file.
         :param path_to_file: str, path to new file
