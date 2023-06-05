@@ -302,10 +302,15 @@ class Image:
                         else:
                             yield (key, value)
 
-                for pair in iterate_mtl(mtl):
-                    if "COLLECTION_NUMBER" in pair:
-                        COLLECTION_NUMBER = pair[pair.index("COLLECTION_NUMBER") + 1]
-                if "COLLECTION_NUMBER" not in locals():
+                COLLECTION_NUMBER = next(
+                    (
+                        pair[pair.index("COLLECTION_NUMBER") + 1]
+                        for pair in iterate_mtl(mtl)
+                        if "COLLECTION_NUMBER" in pair
+                    ),
+                    None,
+                )
+                if not "COLLECTION_NUMBER":
                     raise AttributeError("Cannot find COLLECTION_NUMBER in MTL metadata file")
 
                 # define collection specific group names
