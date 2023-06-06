@@ -212,7 +212,15 @@ class Image:
         self.dataset = memfile.open()
         memfile.close()
 
-    def warp(self, dst_crs, resampling_method=0, num_threads=4, resolution=None, nodata=None, target_align=None):
+    def warp(
+        self,
+        dst_crs,
+        resampling_method=0,
+        num_threads=4,
+        resolution=None,
+        nodata=None,
+        target_align=None,
+    ):
         """Reproject a source raster to a destination raster.
 
         :param dst_crs: CRS or dict, Target coordinate reference system.
@@ -284,7 +292,45 @@ class Image:
             else:
                 # get rescale factors from mtl file
                 mtl = toa_utils._load_mtl(str(mtl_file))  # no obvious reason not to call this
-                metadata = mtl["L1_METADATA_FILE"]
+
+                # search for collection number in MTL metadata file
+                def iterate_mtl(mtl_obj):
+                    for key, value in mtl_obj.items():
+                        if isinstance(value, dict):
+                            for pair in iterate_mtl(value):
+                                yield (key, *pair)
+                        else:
+                            yield (key, value)
+
+                COLLECTION_NUMBER = next(
+                    (
+                        pair[pair.index("COLLECTION_NUMBER") + 1]
+                        for pair in iterate_mtl(mtl)
+                        if "COLLECTION_NUMBER" in pair
+                    ),
+                    None,
+                )
+                if not "COLLECTION_NUMBER":
+                    raise AttributeError("Cannot find COLLECTION_NUMBER in MTL metadata file")
+
+                # define collection specific group names
+                if COLLECTION_NUMBER == 1:
+                    # Landsat collection 1 naming convention
+                    mtl_group_main = "L1_METADATA_FILE"
+                    mtl_group_radiometric_rescaling = "RADIOMETRIC_RESCALING"
+                    if platform == Platform.Landsat8:
+                        mtl_group_thermal_constants = "TIRS_THERMAL_CONSTANTS"
+                    else:
+                        mtl_group_thermal_constants = "THERMAL_CONSTANTS"
+                elif COLLECTION_NUMBER == 2:
+                    # Landsat collection 2 naming convention
+                    mtl_group_main = "LANDSAT_METADATA_FILE"
+                    mtl_group_radiometric_rescaling = "LEVEL1_RADIOMETRIC_RESCALING"
+                    mtl_group_thermal_constants = "LEVEL1_THERMAL_CONSTANTS"
+                else:
+                    raise AttributeError(f"COLLECTION_NUMBER {COLLECTION_NUMBER} in metadata file is not supported")
+
+                metadata = mtl[mtl_group_main]
                 sun_elevation = metadata["IMAGE_ATTRIBUTES"]["SUN_ELEVATION"]
                 toa = []
 
@@ -293,13 +339,23 @@ class Image:
                         platform != Platform.Landsat8 and b.startswith("6")
                     ):
                         if platform == Platform.Landsat8:
-                            thermal_conversion_constant1 = metadata["TIRS_THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["TIRS_THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata[mtl_group_thermal_constants][
+                                f"K1_CONSTANT_BAND_{b}"
+                            ]
+                            thermal_conversion_constant2 = metadata[mtl_group_thermal_constants][
+                                f"K2_CONSTANT_BAND_{b}"
+                            ]
                         else:
-                            thermal_conversion_constant1 = metadata["THERMAL_CONSTANTS"][f"K1_CONSTANT_BAND_{b}"]
-                            thermal_conversion_constant2 = metadata["THERMAL_CONSTANTS"][f"K2_CONSTANT_BAND_{b}"]
-                        multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"RADIANCE_MULT_BAND_{b}"]
-                        additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"RADIANCE_ADD_BAND_{b}"]
+                            thermal_conversion_constant1 = metadata[mtl_group_thermal_constants][
+                                f"K1_CONSTANT_BAND_{b}"
+                            ]
+                            thermal_conversion_constant2 = metadata[mtl_group_thermal_constants][
+                                f"K2_CONSTANT_BAND_{b}"
+                            ]
+                        multiplicative_rescaling_factors = metadata[mtl_group_radiometric_rescaling][
+                            f"RADIANCE_MULT_BAND_{b}"
+                        ]
+                        additive_rescaling_factors = metadata[mtl_group_radiometric_rescaling][f"RADIANCE_ADD_BAND_{b}"]
 
                         # rescale thermal bands
                         toa.append(
@@ -314,8 +370,10 @@ class Image:
                         continue
 
                     # rescale reflectance bands
-                    multiplicative_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_MULT_BAND_{b}"]
-                    additive_rescaling_factors = metadata["RADIOMETRIC_RESCALING"][f"REFLECTANCE_ADD_BAND_{b}"]
+                    multiplicative_rescaling_factors = metadata[mtl_group_radiometric_rescaling][
+                        f"REFLECTANCE_MULT_BAND_{b}"
+                    ]
+                    additive_rescaling_factors = metadata[mtl_group_radiometric_rescaling][f"REFLECTANCE_ADD_BAND_{b}"]
                     toa.append(
                         reflectance.reflectance(
                             self.__arr[idx, :, :],
@@ -455,7 +513,10 @@ class Image:
         """
         # access window bounds
         bounds = rasterio.windows.bounds(tile, self.dataset.transform)
-        return self.__arr[(band,) + tile.toslices()], bounds  # Shape of array is announced with (bands, height, width)
+        return (
+            self.__arr[(band,) + tile.toslices()],
+            bounds,
+        )  # Shape of array is announced with (bands, height, width)
 
     def to_dask_array(self, chunk_size=(1, 6000, 6000)):
         """transforms numpy to dask array
@@ -471,7 +532,15 @@ class Image:
         self.da_arr = da.from_array(self.__arr, chunks=chunk_size)
         return self.da_arr
 
-    def write_to_file(self, path_to_file, dtype, driver="GTiff", nodata=None, compress=None, kwargs=None):
+    def write_to_file(
+        self,
+        path_to_file,
+        dtype,
+        driver="GTiff",
+        nodata=None,
+        compress=None,
+        kwargs=None,
+    ):
         """
         Write a dataset to file.
         :param path_to_file: str, path to new file
